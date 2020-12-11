@@ -1,0 +1,2350 @@
+["INFO" - 9:53:39 PM] Extension Name: esbenp.prettier-vscode.
+["INFO" - 9:53:39 PM] Extension Version: 5.8.0.
+["INFO" - 9:53:39 PM] Loaded module 'prettier@2.2.0' from '/home/archie/dropship/node_modules/prettier/index.js'
+["INFO" - 9:53:39 PM] Loaded module 'prettier@2.2.0' from '/home/archie/dropship/node_modules/prettier/index.js'
+["INFO" - 9:53:39 PM] Enabling prettier for languages: ansible, css, graphql, home-assistant, html, javascript, javascriptreact, json, json5, jsonc, less, markdown, mdx, mongo, postcss, scss, typescript, typescriptreact, vue, yaml
+["INFO" - 9:53:39 PM] Enabling prettier for file extensions: .JSON-tmLanguage, ._js, .avsc, .bones, .cjs, .component.html, .css, .es, .es6, .frag, .geojson, .gltf, .gql, .graphql, .graphqls, .gs, .har, .htm, .html, .html.hl, .ice, .inc, .jake, .js, .js.flow, .jsb, .jscad, .jsfl, .jsm, .json, .json5, .jsonc, .jss, .jsx, .less, .markdown, .mcmeta, .md, .mdown, .mdwn, .mdx, .mir, .mjml, .mjs, .mkd, .mkdn, .mkdown, .njs, .pac, .pcss, .postcss, .reek, .ronn, .rviz, .scss, .sjs, .ssjs, .st, .sublime-build, .sublime-commands, .sublime-completions, .sublime-keymap, .sublime-macro, .sublime-menu, .sublime-mousemap, .sublime-project, .sublime-settings, .sublime-syntax, .sublime-theme, .sublime-workspace, .sublime_metrics, .sublime_session, .syntax, .tfstate, .tfstate.backup, .topojson, .ts, .tsx, .vue, .webapp, .webmanifest, .workbook, .wxs, .wxss, .xht, .xhtml, .xsjs, .xsjslib, .yaml, .yaml-tmlanguage, .yaml.sed, .yml, .yml.mysql, .yy, .yyp
+["INFO" - 9:53:39 PM] Enabling prettier for range supported languages: graphql, javascript, javascriptreact, json, typescript, typescriptreact
+["INFO" - 11:50:16 PM] Formatting /home/archie/dropship/components/layouts/main.tsx
+["INFO" - 11:50:16 PM] Using ignore file (if present) at /home/archie/dropship/.prettierignore
+["INFO" - 11:50:16 PM] Loaded module 'prettier@2.2.0' from '/home/archie/dropship/node_modules/prettier/index.js'
+["INFO" - 11:50:16 PM] File Info:
+{
+  "ignored": false,
+  "inferredParser": "typescript"
+}
+["INFO" - 11:50:16 PM] No local configuration (i.e. .prettierrc or .editorconfig) detected, falling back to VS Code configuration
+["INFO" - 11:50:16 PM] Prettier Options:
+{
+  "arrowParens": "always",
+  "bracketSpacing": true,
+  "endOfLine": "lf",
+  "htmlWhitespaceSensitivity": "css",
+  "insertPragma": false,
+  "jsxBracketSameLine": false,
+  "jsxSingleQuote": false,
+  "printWidth": 80,
+  "proseWrap": "preserve",
+  "quoteProps": "as-needed",
+  "requirePragma": false,
+  "semi": true,
+  "singleQuote": false,
+  "tabWidth": 2,
+  "trailingComma": "es5",
+  "useTabs": false,
+  "vueIndentScriptAndStyle": false,
+  "filepath": "/home/archie/dropship/components/layouts/main.tsx",
+  "parser": "typescript"
+}
+["INFO" - 11:50:16 PM] Formatting completed in 211.161368ms.
+["INFO" - 11:52:54 PM] Formatting /home/archie/dropship/components/layouts/main.tsx
+["INFO" - 11:52:54 PM] Using ignore file (if present) at /home/archie/dropship/.prettierignore
+["INFO" - 11:52:54 PM] Loaded module 'prettier@2.2.0' from '/home/archie/dropship/node_modules/prettier/index.js'
+["INFO" - 11:52:54 PM] File Info:
+{
+  "ignored": false,
+  "inferredParser": "typescript"
+}
+["INFO" - 11:52:54 PM] No local configuration (i.e. .prettierrc or .editorconfig) detected, falling back to VS Code configuration
+["INFO" - 11:52:54 PM] Prettier Options:
+{
+  "arrowParens": "always",
+  "bracketSpacing": true,
+  "endOfLine": "lf",
+  "htmlWhitespaceSensitivity": "css",
+  "insertPragma": false,
+  "jsxBracketSameLine": false,
+  "jsxSingleQuote": false,
+  "printWidth": 80,
+  "proseWrap": "preserve",
+  "quoteProps": "as-needed",
+  "requirePragma": false,
+  "semi": true,
+  "singleQuote": false,
+  "tabWidth": 2,
+  "trailingComma": "es5",
+  "useTabs": false,
+  "vueIndentScriptAndStyle": false,
+  "filepath": "/home/archie/dropship/components/layouts/main.tsx",
+  "parser": "typescript"
+}
+["INFO" - 11:52:54 PM] Formatting completed in 45.476235ms.
+["INFO" - 11:53:03 PM] Formatting /home/archie/dropship/pages/index.tsx
+["INFO" - 11:53:03 PM] Using ignore file (if present) at /home/archie/dropship/.prettierignore
+["INFO" - 11:53:03 PM] Loaded module 'prettier@2.2.0' from '/home/archie/dropship/node_modules/prettier/index.js'
+["INFO" - 11:53:03 PM] File Info:
+{
+  "ignored": false,
+  "inferredParser": "typescript"
+}
+["INFO" - 11:53:03 PM] No local configuration (i.e. .prettierrc or .editorconfig) detected, falling back to VS Code configuration
+["INFO" - 11:53:03 PM] Prettier Options:
+{
+  "arrowParens": "always",
+  "bracketSpacing": true,
+  "endOfLine": "lf",
+  "htmlWhitespaceSensitivity": "css",
+  "insertPragma": false,
+  "jsxBracketSameLine": false,
+  "jsxSingleQuote": false,
+  "printWidth": 80,
+  "proseWrap": "preserve",
+  "quoteProps": "as-needed",
+  "requirePragma": false,
+  "semi": true,
+  "singleQuote": false,
+  "tabWidth": 2,
+  "trailingComma": "es5",
+  "useTabs": false,
+  "vueIndentScriptAndStyle": false,
+  "filepath": "/home/archie/dropship/pages/index.tsx",
+  "parser": "typescript"
+}
+["INFO" - 11:53:03 PM] Formatting completed in 16.427809ms.
+["INFO" - 11:57:40 PM] Formatting /home/archie/dropship/pages/index.tsx
+["INFO" - 11:57:40 PM] Using ignore file (if present) at /home/archie/dropship/.prettierignore
+["INFO" - 11:57:40 PM] Loaded module 'prettier@2.2.0' from '/home/archie/dropship/node_modules/prettier/index.js'
+["INFO" - 11:57:40 PM] File Info:
+{
+  "ignored": false,
+  "inferredParser": "typescript"
+}
+["INFO" - 11:57:40 PM] No local configuration (i.e. .prettierrc or .editorconfig) detected, falling back to VS Code configuration
+["INFO" - 11:57:40 PM] Prettier Options:
+{
+  "arrowParens": "always",
+  "bracketSpacing": true,
+  "endOfLine": "lf",
+  "htmlWhitespaceSensitivity": "css",
+  "insertPragma": false,
+  "jsxBracketSameLine": false,
+  "jsxSingleQuote": false,
+  "printWidth": 80,
+  "proseWrap": "preserve",
+  "quoteProps": "as-needed",
+  "requirePragma": false,
+  "semi": true,
+  "singleQuote": false,
+  "tabWidth": 2,
+  "trailingComma": "es5",
+  "useTabs": false,
+  "vueIndentScriptAndStyle": false,
+  "filepath": "/home/archie/dropship/pages/index.tsx",
+  "parser": "typescript"
+}
+["INFO" - 11:57:40 PM] Formatting completed in 17.141266ms.
+["INFO" - 11:57:54 PM] Formatting /home/archie/dropship/pages/index.tsx
+["INFO" - 11:57:54 PM] Using ignore file (if present) at /home/archie/dropship/.prettierignore
+["INFO" - 11:57:54 PM] Loaded module 'prettier@2.2.0' from '/home/archie/dropship/node_modules/prettier/index.js'
+["INFO" - 11:57:54 PM] File Info:
+{
+  "ignored": false,
+  "inferredParser": "typescript"
+}
+["INFO" - 11:57:54 PM] No local configuration (i.e. .prettierrc or .editorconfig) detected, falling back to VS Code configuration
+["INFO" - 11:57:54 PM] Prettier Options:
+{
+  "arrowParens": "always",
+  "bracketSpacing": true,
+  "endOfLine": "lf",
+  "htmlWhitespaceSensitivity": "css",
+  "insertPragma": false,
+  "jsxBracketSameLine": false,
+  "jsxSingleQuote": false,
+  "printWidth": 80,
+  "proseWrap": "preserve",
+  "quoteProps": "as-needed",
+  "requirePragma": false,
+  "semi": true,
+  "singleQuote": false,
+  "tabWidth": 2,
+  "trailingComma": "es5",
+  "useTabs": false,
+  "vueIndentScriptAndStyle": false,
+  "filepath": "/home/archie/dropship/pages/index.tsx",
+  "parser": "typescript"
+}
+["INFO" - 11:57:54 PM] Formatting completed in 12.851993ms.
+["INFO" - 11:57:59 PM] Formatting /home/archie/dropship/pages/index.tsx
+["INFO" - 11:57:59 PM] Using ignore file (if present) at /home/archie/dropship/.prettierignore
+["INFO" - 11:57:59 PM] Loaded module 'prettier@2.2.0' from '/home/archie/dropship/node_modules/prettier/index.js'
+["INFO" - 11:57:59 PM] File Info:
+{
+  "ignored": false,
+  "inferredParser": "typescript"
+}
+["INFO" - 11:57:59 PM] No local configuration (i.e. .prettierrc or .editorconfig) detected, falling back to VS Code configuration
+["INFO" - 11:57:59 PM] Prettier Options:
+{
+  "arrowParens": "always",
+  "bracketSpacing": true,
+  "endOfLine": "lf",
+  "htmlWhitespaceSensitivity": "css",
+  "insertPragma": false,
+  "jsxBracketSameLine": false,
+  "jsxSingleQuote": false,
+  "printWidth": 80,
+  "proseWrap": "preserve",
+  "quoteProps": "as-needed",
+  "requirePragma": false,
+  "semi": true,
+  "singleQuote": false,
+  "tabWidth": 2,
+  "trailingComma": "es5",
+  "useTabs": false,
+  "vueIndentScriptAndStyle": false,
+  "filepath": "/home/archie/dropship/pages/index.tsx",
+  "parser": "typescript"
+}
+["INFO" - 11:57:59 PM] Formatting completed in 32.097618ms.
+["INFO" - 11:59:08 PM] Formatting /home/archie/dropship/pages/index.tsx
+["INFO" - 11:59:08 PM] Using ignore file (if present) at /home/archie/dropship/.prettierignore
+["INFO" - 11:59:08 PM] Loaded module 'prettier@2.2.0' from '/home/archie/dropship/node_modules/prettier/index.js'
+["INFO" - 11:59:08 PM] File Info:
+{
+  "ignored": false,
+  "inferredParser": "typescript"
+}
+["INFO" - 11:59:08 PM] No local configuration (i.e. .prettierrc or .editorconfig) detected, falling back to VS Code configuration
+["INFO" - 11:59:08 PM] Prettier Options:
+{
+  "arrowParens": "always",
+  "bracketSpacing": true,
+  "endOfLine": "lf",
+  "htmlWhitespaceSensitivity": "css",
+  "insertPragma": false,
+  "jsxBracketSameLine": false,
+  "jsxSingleQuote": false,
+  "printWidth": 80,
+  "proseWrap": "preserve",
+  "quoteProps": "as-needed",
+  "requirePragma": false,
+  "semi": true,
+  "singleQuote": false,
+  "tabWidth": 2,
+  "trailingComma": "es5",
+  "useTabs": false,
+  "vueIndentScriptAndStyle": false,
+  "filepath": "/home/archie/dropship/pages/index.tsx",
+  "parser": "typescript"
+}
+["INFO" - 11:59:08 PM] Formatting completed in 11.717309ms.
+["INFO" - 11:59:26 PM] Formatting /home/archie/dropship/pages/index.tsx
+["INFO" - 11:59:26 PM] Using ignore file (if present) at /home/archie/dropship/.prettierignore
+["INFO" - 11:59:26 PM] Loaded module 'prettier@2.2.0' from '/home/archie/dropship/node_modules/prettier/index.js'
+["INFO" - 11:59:26 PM] File Info:
+{
+  "ignored": false,
+  "inferredParser": "typescript"
+}
+["INFO" - 11:59:26 PM] No local configuration (i.e. .prettierrc or .editorconfig) detected, falling back to VS Code configuration
+["INFO" - 11:59:26 PM] Prettier Options:
+{
+  "arrowParens": "always",
+  "bracketSpacing": true,
+  "endOfLine": "lf",
+  "htmlWhitespaceSensitivity": "css",
+  "insertPragma": false,
+  "jsxBracketSameLine": false,
+  "jsxSingleQuote": false,
+  "printWidth": 80,
+  "proseWrap": "preserve",
+  "quoteProps": "as-needed",
+  "requirePragma": false,
+  "semi": true,
+  "singleQuote": false,
+  "tabWidth": 2,
+  "trailingComma": "es5",
+  "useTabs": false,
+  "vueIndentScriptAndStyle": false,
+  "filepath": "/home/archie/dropship/pages/index.tsx",
+  "parser": "typescript"
+}
+["INFO" - 11:59:26 PM] Formatting completed in 12.711757ms.
+["INFO" - 11:59:55 PM] Formatting /home/archie/dropship/pages/index.tsx
+["INFO" - 11:59:55 PM] Using ignore file (if present) at /home/archie/dropship/.prettierignore
+["INFO" - 11:59:55 PM] Loaded module 'prettier@2.2.0' from '/home/archie/dropship/node_modules/prettier/index.js'
+["INFO" - 11:59:55 PM] File Info:
+{
+  "ignored": false,
+  "inferredParser": "typescript"
+}
+["INFO" - 11:59:55 PM] No local configuration (i.e. .prettierrc or .editorconfig) detected, falling back to VS Code configuration
+["INFO" - 11:59:55 PM] Prettier Options:
+{
+  "arrowParens": "always",
+  "bracketSpacing": true,
+  "endOfLine": "lf",
+  "htmlWhitespaceSensitivity": "css",
+  "insertPragma": false,
+  "jsxBracketSameLine": false,
+  "jsxSingleQuote": false,
+  "printWidth": 80,
+  "proseWrap": "preserve",
+  "quoteProps": "as-needed",
+  "requirePragma": false,
+  "semi": true,
+  "singleQuote": false,
+  "tabWidth": 2,
+  "trailingComma": "es5",
+  "useTabs": false,
+  "vueIndentScriptAndStyle": false,
+  "filepath": "/home/archie/dropship/pages/index.tsx",
+  "parser": "typescript"
+}
+["INFO" - 11:59:55 PM] Formatting completed in 11.600325ms.
+["INFO" - 12:00:00 AM] Formatting /home/archie/dropship/pages/index.tsx
+["INFO" - 12:00:00 AM] Using ignore file (if present) at /home/archie/dropship/.prettierignore
+["INFO" - 12:00:00 AM] Loaded module 'prettier@2.2.0' from '/home/archie/dropship/node_modules/prettier/index.js'
+["INFO" - 12:00:00 AM] File Info:
+{
+  "ignored": false,
+  "inferredParser": "typescript"
+}
+["INFO" - 12:00:01 AM] No local configuration (i.e. .prettierrc or .editorconfig) detected, falling back to VS Code configuration
+["INFO" - 12:00:01 AM] Prettier Options:
+{
+  "arrowParens": "always",
+  "bracketSpacing": true,
+  "endOfLine": "lf",
+  "htmlWhitespaceSensitivity": "css",
+  "insertPragma": false,
+  "jsxBracketSameLine": false,
+  "jsxSingleQuote": false,
+  "printWidth": 80,
+  "proseWrap": "preserve",
+  "quoteProps": "as-needed",
+  "requirePragma": false,
+  "semi": true,
+  "singleQuote": false,
+  "tabWidth": 2,
+  "trailingComma": "es5",
+  "useTabs": false,
+  "vueIndentScriptAndStyle": false,
+  "filepath": "/home/archie/dropship/pages/index.tsx",
+  "parser": "typescript"
+}
+["INFO" - 12:00:01 AM] Formatting completed in 46.180041ms.
+["INFO" - 12:00:12 AM] Formatting /home/archie/dropship/pages/index.tsx
+["INFO" - 12:00:12 AM] Using ignore file (if present) at /home/archie/dropship/.prettierignore
+["INFO" - 12:00:12 AM] Loaded module 'prettier@2.2.0' from '/home/archie/dropship/node_modules/prettier/index.js'
+["INFO" - 12:00:12 AM] File Info:
+{
+  "ignored": false,
+  "inferredParser": "typescript"
+}
+["INFO" - 12:00:13 AM] No local configuration (i.e. .prettierrc or .editorconfig) detected, falling back to VS Code configuration
+["INFO" - 12:00:13 AM] Prettier Options:
+{
+  "arrowParens": "always",
+  "bracketSpacing": true,
+  "endOfLine": "lf",
+  "htmlWhitespaceSensitivity": "css",
+  "insertPragma": false,
+  "jsxBracketSameLine": false,
+  "jsxSingleQuote": false,
+  "printWidth": 80,
+  "proseWrap": "preserve",
+  "quoteProps": "as-needed",
+  "requirePragma": false,
+  "semi": true,
+  "singleQuote": false,
+  "tabWidth": 2,
+  "trailingComma": "es5",
+  "useTabs": false,
+  "vueIndentScriptAndStyle": false,
+  "filepath": "/home/archie/dropship/pages/index.tsx",
+  "parser": "typescript"
+}
+["INFO" - 12:00:13 AM] Formatting completed in 28.204373ms.
+["INFO" - 12:00:42 AM] Formatting /home/archie/dropship/pages/index.tsx
+["INFO" - 12:00:42 AM] Using ignore file (if present) at /home/archie/dropship/.prettierignore
+["INFO" - 12:00:42 AM] Loaded module 'prettier@2.2.0' from '/home/archie/dropship/node_modules/prettier/index.js'
+["INFO" - 12:00:42 AM] File Info:
+{
+  "ignored": false,
+  "inferredParser": "typescript"
+}
+["INFO" - 12:00:42 AM] No local configuration (i.e. .prettierrc or .editorconfig) detected, falling back to VS Code configuration
+["INFO" - 12:00:42 AM] Prettier Options:
+{
+  "arrowParens": "always",
+  "bracketSpacing": true,
+  "endOfLine": "lf",
+  "htmlWhitespaceSensitivity": "css",
+  "insertPragma": false,
+  "jsxBracketSameLine": false,
+  "jsxSingleQuote": false,
+  "printWidth": 80,
+  "proseWrap": "preserve",
+  "quoteProps": "as-needed",
+  "requirePragma": false,
+  "semi": true,
+  "singleQuote": false,
+  "tabWidth": 2,
+  "trailingComma": "es5",
+  "useTabs": false,
+  "vueIndentScriptAndStyle": false,
+  "filepath": "/home/archie/dropship/pages/index.tsx",
+  "parser": "typescript"
+}
+["INFO" - 12:00:42 AM] Formatting completed in 12.504944ms.
+["INFO" - 12:00:57 AM] Formatting /home/archie/dropship/pages/index.tsx
+["INFO" - 12:00:57 AM] Using ignore file (if present) at /home/archie/dropship/.prettierignore
+["INFO" - 12:00:57 AM] Loaded module 'prettier@2.2.0' from '/home/archie/dropship/node_modules/prettier/index.js'
+["INFO" - 12:00:57 AM] File Info:
+{
+  "ignored": false,
+  "inferredParser": "typescript"
+}
+["INFO" - 12:00:57 AM] No local configuration (i.e. .prettierrc or .editorconfig) detected, falling back to VS Code configuration
+["INFO" - 12:00:57 AM] Prettier Options:
+{
+  "arrowParens": "always",
+  "bracketSpacing": true,
+  "endOfLine": "lf",
+  "htmlWhitespaceSensitivity": "css",
+  "insertPragma": false,
+  "jsxBracketSameLine": false,
+  "jsxSingleQuote": false,
+  "printWidth": 80,
+  "proseWrap": "preserve",
+  "quoteProps": "as-needed",
+  "requirePragma": false,
+  "semi": true,
+  "singleQuote": false,
+  "tabWidth": 2,
+  "trailingComma": "es5",
+  "useTabs": false,
+  "vueIndentScriptAndStyle": false,
+  "filepath": "/home/archie/dropship/pages/index.tsx",
+  "parser": "typescript"
+}
+["INFO" - 12:00:57 AM] Formatting completed in 14.119374ms.
+["INFO" - 12:01:01 AM] Formatting /home/archie/dropship/pages/index.tsx
+["INFO" - 12:01:01 AM] Using ignore file (if present) at /home/archie/dropship/.prettierignore
+["INFO" - 12:01:01 AM] Loaded module 'prettier@2.2.0' from '/home/archie/dropship/node_modules/prettier/index.js'
+["INFO" - 12:01:01 AM] File Info:
+{
+  "ignored": false,
+  "inferredParser": "typescript"
+}
+["INFO" - 12:01:01 AM] No local configuration (i.e. .prettierrc or .editorconfig) detected, falling back to VS Code configuration
+["INFO" - 12:01:01 AM] Prettier Options:
+{
+  "arrowParens": "always",
+  "bracketSpacing": true,
+  "endOfLine": "lf",
+  "htmlWhitespaceSensitivity": "css",
+  "insertPragma": false,
+  "jsxBracketSameLine": false,
+  "jsxSingleQuote": false,
+  "printWidth": 80,
+  "proseWrap": "preserve",
+  "quoteProps": "as-needed",
+  "requirePragma": false,
+  "semi": true,
+  "singleQuote": false,
+  "tabWidth": 2,
+  "trailingComma": "es5",
+  "useTabs": false,
+  "vueIndentScriptAndStyle": false,
+  "filepath": "/home/archie/dropship/pages/index.tsx",
+  "parser": "typescript"
+}
+["INFO" - 12:01:01 AM] Formatting completed in 12.027487ms.
+["INFO" - 12:01:05 AM] Formatting /home/archie/dropship/pages/index.tsx
+["INFO" - 12:01:05 AM] Using ignore file (if present) at /home/archie/dropship/.prettierignore
+["INFO" - 12:01:05 AM] Loaded module 'prettier@2.2.0' from '/home/archie/dropship/node_modules/prettier/index.js'
+["INFO" - 12:01:05 AM] File Info:
+{
+  "ignored": false,
+  "inferredParser": "typescript"
+}
+["INFO" - 12:01:05 AM] No local configuration (i.e. .prettierrc or .editorconfig) detected, falling back to VS Code configuration
+["INFO" - 12:01:05 AM] Prettier Options:
+{
+  "arrowParens": "always",
+  "bracketSpacing": true,
+  "endOfLine": "lf",
+  "htmlWhitespaceSensitivity": "css",
+  "insertPragma": false,
+  "jsxBracketSameLine": false,
+  "jsxSingleQuote": false,
+  "printWidth": 80,
+  "proseWrap": "preserve",
+  "quoteProps": "as-needed",
+  "requirePragma": false,
+  "semi": true,
+  "singleQuote": false,
+  "tabWidth": 2,
+  "trailingComma": "es5",
+  "useTabs": false,
+  "vueIndentScriptAndStyle": false,
+  "filepath": "/home/archie/dropship/pages/index.tsx",
+  "parser": "typescript"
+}
+["INFO" - 12:01:05 AM] Formatting completed in 34.806199ms.
+["INFO" - 12:05:34 AM] Formatting /home/archie/dropship/pages/index.tsx
+["INFO" - 12:05:34 AM] Using ignore file (if present) at /home/archie/dropship/.prettierignore
+["INFO" - 12:05:34 AM] Loaded module 'prettier@2.2.0' from '/home/archie/dropship/node_modules/prettier/index.js'
+["INFO" - 12:05:34 AM] File Info:
+{
+  "ignored": false,
+  "inferredParser": "typescript"
+}
+["INFO" - 12:05:34 AM] No local configuration (i.e. .prettierrc or .editorconfig) detected, falling back to VS Code configuration
+["INFO" - 12:05:34 AM] Prettier Options:
+{
+  "arrowParens": "always",
+  "bracketSpacing": true,
+  "endOfLine": "lf",
+  "htmlWhitespaceSensitivity": "css",
+  "insertPragma": false,
+  "jsxBracketSameLine": false,
+  "jsxSingleQuote": false,
+  "printWidth": 80,
+  "proseWrap": "preserve",
+  "quoteProps": "as-needed",
+  "requirePragma": false,
+  "semi": true,
+  "singleQuote": false,
+  "tabWidth": 2,
+  "trailingComma": "es5",
+  "useTabs": false,
+  "vueIndentScriptAndStyle": false,
+  "filepath": "/home/archie/dropship/pages/index.tsx",
+  "parser": "typescript"
+}
+["INFO" - 12:05:34 AM] Formatting completed in 11.99937ms.
+["INFO" - 12:07:28 AM] Formatting /home/archie/dropship/pages/index.tsx
+["INFO" - 12:07:28 AM] Using ignore file (if present) at /home/archie/dropship/.prettierignore
+["INFO" - 12:07:28 AM] Loaded module 'prettier@2.2.0' from '/home/archie/dropship/node_modules/prettier/index.js'
+["INFO" - 12:07:28 AM] File Info:
+{
+  "ignored": false,
+  "inferredParser": "typescript"
+}
+["INFO" - 12:07:28 AM] No local configuration (i.e. .prettierrc or .editorconfig) detected, falling back to VS Code configuration
+["INFO" - 12:07:28 AM] Prettier Options:
+{
+  "arrowParens": "always",
+  "bracketSpacing": true,
+  "endOfLine": "lf",
+  "htmlWhitespaceSensitivity": "css",
+  "insertPragma": false,
+  "jsxBracketSameLine": false,
+  "jsxSingleQuote": false,
+  "printWidth": 80,
+  "proseWrap": "preserve",
+  "quoteProps": "as-needed",
+  "requirePragma": false,
+  "semi": true,
+  "singleQuote": false,
+  "tabWidth": 2,
+  "trailingComma": "es5",
+  "useTabs": false,
+  "vueIndentScriptAndStyle": false,
+  "filepath": "/home/archie/dropship/pages/index.tsx",
+  "parser": "typescript"
+}
+["INFO" - 12:07:28 AM] Formatting completed in 14.617833ms.
+["INFO" - 12:07:42 AM] Formatting /home/archie/dropship/pages/index.tsx
+["INFO" - 12:07:42 AM] Using ignore file (if present) at /home/archie/dropship/.prettierignore
+["INFO" - 12:07:42 AM] Loaded module 'prettier@2.2.0' from '/home/archie/dropship/node_modules/prettier/index.js'
+["INFO" - 12:07:42 AM] File Info:
+{
+  "ignored": false,
+  "inferredParser": "typescript"
+}
+["INFO" - 12:07:42 AM] No local configuration (i.e. .prettierrc or .editorconfig) detected, falling back to VS Code configuration
+["INFO" - 12:07:42 AM] Prettier Options:
+{
+  "arrowParens": "always",
+  "bracketSpacing": true,
+  "endOfLine": "lf",
+  "htmlWhitespaceSensitivity": "css",
+  "insertPragma": false,
+  "jsxBracketSameLine": false,
+  "jsxSingleQuote": false,
+  "printWidth": 80,
+  "proseWrap": "preserve",
+  "quoteProps": "as-needed",
+  "requirePragma": false,
+  "semi": true,
+  "singleQuote": false,
+  "tabWidth": 2,
+  "trailingComma": "es5",
+  "useTabs": false,
+  "vueIndentScriptAndStyle": false,
+  "filepath": "/home/archie/dropship/pages/index.tsx",
+  "parser": "typescript"
+}
+["INFO" - 12:07:42 AM] Formatting completed in 53.911927ms.
+["INFO" - 12:07:51 AM] Formatting /home/archie/dropship/pages/index.tsx
+["INFO" - 12:07:51 AM] Using ignore file (if present) at /home/archie/dropship/.prettierignore
+["INFO" - 12:07:51 AM] Loaded module 'prettier@2.2.0' from '/home/archie/dropship/node_modules/prettier/index.js'
+["INFO" - 12:07:51 AM] File Info:
+{
+  "ignored": false,
+  "inferredParser": "typescript"
+}
+["INFO" - 12:07:51 AM] No local configuration (i.e. .prettierrc or .editorconfig) detected, falling back to VS Code configuration
+["INFO" - 12:07:51 AM] Prettier Options:
+{
+  "arrowParens": "always",
+  "bracketSpacing": true,
+  "endOfLine": "lf",
+  "htmlWhitespaceSensitivity": "css",
+  "insertPragma": false,
+  "jsxBracketSameLine": false,
+  "jsxSingleQuote": false,
+  "printWidth": 80,
+  "proseWrap": "preserve",
+  "quoteProps": "as-needed",
+  "requirePragma": false,
+  "semi": true,
+  "singleQuote": false,
+  "tabWidth": 2,
+  "trailingComma": "es5",
+  "useTabs": false,
+  "vueIndentScriptAndStyle": false,
+  "filepath": "/home/archie/dropship/pages/index.tsx",
+  "parser": "typescript"
+}
+["INFO" - 12:07:51 AM] Formatting completed in 19.92667ms.
+["INFO" - 12:07:54 AM] Formatting /home/archie/dropship/pages/index.tsx
+["INFO" - 12:07:54 AM] Using ignore file (if present) at /home/archie/dropship/.prettierignore
+["INFO" - 12:07:54 AM] Loaded module 'prettier@2.2.0' from '/home/archie/dropship/node_modules/prettier/index.js'
+["INFO" - 12:07:54 AM] File Info:
+{
+  "ignored": false,
+  "inferredParser": "typescript"
+}
+["INFO" - 12:07:54 AM] No local configuration (i.e. .prettierrc or .editorconfig) detected, falling back to VS Code configuration
+["INFO" - 12:07:54 AM] Prettier Options:
+{
+  "arrowParens": "always",
+  "bracketSpacing": true,
+  "endOfLine": "lf",
+  "htmlWhitespaceSensitivity": "css",
+  "insertPragma": false,
+  "jsxBracketSameLine": false,
+  "jsxSingleQuote": false,
+  "printWidth": 80,
+  "proseWrap": "preserve",
+  "quoteProps": "as-needed",
+  "requirePragma": false,
+  "semi": true,
+  "singleQuote": false,
+  "tabWidth": 2,
+  "trailingComma": "es5",
+  "useTabs": false,
+  "vueIndentScriptAndStyle": false,
+  "filepath": "/home/archie/dropship/pages/index.tsx",
+  "parser": "typescript"
+}
+["INFO" - 12:07:54 AM] Formatting completed in 28.048571ms.
+["INFO" - 12:08:26 AM] Formatting /home/archie/dropship/pages/index.tsx
+["INFO" - 12:08:26 AM] Using ignore file (if present) at /home/archie/dropship/.prettierignore
+["INFO" - 12:08:26 AM] Loaded module 'prettier@2.2.0' from '/home/archie/dropship/node_modules/prettier/index.js'
+["INFO" - 12:08:26 AM] File Info:
+{
+  "ignored": false,
+  "inferredParser": "typescript"
+}
+["INFO" - 12:08:26 AM] No local configuration (i.e. .prettierrc or .editorconfig) detected, falling back to VS Code configuration
+["INFO" - 12:08:26 AM] Prettier Options:
+{
+  "arrowParens": "always",
+  "bracketSpacing": true,
+  "endOfLine": "lf",
+  "htmlWhitespaceSensitivity": "css",
+  "insertPragma": false,
+  "jsxBracketSameLine": false,
+  "jsxSingleQuote": false,
+  "printWidth": 80,
+  "proseWrap": "preserve",
+  "quoteProps": "as-needed",
+  "requirePragma": false,
+  "semi": true,
+  "singleQuote": false,
+  "tabWidth": 2,
+  "trailingComma": "es5",
+  "useTabs": false,
+  "vueIndentScriptAndStyle": false,
+  "filepath": "/home/archie/dropship/pages/index.tsx",
+  "parser": "typescript"
+}
+["INFO" - 12:08:26 AM] Formatting completed in 13.038908ms.
+["INFO" - 12:09:33 AM] Formatting /home/archie/dropship/pages/index.tsx
+["INFO" - 12:09:33 AM] Using ignore file (if present) at /home/archie/dropship/.prettierignore
+["INFO" - 12:09:33 AM] Loaded module 'prettier@2.2.0' from '/home/archie/dropship/node_modules/prettier/index.js'
+["INFO" - 12:09:33 AM] File Info:
+{
+  "ignored": false,
+  "inferredParser": "typescript"
+}
+["INFO" - 12:09:33 AM] No local configuration (i.e. .prettierrc or .editorconfig) detected, falling back to VS Code configuration
+["INFO" - 12:09:33 AM] Prettier Options:
+{
+  "arrowParens": "always",
+  "bracketSpacing": true,
+  "endOfLine": "lf",
+  "htmlWhitespaceSensitivity": "css",
+  "insertPragma": false,
+  "jsxBracketSameLine": false,
+  "jsxSingleQuote": false,
+  "printWidth": 80,
+  "proseWrap": "preserve",
+  "quoteProps": "as-needed",
+  "requirePragma": false,
+  "semi": true,
+  "singleQuote": false,
+  "tabWidth": 2,
+  "trailingComma": "es5",
+  "useTabs": false,
+  "vueIndentScriptAndStyle": false,
+  "filepath": "/home/archie/dropship/pages/index.tsx",
+  "parser": "typescript"
+}
+["INFO" - 12:09:33 AM] Formatting completed in 31.0129ms.
+["INFO" - 12:09:35 AM] Formatting /home/archie/dropship/pages/index.tsx
+["INFO" - 12:09:35 AM] Using ignore file (if present) at /home/archie/dropship/.prettierignore
+["INFO" - 12:09:35 AM] Loaded module 'prettier@2.2.0' from '/home/archie/dropship/node_modules/prettier/index.js'
+["INFO" - 12:09:35 AM] File Info:
+{
+  "ignored": false,
+  "inferredParser": "typescript"
+}
+["INFO" - 12:09:35 AM] No local configuration (i.e. .prettierrc or .editorconfig) detected, falling back to VS Code configuration
+["INFO" - 12:09:35 AM] Prettier Options:
+{
+  "arrowParens": "always",
+  "bracketSpacing": true,
+  "endOfLine": "lf",
+  "htmlWhitespaceSensitivity": "css",
+  "insertPragma": false,
+  "jsxBracketSameLine": false,
+  "jsxSingleQuote": false,
+  "printWidth": 80,
+  "proseWrap": "preserve",
+  "quoteProps": "as-needed",
+  "requirePragma": false,
+  "semi": true,
+  "singleQuote": false,
+  "tabWidth": 2,
+  "trailingComma": "es5",
+  "useTabs": false,
+  "vueIndentScriptAndStyle": false,
+  "filepath": "/home/archie/dropship/pages/index.tsx",
+  "parser": "typescript"
+}
+["INFO" - 12:09:35 AM] Formatting completed in 31.834268ms.
+["INFO" - 12:10:28 AM] Formatting /home/archie/dropship/pages/index.tsx
+["INFO" - 12:10:28 AM] Using ignore file (if present) at /home/archie/dropship/.prettierignore
+["INFO" - 12:10:28 AM] Loaded module 'prettier@2.2.0' from '/home/archie/dropship/node_modules/prettier/index.js'
+["INFO" - 12:10:28 AM] File Info:
+{
+  "ignored": false,
+  "inferredParser": "typescript"
+}
+["INFO" - 12:10:28 AM] No local configuration (i.e. .prettierrc or .editorconfig) detected, falling back to VS Code configuration
+["INFO" - 12:10:28 AM] Prettier Options:
+{
+  "arrowParens": "always",
+  "bracketSpacing": true,
+  "endOfLine": "lf",
+  "htmlWhitespaceSensitivity": "css",
+  "insertPragma": false,
+  "jsxBracketSameLine": false,
+  "jsxSingleQuote": false,
+  "printWidth": 80,
+  "proseWrap": "preserve",
+  "quoteProps": "as-needed",
+  "requirePragma": false,
+  "semi": true,
+  "singleQuote": false,
+  "tabWidth": 2,
+  "trailingComma": "es5",
+  "useTabs": false,
+  "vueIndentScriptAndStyle": false,
+  "filepath": "/home/archie/dropship/pages/index.tsx",
+  "parser": "typescript"
+}
+["INFO" - 12:10:28 AM] Formatting completed in 12.194995ms.
+["INFO" - 12:10:32 AM] Formatting /home/archie/dropship/pages/index.tsx
+["INFO" - 12:10:32 AM] Using ignore file (if present) at /home/archie/dropship/.prettierignore
+["INFO" - 12:10:32 AM] Loaded module 'prettier@2.2.0' from '/home/archie/dropship/node_modules/prettier/index.js'
+["INFO" - 12:10:32 AM] File Info:
+{
+  "ignored": false,
+  "inferredParser": "typescript"
+}
+["INFO" - 12:10:32 AM] No local configuration (i.e. .prettierrc or .editorconfig) detected, falling back to VS Code configuration
+["INFO" - 12:10:32 AM] Prettier Options:
+{
+  "arrowParens": "always",
+  "bracketSpacing": true,
+  "endOfLine": "lf",
+  "htmlWhitespaceSensitivity": "css",
+  "insertPragma": false,
+  "jsxBracketSameLine": false,
+  "jsxSingleQuote": false,
+  "printWidth": 80,
+  "proseWrap": "preserve",
+  "quoteProps": "as-needed",
+  "requirePragma": false,
+  "semi": true,
+  "singleQuote": false,
+  "tabWidth": 2,
+  "trailingComma": "es5",
+  "useTabs": false,
+  "vueIndentScriptAndStyle": false,
+  "filepath": "/home/archie/dropship/pages/index.tsx",
+  "parser": "typescript"
+}
+["INFO" - 12:10:33 AM] Formatting completed in 43.267517ms.
+["INFO" - 12:10:45 AM] Formatting /home/archie/dropship/pages/index.tsx
+["INFO" - 12:10:45 AM] Using ignore file (if present) at /home/archie/dropship/.prettierignore
+["INFO" - 12:10:45 AM] Loaded module 'prettier@2.2.0' from '/home/archie/dropship/node_modules/prettier/index.js'
+["INFO" - 12:10:45 AM] File Info:
+{
+  "ignored": false,
+  "inferredParser": "typescript"
+}
+["INFO" - 12:10:45 AM] No local configuration (i.e. .prettierrc or .editorconfig) detected, falling back to VS Code configuration
+["INFO" - 12:10:45 AM] Prettier Options:
+{
+  "arrowParens": "always",
+  "bracketSpacing": true,
+  "endOfLine": "lf",
+  "htmlWhitespaceSensitivity": "css",
+  "insertPragma": false,
+  "jsxBracketSameLine": false,
+  "jsxSingleQuote": false,
+  "printWidth": 80,
+  "proseWrap": "preserve",
+  "quoteProps": "as-needed",
+  "requirePragma": false,
+  "semi": true,
+  "singleQuote": false,
+  "tabWidth": 2,
+  "trailingComma": "es5",
+  "useTabs": false,
+  "vueIndentScriptAndStyle": false,
+  "filepath": "/home/archie/dropship/pages/index.tsx",
+  "parser": "typescript"
+}
+["INFO" - 12:10:45 AM] Formatting completed in 10.346734ms.
+["INFO" - 12:11:10 AM] Formatting /home/archie/dropship/pages/index.tsx
+["INFO" - 12:11:10 AM] Using ignore file (if present) at /home/archie/dropship/.prettierignore
+["INFO" - 12:11:10 AM] Loaded module 'prettier@2.2.0' from '/home/archie/dropship/node_modules/prettier/index.js'
+["INFO" - 12:11:10 AM] File Info:
+{
+  "ignored": false,
+  "inferredParser": "typescript"
+}
+["INFO" - 12:11:10 AM] No local configuration (i.e. .prettierrc or .editorconfig) detected, falling back to VS Code configuration
+["INFO" - 12:11:10 AM] Prettier Options:
+{
+  "arrowParens": "always",
+  "bracketSpacing": true,
+  "endOfLine": "lf",
+  "htmlWhitespaceSensitivity": "css",
+  "insertPragma": false,
+  "jsxBracketSameLine": false,
+  "jsxSingleQuote": false,
+  "printWidth": 80,
+  "proseWrap": "preserve",
+  "quoteProps": "as-needed",
+  "requirePragma": false,
+  "semi": true,
+  "singleQuote": false,
+  "tabWidth": 2,
+  "trailingComma": "es5",
+  "useTabs": false,
+  "vueIndentScriptAndStyle": false,
+  "filepath": "/home/archie/dropship/pages/index.tsx",
+  "parser": "typescript"
+}
+["INFO" - 12:11:10 AM] Formatting completed in 14.85141ms.
+["INFO" - 12:11:25 AM] Formatting /home/archie/dropship/pages/index.tsx
+["INFO" - 12:11:25 AM] Using ignore file (if present) at /home/archie/dropship/.prettierignore
+["INFO" - 12:11:25 AM] Loaded module 'prettier@2.2.0' from '/home/archie/dropship/node_modules/prettier/index.js'
+["INFO" - 12:11:25 AM] File Info:
+{
+  "ignored": false,
+  "inferredParser": "typescript"
+}
+["INFO" - 12:11:25 AM] No local configuration (i.e. .prettierrc or .editorconfig) detected, falling back to VS Code configuration
+["INFO" - 12:11:25 AM] Prettier Options:
+{
+  "arrowParens": "always",
+  "bracketSpacing": true,
+  "endOfLine": "lf",
+  "htmlWhitespaceSensitivity": "css",
+  "insertPragma": false,
+  "jsxBracketSameLine": false,
+  "jsxSingleQuote": false,
+  "printWidth": 80,
+  "proseWrap": "preserve",
+  "quoteProps": "as-needed",
+  "requirePragma": false,
+  "semi": true,
+  "singleQuote": false,
+  "tabWidth": 2,
+  "trailingComma": "es5",
+  "useTabs": false,
+  "vueIndentScriptAndStyle": false,
+  "filepath": "/home/archie/dropship/pages/index.tsx",
+  "parser": "typescript"
+}
+["INFO" - 12:11:25 AM] Formatting completed in 16.883946ms.
+["INFO" - 12:11:45 AM] Formatting /home/archie/dropship/pages/index.tsx
+["INFO" - 12:11:45 AM] Using ignore file (if present) at /home/archie/dropship/.prettierignore
+["INFO" - 12:11:45 AM] Loaded module 'prettier@2.2.0' from '/home/archie/dropship/node_modules/prettier/index.js'
+["INFO" - 12:11:45 AM] File Info:
+{
+  "ignored": false,
+  "inferredParser": "typescript"
+}
+["INFO" - 12:11:45 AM] No local configuration (i.e. .prettierrc or .editorconfig) detected, falling back to VS Code configuration
+["INFO" - 12:11:45 AM] Prettier Options:
+{
+  "arrowParens": "always",
+  "bracketSpacing": true,
+  "endOfLine": "lf",
+  "htmlWhitespaceSensitivity": "css",
+  "insertPragma": false,
+  "jsxBracketSameLine": false,
+  "jsxSingleQuote": false,
+  "printWidth": 80,
+  "proseWrap": "preserve",
+  "quoteProps": "as-needed",
+  "requirePragma": false,
+  "semi": true,
+  "singleQuote": false,
+  "tabWidth": 2,
+  "trailingComma": "es5",
+  "useTabs": false,
+  "vueIndentScriptAndStyle": false,
+  "filepath": "/home/archie/dropship/pages/index.tsx",
+  "parser": "typescript"
+}
+["INFO" - 12:11:45 AM] Formatting completed in 10.967156ms.
+["INFO" - 12:12:06 AM] Formatting /home/archie/dropship/pages/index.tsx
+["INFO" - 12:12:06 AM] Using ignore file (if present) at /home/archie/dropship/.prettierignore
+["INFO" - 12:12:06 AM] Loaded module 'prettier@2.2.0' from '/home/archie/dropship/node_modules/prettier/index.js'
+["INFO" - 12:12:06 AM] File Info:
+{
+  "ignored": false,
+  "inferredParser": "typescript"
+}
+["INFO" - 12:12:06 AM] No local configuration (i.e. .prettierrc or .editorconfig) detected, falling back to VS Code configuration
+["INFO" - 12:12:06 AM] Prettier Options:
+{
+  "arrowParens": "always",
+  "bracketSpacing": true,
+  "endOfLine": "lf",
+  "htmlWhitespaceSensitivity": "css",
+  "insertPragma": false,
+  "jsxBracketSameLine": false,
+  "jsxSingleQuote": false,
+  "printWidth": 80,
+  "proseWrap": "preserve",
+  "quoteProps": "as-needed",
+  "requirePragma": false,
+  "semi": true,
+  "singleQuote": false,
+  "tabWidth": 2,
+  "trailingComma": "es5",
+  "useTabs": false,
+  "vueIndentScriptAndStyle": false,
+  "filepath": "/home/archie/dropship/pages/index.tsx",
+  "parser": "typescript"
+}
+["INFO" - 12:12:06 AM] Formatting completed in 25.66254ms.
+["INFO" - 12:12:14 AM] Formatting /home/archie/dropship/pages/index.tsx
+["INFO" - 12:12:14 AM] Using ignore file (if present) at /home/archie/dropship/.prettierignore
+["INFO" - 12:12:14 AM] Loaded module 'prettier@2.2.0' from '/home/archie/dropship/node_modules/prettier/index.js'
+["INFO" - 12:12:14 AM] File Info:
+{
+  "ignored": false,
+  "inferredParser": "typescript"
+}
+["INFO" - 12:12:14 AM] No local configuration (i.e. .prettierrc or .editorconfig) detected, falling back to VS Code configuration
+["INFO" - 12:12:14 AM] Prettier Options:
+{
+  "arrowParens": "always",
+  "bracketSpacing": true,
+  "endOfLine": "lf",
+  "htmlWhitespaceSensitivity": "css",
+  "insertPragma": false,
+  "jsxBracketSameLine": false,
+  "jsxSingleQuote": false,
+  "printWidth": 80,
+  "proseWrap": "preserve",
+  "quoteProps": "as-needed",
+  "requirePragma": false,
+  "semi": true,
+  "singleQuote": false,
+  "tabWidth": 2,
+  "trailingComma": "es5",
+  "useTabs": false,
+  "vueIndentScriptAndStyle": false,
+  "filepath": "/home/archie/dropship/pages/index.tsx",
+  "parser": "typescript"
+}
+["INFO" - 12:12:14 AM] Formatting completed in 9.73966ms.
+["INFO" - 12:12:37 AM] Formatting /home/archie/dropship/pages/index.tsx
+["INFO" - 12:12:37 AM] Using ignore file (if present) at /home/archie/dropship/.prettierignore
+["INFO" - 12:12:37 AM] Loaded module 'prettier@2.2.0' from '/home/archie/dropship/node_modules/prettier/index.js'
+["INFO" - 12:12:37 AM] File Info:
+{
+  "ignored": false,
+  "inferredParser": "typescript"
+}
+["INFO" - 12:12:37 AM] No local configuration (i.e. .prettierrc or .editorconfig) detected, falling back to VS Code configuration
+["INFO" - 12:12:37 AM] Prettier Options:
+{
+  "arrowParens": "always",
+  "bracketSpacing": true,
+  "endOfLine": "lf",
+  "htmlWhitespaceSensitivity": "css",
+  "insertPragma": false,
+  "jsxBracketSameLine": false,
+  "jsxSingleQuote": false,
+  "printWidth": 80,
+  "proseWrap": "preserve",
+  "quoteProps": "as-needed",
+  "requirePragma": false,
+  "semi": true,
+  "singleQuote": false,
+  "tabWidth": 2,
+  "trailingComma": "es5",
+  "useTabs": false,
+  "vueIndentScriptAndStyle": false,
+  "filepath": "/home/archie/dropship/pages/index.tsx",
+  "parser": "typescript"
+}
+["INFO" - 12:12:37 AM] Formatting completed in 16.307983ms.
+["INFO" - 12:12:47 AM] Formatting /home/archie/dropship/pages/index.tsx
+["INFO" - 12:12:47 AM] Using ignore file (if present) at /home/archie/dropship/.prettierignore
+["INFO" - 12:12:47 AM] Loaded module 'prettier@2.2.0' from '/home/archie/dropship/node_modules/prettier/index.js'
+["INFO" - 12:12:47 AM] File Info:
+{
+  "ignored": false,
+  "inferredParser": "typescript"
+}
+["INFO" - 12:12:47 AM] No local configuration (i.e. .prettierrc or .editorconfig) detected, falling back to VS Code configuration
+["INFO" - 12:12:47 AM] Prettier Options:
+{
+  "arrowParens": "always",
+  "bracketSpacing": true,
+  "endOfLine": "lf",
+  "htmlWhitespaceSensitivity": "css",
+  "insertPragma": false,
+  "jsxBracketSameLine": false,
+  "jsxSingleQuote": false,
+  "printWidth": 80,
+  "proseWrap": "preserve",
+  "quoteProps": "as-needed",
+  "requirePragma": false,
+  "semi": true,
+  "singleQuote": false,
+  "tabWidth": 2,
+  "trailingComma": "es5",
+  "useTabs": false,
+  "vueIndentScriptAndStyle": false,
+  "filepath": "/home/archie/dropship/pages/index.tsx",
+  "parser": "typescript"
+}
+["INFO" - 12:12:47 AM] Formatting completed in 19.510203ms.
+["INFO" - 12:13:27 AM] Formatting /home/archie/dropship/pages/index.tsx
+["INFO" - 12:13:27 AM] Using ignore file (if present) at /home/archie/dropship/.prettierignore
+["INFO" - 12:13:27 AM] Loaded module 'prettier@2.2.0' from '/home/archie/dropship/node_modules/prettier/index.js'
+["INFO" - 12:13:27 AM] File Info:
+{
+  "ignored": false,
+  "inferredParser": "typescript"
+}
+["INFO" - 12:13:27 AM] No local configuration (i.e. .prettierrc or .editorconfig) detected, falling back to VS Code configuration
+["INFO" - 12:13:27 AM] Prettier Options:
+{
+  "arrowParens": "always",
+  "bracketSpacing": true,
+  "endOfLine": "lf",
+  "htmlWhitespaceSensitivity": "css",
+  "insertPragma": false,
+  "jsxBracketSameLine": false,
+  "jsxSingleQuote": false,
+  "printWidth": 80,
+  "proseWrap": "preserve",
+  "quoteProps": "as-needed",
+  "requirePragma": false,
+  "semi": true,
+  "singleQuote": false,
+  "tabWidth": 2,
+  "trailingComma": "es5",
+  "useTabs": false,
+  "vueIndentScriptAndStyle": false,
+  "filepath": "/home/archie/dropship/pages/index.tsx",
+  "parser": "typescript"
+}
+["INFO" - 12:13:27 AM] Formatting completed in 9.716577ms.
+["INFO" - 12:13:30 AM] Formatting /home/archie/dropship/pages/index.tsx
+["INFO" - 12:13:30 AM] Using ignore file (if present) at /home/archie/dropship/.prettierignore
+["INFO" - 12:13:30 AM] Loaded module 'prettier@2.2.0' from '/home/archie/dropship/node_modules/prettier/index.js'
+["INFO" - 12:13:30 AM] File Info:
+{
+  "ignored": false,
+  "inferredParser": "typescript"
+}
+["INFO" - 12:13:30 AM] No local configuration (i.e. .prettierrc or .editorconfig) detected, falling back to VS Code configuration
+["INFO" - 12:13:30 AM] Prettier Options:
+{
+  "arrowParens": "always",
+  "bracketSpacing": true,
+  "endOfLine": "lf",
+  "htmlWhitespaceSensitivity": "css",
+  "insertPragma": false,
+  "jsxBracketSameLine": false,
+  "jsxSingleQuote": false,
+  "printWidth": 80,
+  "proseWrap": "preserve",
+  "quoteProps": "as-needed",
+  "requirePragma": false,
+  "semi": true,
+  "singleQuote": false,
+  "tabWidth": 2,
+  "trailingComma": "es5",
+  "useTabs": false,
+  "vueIndentScriptAndStyle": false,
+  "filepath": "/home/archie/dropship/pages/index.tsx",
+  "parser": "typescript"
+}
+["INFO" - 12:13:30 AM] Formatting completed in 42.577523ms.
+["INFO" - 12:13:32 AM] Formatting /home/archie/dropship/pages/index.tsx
+["INFO" - 12:13:32 AM] Using ignore file (if present) at /home/archie/dropship/.prettierignore
+["INFO" - 12:13:32 AM] Loaded module 'prettier@2.2.0' from '/home/archie/dropship/node_modules/prettier/index.js'
+["INFO" - 12:13:32 AM] File Info:
+{
+  "ignored": false,
+  "inferredParser": "typescript"
+}
+["INFO" - 12:13:32 AM] No local configuration (i.e. .prettierrc or .editorconfig) detected, falling back to VS Code configuration
+["INFO" - 12:13:32 AM] Prettier Options:
+{
+  "arrowParens": "always",
+  "bracketSpacing": true,
+  "endOfLine": "lf",
+  "htmlWhitespaceSensitivity": "css",
+  "insertPragma": false,
+  "jsxBracketSameLine": false,
+  "jsxSingleQuote": false,
+  "printWidth": 80,
+  "proseWrap": "preserve",
+  "quoteProps": "as-needed",
+  "requirePragma": false,
+  "semi": true,
+  "singleQuote": false,
+  "tabWidth": 2,
+  "trailingComma": "es5",
+  "useTabs": false,
+  "vueIndentScriptAndStyle": false,
+  "filepath": "/home/archie/dropship/pages/index.tsx",
+  "parser": "typescript"
+}
+["INFO" - 12:13:32 AM] Formatting completed in 39.450685ms.
+["INFO" - 12:13:45 AM] Formatting /home/archie/dropship/pages/index.tsx
+["INFO" - 12:13:45 AM] Using ignore file (if present) at /home/archie/dropship/.prettierignore
+["INFO" - 12:13:45 AM] Loaded module 'prettier@2.2.0' from '/home/archie/dropship/node_modules/prettier/index.js'
+["INFO" - 12:13:45 AM] File Info:
+{
+  "ignored": false,
+  "inferredParser": "typescript"
+}
+["INFO" - 12:13:45 AM] No local configuration (i.e. .prettierrc or .editorconfig) detected, falling back to VS Code configuration
+["INFO" - 12:13:45 AM] Prettier Options:
+{
+  "arrowParens": "always",
+  "bracketSpacing": true,
+  "endOfLine": "lf",
+  "htmlWhitespaceSensitivity": "css",
+  "insertPragma": false,
+  "jsxBracketSameLine": false,
+  "jsxSingleQuote": false,
+  "printWidth": 80,
+  "proseWrap": "preserve",
+  "quoteProps": "as-needed",
+  "requirePragma": false,
+  "semi": true,
+  "singleQuote": false,
+  "tabWidth": 2,
+  "trailingComma": "es5",
+  "useTabs": false,
+  "vueIndentScriptAndStyle": false,
+  "filepath": "/home/archie/dropship/pages/index.tsx",
+  "parser": "typescript"
+}
+["INFO" - 12:13:45 AM] Formatting completed in 15.984163ms.
+["INFO" - 12:13:53 AM] Formatting /home/archie/dropship/pages/index.tsx
+["INFO" - 12:13:53 AM] Using ignore file (if present) at /home/archie/dropship/.prettierignore
+["INFO" - 12:13:53 AM] Loaded module 'prettier@2.2.0' from '/home/archie/dropship/node_modules/prettier/index.js'
+["INFO" - 12:13:53 AM] File Info:
+{
+  "ignored": false,
+  "inferredParser": "typescript"
+}
+["INFO" - 12:13:53 AM] No local configuration (i.e. .prettierrc or .editorconfig) detected, falling back to VS Code configuration
+["INFO" - 12:13:53 AM] Prettier Options:
+{
+  "arrowParens": "always",
+  "bracketSpacing": true,
+  "endOfLine": "lf",
+  "htmlWhitespaceSensitivity": "css",
+  "insertPragma": false,
+  "jsxBracketSameLine": false,
+  "jsxSingleQuote": false,
+  "printWidth": 80,
+  "proseWrap": "preserve",
+  "quoteProps": "as-needed",
+  "requirePragma": false,
+  "semi": true,
+  "singleQuote": false,
+  "tabWidth": 2,
+  "trailingComma": "es5",
+  "useTabs": false,
+  "vueIndentScriptAndStyle": false,
+  "filepath": "/home/archie/dropship/pages/index.tsx",
+  "parser": "typescript"
+}
+["INFO" - 12:13:53 AM] Formatting completed in 16.829736ms.
+["INFO" - 12:13:58 AM] Formatting /home/archie/dropship/pages/index.tsx
+["INFO" - 12:13:58 AM] Using ignore file (if present) at /home/archie/dropship/.prettierignore
+["INFO" - 12:13:58 AM] Loaded module 'prettier@2.2.0' from '/home/archie/dropship/node_modules/prettier/index.js'
+["INFO" - 12:13:58 AM] File Info:
+{
+  "ignored": false,
+  "inferredParser": "typescript"
+}
+["INFO" - 12:13:58 AM] No local configuration (i.e. .prettierrc or .editorconfig) detected, falling back to VS Code configuration
+["INFO" - 12:13:58 AM] Prettier Options:
+{
+  "arrowParens": "always",
+  "bracketSpacing": true,
+  "endOfLine": "lf",
+  "htmlWhitespaceSensitivity": "css",
+  "insertPragma": false,
+  "jsxBracketSameLine": false,
+  "jsxSingleQuote": false,
+  "printWidth": 80,
+  "proseWrap": "preserve",
+  "quoteProps": "as-needed",
+  "requirePragma": false,
+  "semi": true,
+  "singleQuote": false,
+  "tabWidth": 2,
+  "trailingComma": "es5",
+  "useTabs": false,
+  "vueIndentScriptAndStyle": false,
+  "filepath": "/home/archie/dropship/pages/index.tsx",
+  "parser": "typescript"
+}
+["ERROR" - 12:13:58 AM] Error formatting document.
+["ERROR" - 12:13:58 AM] '{' expected. (8:61)
+   6 |       <Row>
+   7 |         <div className="embed-responsive embed-responsive-21by9">
+>  8 |           <video width="750" height="500" controls autoPlay=true>
+     |                                                             ^
+   9 |             <source src="vid.mp4" type="video/mp4" />
+  10 |           </video>
+  11 |         </div>
+SyntaxError: '{' expected. (8:61)
+   6 |       <Row>
+   7 |         <div className="embed-responsive embed-responsive-21by9">
+>  8 |           <video width="750" height="500" controls autoPlay=true>
+     |                                                             ^
+   9 |             <source src="vid.mp4" type="video/mp4" />
+  10 |           </video>
+  11 |         </div>
+	at e (/home/archie/dropship/node_modules/prettier/parser-typescript.js:1:384)
+	at Object.parse (/home/archie/dropship/node_modules/prettier/parser-typescript.js:1:3072782)
+	at Object.parse (/home/archie/dropship/node_modules/prettier/index.js:13625:19)
+	at coreFormat (/home/archie/dropship/node_modules/prettier/index.js:14899:14)
+	at format (/home/archie/dropship/node_modules/prettier/index.js:15131:14)
+	at /home/archie/dropship/node_modules/prettier/index.js:57542:12
+	at Object.format (/home/archie/dropship/node_modules/prettier/index.js:57562:12)
+	at t.default.<anonymous> (/home/archie/.vscode-oss/extensions/esbenp.prettier-vscode-5.8.0/dist/extension.js:1:17599)
+	at Generator.next (<anonymous>)
+	at s (/home/archie/.vscode-oss/extensions/esbenp.prettier-vscode-5.8.0/dist/extension.js:1:11597)
+["INFO" - 12:13:58 AM] Formatting completed in 14.224911ms.
+["INFO" - 12:14:01 AM] Formatting /home/archie/dropship/pages/index.tsx
+["INFO" - 12:14:01 AM] Using ignore file (if present) at /home/archie/dropship/.prettierignore
+["INFO" - 12:14:01 AM] Loaded module 'prettier@2.2.0' from '/home/archie/dropship/node_modules/prettier/index.js'
+["INFO" - 12:14:01 AM] File Info:
+{
+  "ignored": false,
+  "inferredParser": "typescript"
+}
+["INFO" - 12:14:01 AM] No local configuration (i.e. .prettierrc or .editorconfig) detected, falling back to VS Code configuration
+["INFO" - 12:14:01 AM] Prettier Options:
+{
+  "arrowParens": "always",
+  "bracketSpacing": true,
+  "endOfLine": "lf",
+  "htmlWhitespaceSensitivity": "css",
+  "insertPragma": false,
+  "jsxBracketSameLine": false,
+  "jsxSingleQuote": false,
+  "printWidth": 80,
+  "proseWrap": "preserve",
+  "quoteProps": "as-needed",
+  "requirePragma": false,
+  "semi": true,
+  "singleQuote": false,
+  "tabWidth": 2,
+  "trailingComma": "es5",
+  "useTabs": false,
+  "vueIndentScriptAndStyle": false,
+  "filepath": "/home/archie/dropship/pages/index.tsx",
+  "parser": "typescript"
+}
+["INFO" - 12:14:01 AM] Formatting completed in 20.814708ms.
+["INFO" - 12:14:54 AM] Formatting /home/archie/dropship/pages/index.tsx
+["INFO" - 12:14:54 AM] Using ignore file (if present) at /home/archie/dropship/.prettierignore
+["INFO" - 12:14:54 AM] Loaded module 'prettier@2.2.0' from '/home/archie/dropship/node_modules/prettier/index.js'
+["INFO" - 12:14:54 AM] File Info:
+{
+  "ignored": false,
+  "inferredParser": "typescript"
+}
+["INFO" - 12:14:54 AM] No local configuration (i.e. .prettierrc or .editorconfig) detected, falling back to VS Code configuration
+["INFO" - 12:14:54 AM] Prettier Options:
+{
+  "arrowParens": "always",
+  "bracketSpacing": true,
+  "endOfLine": "lf",
+  "htmlWhitespaceSensitivity": "css",
+  "insertPragma": false,
+  "jsxBracketSameLine": false,
+  "jsxSingleQuote": false,
+  "printWidth": 80,
+  "proseWrap": "preserve",
+  "quoteProps": "as-needed",
+  "requirePragma": false,
+  "semi": true,
+  "singleQuote": false,
+  "tabWidth": 2,
+  "trailingComma": "es5",
+  "useTabs": false,
+  "vueIndentScriptAndStyle": false,
+  "filepath": "/home/archie/dropship/pages/index.tsx",
+  "parser": "typescript"
+}
+["INFO" - 12:14:54 AM] Formatting completed in 22.145825ms.
+["INFO" - 12:15:10 AM] Formatting /home/archie/dropship/pages/index.tsx
+["INFO" - 12:15:10 AM] Using ignore file (if present) at /home/archie/dropship/.prettierignore
+["INFO" - 12:15:10 AM] Loaded module 'prettier@2.2.0' from '/home/archie/dropship/node_modules/prettier/index.js'
+["INFO" - 12:15:10 AM] File Info:
+{
+  "ignored": false,
+  "inferredParser": "typescript"
+}
+["INFO" - 12:15:10 AM] No local configuration (i.e. .prettierrc or .editorconfig) detected, falling back to VS Code configuration
+["INFO" - 12:15:10 AM] Prettier Options:
+{
+  "arrowParens": "always",
+  "bracketSpacing": true,
+  "endOfLine": "lf",
+  "htmlWhitespaceSensitivity": "css",
+  "insertPragma": false,
+  "jsxBracketSameLine": false,
+  "jsxSingleQuote": false,
+  "printWidth": 80,
+  "proseWrap": "preserve",
+  "quoteProps": "as-needed",
+  "requirePragma": false,
+  "semi": true,
+  "singleQuote": false,
+  "tabWidth": 2,
+  "trailingComma": "es5",
+  "useTabs": false,
+  "vueIndentScriptAndStyle": false,
+  "filepath": "/home/archie/dropship/pages/index.tsx",
+  "parser": "typescript"
+}
+["INFO" - 12:15:10 AM] Formatting completed in 42.144437ms.
+["INFO" - 12:16:40 AM] Formatting /home/archie/dropship/pages/index.tsx
+["INFO" - 12:16:40 AM] Using ignore file (if present) at /home/archie/dropship/.prettierignore
+["INFO" - 12:16:40 AM] Loaded module 'prettier@2.2.0' from '/home/archie/dropship/node_modules/prettier/index.js'
+["INFO" - 12:16:40 AM] File Info:
+{
+  "ignored": false,
+  "inferredParser": "typescript"
+}
+["INFO" - 12:16:40 AM] No local configuration (i.e. .prettierrc or .editorconfig) detected, falling back to VS Code configuration
+["INFO" - 12:16:40 AM] Prettier Options:
+{
+  "arrowParens": "always",
+  "bracketSpacing": true,
+  "endOfLine": "lf",
+  "htmlWhitespaceSensitivity": "css",
+  "insertPragma": false,
+  "jsxBracketSameLine": false,
+  "jsxSingleQuote": false,
+  "printWidth": 80,
+  "proseWrap": "preserve",
+  "quoteProps": "as-needed",
+  "requirePragma": false,
+  "semi": true,
+  "singleQuote": false,
+  "tabWidth": 2,
+  "trailingComma": "es5",
+  "useTabs": false,
+  "vueIndentScriptAndStyle": false,
+  "filepath": "/home/archie/dropship/pages/index.tsx",
+  "parser": "typescript"
+}
+["ERROR" - 12:16:40 AM] Error formatting document.
+["ERROR" - 12:16:40 AM] Expected corresponding JSX closing tag for 'source'. (11:1)
+   9 | 
+  10 |   <source src="vid.mp4" type="video/mp4">
+> 11 | </video>
+     | ^
+  12 |         </div>
+  13 |       </Row>
+  14 |     </Container>
+SyntaxError: Expected corresponding JSX closing tag for 'source'. (11:1)
+   9 | 
+  10 |   <source src="vid.mp4" type="video/mp4">
+> 11 | </video>
+     | ^
+  12 |         </div>
+  13 |       </Row>
+  14 |     </Container>
+	at e (/home/archie/dropship/node_modules/prettier/parser-typescript.js:1:384)
+	at Object.parse (/home/archie/dropship/node_modules/prettier/parser-typescript.js:1:3072782)
+	at Object.parse (/home/archie/dropship/node_modules/prettier/index.js:13625:19)
+	at coreFormat (/home/archie/dropship/node_modules/prettier/index.js:14899:14)
+	at format (/home/archie/dropship/node_modules/prettier/index.js:15131:14)
+	at /home/archie/dropship/node_modules/prettier/index.js:57542:12
+	at Object.format (/home/archie/dropship/node_modules/prettier/index.js:57562:12)
+	at t.default.<anonymous> (/home/archie/.vscode-oss/extensions/esbenp.prettier-vscode-5.8.0/dist/extension.js:1:17599)
+	at Generator.next (<anonymous>)
+	at s (/home/archie/.vscode-oss/extensions/esbenp.prettier-vscode-5.8.0/dist/extension.js:1:11597)
+["INFO" - 12:16:40 AM] Formatting completed in 13.555357ms.
+["INFO" - 12:16:42 AM] Formatting /home/archie/dropship/pages/index.tsx
+["INFO" - 12:16:42 AM] Using ignore file (if present) at /home/archie/dropship/.prettierignore
+["INFO" - 12:16:42 AM] Loaded module 'prettier@2.2.0' from '/home/archie/dropship/node_modules/prettier/index.js'
+["INFO" - 12:16:42 AM] File Info:
+{
+  "ignored": false,
+  "inferredParser": "typescript"
+}
+["INFO" - 12:16:42 AM] No local configuration (i.e. .prettierrc or .editorconfig) detected, falling back to VS Code configuration
+["INFO" - 12:16:42 AM] Prettier Options:
+{
+  "arrowParens": "always",
+  "bracketSpacing": true,
+  "endOfLine": "lf",
+  "htmlWhitespaceSensitivity": "css",
+  "insertPragma": false,
+  "jsxBracketSameLine": false,
+  "jsxSingleQuote": false,
+  "printWidth": 80,
+  "proseWrap": "preserve",
+  "quoteProps": "as-needed",
+  "requirePragma": false,
+  "semi": true,
+  "singleQuote": false,
+  "tabWidth": 2,
+  "trailingComma": "es5",
+  "useTabs": false,
+  "vueIndentScriptAndStyle": false,
+  "filepath": "/home/archie/dropship/pages/index.tsx",
+  "parser": "typescript"
+}
+["ERROR" - 12:16:42 AM] Error formatting document.
+["ERROR" - 12:16:42 AM] Expected corresponding JSX closing tag for 'source'. (11:1)
+   9 | 
+  10 |   <source src="vid.mp4" type="video/mp4">
+> 11 | </video>
+     | ^
+  12 |         </div>
+  13 |       </Row>
+  14 |     </Container>
+SyntaxError: Expected corresponding JSX closing tag for 'source'. (11:1)
+   9 | 
+  10 |   <source src="vid.mp4" type="video/mp4">
+> 11 | </video>
+     | ^
+  12 |         </div>
+  13 |       </Row>
+  14 |     </Container>
+	at e (/home/archie/dropship/node_modules/prettier/parser-typescript.js:1:384)
+	at Object.parse (/home/archie/dropship/node_modules/prettier/parser-typescript.js:1:3072782)
+	at Object.parse (/home/archie/dropship/node_modules/prettier/index.js:13625:19)
+	at coreFormat (/home/archie/dropship/node_modules/prettier/index.js:14899:14)
+	at format (/home/archie/dropship/node_modules/prettier/index.js:15131:14)
+	at /home/archie/dropship/node_modules/prettier/index.js:57542:12
+	at Object.format (/home/archie/dropship/node_modules/prettier/index.js:57562:12)
+	at t.default.<anonymous> (/home/archie/.vscode-oss/extensions/esbenp.prettier-vscode-5.8.0/dist/extension.js:1:17599)
+	at Generator.next (<anonymous>)
+	at s (/home/archie/.vscode-oss/extensions/esbenp.prettier-vscode-5.8.0/dist/extension.js:1:11597)
+["INFO" - 12:16:42 AM] Formatting completed in 91.412572ms.
+["INFO" - 12:16:48 AM] Formatting /home/archie/dropship/pages/index.tsx
+["INFO" - 12:16:48 AM] Using ignore file (if present) at /home/archie/dropship/.prettierignore
+["INFO" - 12:16:48 AM] Loaded module 'prettier@2.2.0' from '/home/archie/dropship/node_modules/prettier/index.js'
+["INFO" - 12:16:48 AM] File Info:
+{
+  "ignored": false,
+  "inferredParser": "typescript"
+}
+["INFO" - 12:16:48 AM] No local configuration (i.e. .prettierrc or .editorconfig) detected, falling back to VS Code configuration
+["INFO" - 12:16:48 AM] Prettier Options:
+{
+  "arrowParens": "always",
+  "bracketSpacing": true,
+  "endOfLine": "lf",
+  "htmlWhitespaceSensitivity": "css",
+  "insertPragma": false,
+  "jsxBracketSameLine": false,
+  "jsxSingleQuote": false,
+  "printWidth": 80,
+  "proseWrap": "preserve",
+  "quoteProps": "as-needed",
+  "requirePragma": false,
+  "semi": true,
+  "singleQuote": false,
+  "tabWidth": 2,
+  "trailingComma": "es5",
+  "useTabs": false,
+  "vueIndentScriptAndStyle": false,
+  "filepath": "/home/archie/dropship/pages/index.tsx",
+  "parser": "typescript"
+}
+["ERROR" - 12:16:48 AM] Error formatting document.
+["ERROR" - 12:16:48 AM] Expected corresponding JSX closing tag for 'source'. (11:1)
+   9 | 
+  10 |   <source src="vid.mp4" type="video/mp4">
+> 11 | </video>
+     | ^
+  12 |         </div>
+  13 |       </Row>
+  14 |     </Container>
+SyntaxError: Expected corresponding JSX closing tag for 'source'. (11:1)
+   9 | 
+  10 |   <source src="vid.mp4" type="video/mp4">
+> 11 | </video>
+     | ^
+  12 |         </div>
+  13 |       </Row>
+  14 |     </Container>
+	at e (/home/archie/dropship/node_modules/prettier/parser-typescript.js:1:384)
+	at Object.parse (/home/archie/dropship/node_modules/prettier/parser-typescript.js:1:3072782)
+	at Object.parse (/home/archie/dropship/node_modules/prettier/index.js:13625:19)
+	at coreFormat (/home/archie/dropship/node_modules/prettier/index.js:14899:14)
+	at format (/home/archie/dropship/node_modules/prettier/index.js:15131:14)
+	at /home/archie/dropship/node_modules/prettier/index.js:57542:12
+	at Object.format (/home/archie/dropship/node_modules/prettier/index.js:57562:12)
+	at t.default.<anonymous> (/home/archie/.vscode-oss/extensions/esbenp.prettier-vscode-5.8.0/dist/extension.js:1:17599)
+	at Generator.next (<anonymous>)
+	at s (/home/archie/.vscode-oss/extensions/esbenp.prettier-vscode-5.8.0/dist/extension.js:1:11597)
+["INFO" - 12:16:48 AM] Formatting completed in 43.845652ms.
+["INFO" - 12:16:59 AM] Formatting /home/archie/dropship/pages/index.tsx
+["INFO" - 12:16:59 AM] Using ignore file (if present) at /home/archie/dropship/.prettierignore
+["INFO" - 12:16:59 AM] Loaded module 'prettier@2.2.0' from '/home/archie/dropship/node_modules/prettier/index.js'
+["INFO" - 12:16:59 AM] File Info:
+{
+  "ignored": false,
+  "inferredParser": "typescript"
+}
+["INFO" - 12:16:59 AM] No local configuration (i.e. .prettierrc or .editorconfig) detected, falling back to VS Code configuration
+["INFO" - 12:16:59 AM] Prettier Options:
+{
+  "arrowParens": "always",
+  "bracketSpacing": true,
+  "endOfLine": "lf",
+  "htmlWhitespaceSensitivity": "css",
+  "insertPragma": false,
+  "jsxBracketSameLine": false,
+  "jsxSingleQuote": false,
+  "printWidth": 80,
+  "proseWrap": "preserve",
+  "quoteProps": "as-needed",
+  "requirePragma": false,
+  "semi": true,
+  "singleQuote": false,
+  "tabWidth": 2,
+  "trailingComma": "es5",
+  "useTabs": false,
+  "vueIndentScriptAndStyle": false,
+  "filepath": "/home/archie/dropship/pages/index.tsx",
+  "parser": "typescript"
+}
+["INFO" - 12:16:59 AM] Formatting completed in 19.860283ms.
+["INFO" - 12:17:15 AM] Formatting /home/archie/dropship/pages/index.tsx
+["INFO" - 12:17:15 AM] Using ignore file (if present) at /home/archie/dropship/.prettierignore
+["INFO" - 12:17:15 AM] Loaded module 'prettier@2.2.0' from '/home/archie/dropship/node_modules/prettier/index.js'
+["INFO" - 12:17:15 AM] File Info:
+{
+  "ignored": false,
+  "inferredParser": "typescript"
+}
+["INFO" - 12:17:15 AM] No local configuration (i.e. .prettierrc or .editorconfig) detected, falling back to VS Code configuration
+["INFO" - 12:17:15 AM] Prettier Options:
+{
+  "arrowParens": "always",
+  "bracketSpacing": true,
+  "endOfLine": "lf",
+  "htmlWhitespaceSensitivity": "css",
+  "insertPragma": false,
+  "jsxBracketSameLine": false,
+  "jsxSingleQuote": false,
+  "printWidth": 80,
+  "proseWrap": "preserve",
+  "quoteProps": "as-needed",
+  "requirePragma": false,
+  "semi": true,
+  "singleQuote": false,
+  "tabWidth": 2,
+  "trailingComma": "es5",
+  "useTabs": false,
+  "vueIndentScriptAndStyle": false,
+  "filepath": "/home/archie/dropship/pages/index.tsx",
+  "parser": "typescript"
+}
+["ERROR" - 12:17:15 AM] Error formatting document.
+["ERROR" - 12:17:15 AM] Expected corresponding JSX closing tag for 'source'. (11:1)
+   9 |   <source src="polina.webm" type="video/webm">
+  10 |   <source src="polina.mp4" type="video/mp4" />
+> 11 | </video>
+     | ^
+  12 |         </div>
+  13 |       </Row>
+  14 |     </Container>
+SyntaxError: Expected corresponding JSX closing tag for 'source'. (11:1)
+   9 |   <source src="polina.webm" type="video/webm">
+  10 |   <source src="polina.mp4" type="video/mp4" />
+> 11 | </video>
+     | ^
+  12 |         </div>
+  13 |       </Row>
+  14 |     </Container>
+	at e (/home/archie/dropship/node_modules/prettier/parser-typescript.js:1:384)
+	at Object.parse (/home/archie/dropship/node_modules/prettier/parser-typescript.js:1:3072782)
+	at Object.parse (/home/archie/dropship/node_modules/prettier/index.js:13625:19)
+	at coreFormat (/home/archie/dropship/node_modules/prettier/index.js:14899:14)
+	at format (/home/archie/dropship/node_modules/prettier/index.js:15131:14)
+	at /home/archie/dropship/node_modules/prettier/index.js:57542:12
+	at Object.format (/home/archie/dropship/node_modules/prettier/index.js:57562:12)
+	at t.default.<anonymous> (/home/archie/.vscode-oss/extensions/esbenp.prettier-vscode-5.8.0/dist/extension.js:1:17599)
+	at Generator.next (<anonymous>)
+	at s (/home/archie/.vscode-oss/extensions/esbenp.prettier-vscode-5.8.0/dist/extension.js:1:11597)
+["INFO" - 12:17:15 AM] Formatting completed in 8.239391ms.
+["INFO" - 12:17:17 AM] Formatting /home/archie/dropship/pages/index.tsx
+["INFO" - 12:17:17 AM] Using ignore file (if present) at /home/archie/dropship/.prettierignore
+["INFO" - 12:17:17 AM] Loaded module 'prettier@2.2.0' from '/home/archie/dropship/node_modules/prettier/index.js'
+["INFO" - 12:17:17 AM] File Info:
+{
+  "ignored": false,
+  "inferredParser": "typescript"
+}
+["INFO" - 12:17:17 AM] No local configuration (i.e. .prettierrc or .editorconfig) detected, falling back to VS Code configuration
+["INFO" - 12:17:17 AM] Prettier Options:
+{
+  "arrowParens": "always",
+  "bracketSpacing": true,
+  "endOfLine": "lf",
+  "htmlWhitespaceSensitivity": "css",
+  "insertPragma": false,
+  "jsxBracketSameLine": false,
+  "jsxSingleQuote": false,
+  "printWidth": 80,
+  "proseWrap": "preserve",
+  "quoteProps": "as-needed",
+  "requirePragma": false,
+  "semi": true,
+  "singleQuote": false,
+  "tabWidth": 2,
+  "trailingComma": "es5",
+  "useTabs": false,
+  "vueIndentScriptAndStyle": false,
+  "filepath": "/home/archie/dropship/pages/index.tsx",
+  "parser": "typescript"
+}
+["INFO" - 12:17:17 AM] Formatting completed in 8.983572ms.
+["INFO" - 12:17:20 AM] Formatting /home/archie/dropship/pages/index.tsx
+["INFO" - 12:17:20 AM] Using ignore file (if present) at /home/archie/dropship/.prettierignore
+["INFO" - 12:17:20 AM] Loaded module 'prettier@2.2.0' from '/home/archie/dropship/node_modules/prettier/index.js'
+["INFO" - 12:17:20 AM] File Info:
+{
+  "ignored": false,
+  "inferredParser": "typescript"
+}
+["INFO" - 12:17:20 AM] No local configuration (i.e. .prettierrc or .editorconfig) detected, falling back to VS Code configuration
+["INFO" - 12:17:20 AM] Prettier Options:
+{
+  "arrowParens": "always",
+  "bracketSpacing": true,
+  "endOfLine": "lf",
+  "htmlWhitespaceSensitivity": "css",
+  "insertPragma": false,
+  "jsxBracketSameLine": false,
+  "jsxSingleQuote": false,
+  "printWidth": 80,
+  "proseWrap": "preserve",
+  "quoteProps": "as-needed",
+  "requirePragma": false,
+  "semi": true,
+  "singleQuote": false,
+  "tabWidth": 2,
+  "trailingComma": "es5",
+  "useTabs": false,
+  "vueIndentScriptAndStyle": false,
+  "filepath": "/home/archie/dropship/pages/index.tsx",
+  "parser": "typescript"
+}
+["INFO" - 12:17:20 AM] Formatting completed in 8.762733ms.
+["INFO" - 12:17:22 AM] Formatting /home/archie/dropship/pages/index.tsx
+["INFO" - 12:17:22 AM] Using ignore file (if present) at /home/archie/dropship/.prettierignore
+["INFO" - 12:17:22 AM] Loaded module 'prettier@2.2.0' from '/home/archie/dropship/node_modules/prettier/index.js'
+["INFO" - 12:17:22 AM] File Info:
+{
+  "ignored": false,
+  "inferredParser": "typescript"
+}
+["INFO" - 12:17:22 AM] No local configuration (i.e. .prettierrc or .editorconfig) detected, falling back to VS Code configuration
+["INFO" - 12:17:22 AM] Prettier Options:
+{
+  "arrowParens": "always",
+  "bracketSpacing": true,
+  "endOfLine": "lf",
+  "htmlWhitespaceSensitivity": "css",
+  "insertPragma": false,
+  "jsxBracketSameLine": false,
+  "jsxSingleQuote": false,
+  "printWidth": 80,
+  "proseWrap": "preserve",
+  "quoteProps": "as-needed",
+  "requirePragma": false,
+  "semi": true,
+  "singleQuote": false,
+  "tabWidth": 2,
+  "trailingComma": "es5",
+  "useTabs": false,
+  "vueIndentScriptAndStyle": false,
+  "filepath": "/home/archie/dropship/pages/index.tsx",
+  "parser": "typescript"
+}
+["INFO" - 12:17:22 AM] Formatting completed in 11.00146ms.
+["INFO" - 12:17:32 AM] Formatting /home/archie/dropship/pages/index.tsx
+["INFO" - 12:17:32 AM] Using ignore file (if present) at /home/archie/dropship/.prettierignore
+["INFO" - 12:17:32 AM] Loaded module 'prettier@2.2.0' from '/home/archie/dropship/node_modules/prettier/index.js'
+["INFO" - 12:17:32 AM] File Info:
+{
+  "ignored": false,
+  "inferredParser": "typescript"
+}
+["INFO" - 12:17:32 AM] No local configuration (i.e. .prettierrc or .editorconfig) detected, falling back to VS Code configuration
+["INFO" - 12:17:32 AM] Prettier Options:
+{
+  "arrowParens": "always",
+  "bracketSpacing": true,
+  "endOfLine": "lf",
+  "htmlWhitespaceSensitivity": "css",
+  "insertPragma": false,
+  "jsxBracketSameLine": false,
+  "jsxSingleQuote": false,
+  "printWidth": 80,
+  "proseWrap": "preserve",
+  "quoteProps": "as-needed",
+  "requirePragma": false,
+  "semi": true,
+  "singleQuote": false,
+  "tabWidth": 2,
+  "trailingComma": "es5",
+  "useTabs": false,
+  "vueIndentScriptAndStyle": false,
+  "filepath": "/home/archie/dropship/pages/index.tsx",
+  "parser": "typescript"
+}
+["INFO" - 12:17:32 AM] Formatting completed in 9.907963ms.
+["INFO" - 12:17:43 AM] Formatting /home/archie/dropship/pages/index.tsx
+["INFO" - 12:17:43 AM] Using ignore file (if present) at /home/archie/dropship/.prettierignore
+["INFO" - 12:17:43 AM] Loaded module 'prettier@2.2.0' from '/home/archie/dropship/node_modules/prettier/index.js'
+["INFO" - 12:17:43 AM] File Info:
+{
+  "ignored": false,
+  "inferredParser": "typescript"
+}
+["INFO" - 12:17:43 AM] No local configuration (i.e. .prettierrc or .editorconfig) detected, falling back to VS Code configuration
+["INFO" - 12:17:43 AM] Prettier Options:
+{
+  "arrowParens": "always",
+  "bracketSpacing": true,
+  "endOfLine": "lf",
+  "htmlWhitespaceSensitivity": "css",
+  "insertPragma": false,
+  "jsxBracketSameLine": false,
+  "jsxSingleQuote": false,
+  "printWidth": 80,
+  "proseWrap": "preserve",
+  "quoteProps": "as-needed",
+  "requirePragma": false,
+  "semi": true,
+  "singleQuote": false,
+  "tabWidth": 2,
+  "trailingComma": "es5",
+  "useTabs": false,
+  "vueIndentScriptAndStyle": false,
+  "filepath": "/home/archie/dropship/pages/index.tsx",
+  "parser": "typescript"
+}
+["INFO" - 12:17:43 AM] Formatting completed in 18.616734ms.
+["INFO" - 12:17:45 AM] Formatting /home/archie/dropship/pages/index.tsx
+["INFO" - 12:17:45 AM] Using ignore file (if present) at /home/archie/dropship/.prettierignore
+["INFO" - 12:17:45 AM] Loaded module 'prettier@2.2.0' from '/home/archie/dropship/node_modules/prettier/index.js'
+["INFO" - 12:17:45 AM] File Info:
+{
+  "ignored": false,
+  "inferredParser": "typescript"
+}
+["INFO" - 12:17:45 AM] No local configuration (i.e. .prettierrc or .editorconfig) detected, falling back to VS Code configuration
+["INFO" - 12:17:45 AM] Prettier Options:
+{
+  "arrowParens": "always",
+  "bracketSpacing": true,
+  "endOfLine": "lf",
+  "htmlWhitespaceSensitivity": "css",
+  "insertPragma": false,
+  "jsxBracketSameLine": false,
+  "jsxSingleQuote": false,
+  "printWidth": 80,
+  "proseWrap": "preserve",
+  "quoteProps": "as-needed",
+  "requirePragma": false,
+  "semi": true,
+  "singleQuote": false,
+  "tabWidth": 2,
+  "trailingComma": "es5",
+  "useTabs": false,
+  "vueIndentScriptAndStyle": false,
+  "filepath": "/home/archie/dropship/pages/index.tsx",
+  "parser": "typescript"
+}
+["INFO" - 12:17:45 AM] Formatting completed in 40.649043ms.
+["INFO" - 12:18:09 AM] Formatting /home/archie/dropship/pages/index.tsx
+["INFO" - 12:18:09 AM] Using ignore file (if present) at /home/archie/dropship/.prettierignore
+["INFO" - 12:18:09 AM] Loaded module 'prettier@2.2.0' from '/home/archie/dropship/node_modules/prettier/index.js'
+["INFO" - 12:18:09 AM] File Info:
+{
+  "ignored": false,
+  "inferredParser": "typescript"
+}
+["INFO" - 12:18:09 AM] No local configuration (i.e. .prettierrc or .editorconfig) detected, falling back to VS Code configuration
+["INFO" - 12:18:09 AM] Prettier Options:
+{
+  "arrowParens": "always",
+  "bracketSpacing": true,
+  "endOfLine": "lf",
+  "htmlWhitespaceSensitivity": "css",
+  "insertPragma": false,
+  "jsxBracketSameLine": false,
+  "jsxSingleQuote": false,
+  "printWidth": 80,
+  "proseWrap": "preserve",
+  "quoteProps": "as-needed",
+  "requirePragma": false,
+  "semi": true,
+  "singleQuote": false,
+  "tabWidth": 2,
+  "trailingComma": "es5",
+  "useTabs": false,
+  "vueIndentScriptAndStyle": false,
+  "filepath": "/home/archie/dropship/pages/index.tsx",
+  "parser": "typescript"
+}
+["INFO" - 12:18:09 AM] Formatting completed in 10.802516ms.
+["INFO" - 12:18:13 AM] Formatting /home/archie/dropship/pages/index.tsx
+["INFO" - 12:18:13 AM] Using ignore file (if present) at /home/archie/dropship/.prettierignore
+["INFO" - 12:18:13 AM] Loaded module 'prettier@2.2.0' from '/home/archie/dropship/node_modules/prettier/index.js'
+["INFO" - 12:18:13 AM] File Info:
+{
+  "ignored": false,
+  "inferredParser": "typescript"
+}
+["INFO" - 12:18:13 AM] No local configuration (i.e. .prettierrc or .editorconfig) detected, falling back to VS Code configuration
+["INFO" - 12:18:13 AM] Prettier Options:
+{
+  "arrowParens": "always",
+  "bracketSpacing": true,
+  "endOfLine": "lf",
+  "htmlWhitespaceSensitivity": "css",
+  "insertPragma": false,
+  "jsxBracketSameLine": false,
+  "jsxSingleQuote": false,
+  "printWidth": 80,
+  "proseWrap": "preserve",
+  "quoteProps": "as-needed",
+  "requirePragma": false,
+  "semi": true,
+  "singleQuote": false,
+  "tabWidth": 2,
+  "trailingComma": "es5",
+  "useTabs": false,
+  "vueIndentScriptAndStyle": false,
+  "filepath": "/home/archie/dropship/pages/index.tsx",
+  "parser": "typescript"
+}
+["INFO" - 12:18:13 AM] Formatting completed in 35.320505ms.
+["INFO" - 12:19:18 AM] Formatting /home/archie/dropship/pages/index.tsx
+["INFO" - 12:19:18 AM] Using ignore file (if present) at /home/archie/dropship/.prettierignore
+["INFO" - 12:19:18 AM] Loaded module 'prettier@2.2.0' from '/home/archie/dropship/node_modules/prettier/index.js'
+["INFO" - 12:19:18 AM] File Info:
+{
+  "ignored": false,
+  "inferredParser": "typescript"
+}
+["INFO" - 12:19:18 AM] No local configuration (i.e. .prettierrc or .editorconfig) detected, falling back to VS Code configuration
+["INFO" - 12:19:18 AM] Prettier Options:
+{
+  "arrowParens": "always",
+  "bracketSpacing": true,
+  "endOfLine": "lf",
+  "htmlWhitespaceSensitivity": "css",
+  "insertPragma": false,
+  "jsxBracketSameLine": false,
+  "jsxSingleQuote": false,
+  "printWidth": 80,
+  "proseWrap": "preserve",
+  "quoteProps": "as-needed",
+  "requirePragma": false,
+  "semi": true,
+  "singleQuote": false,
+  "tabWidth": 2,
+  "trailingComma": "es5",
+  "useTabs": false,
+  "vueIndentScriptAndStyle": false,
+  "filepath": "/home/archie/dropship/pages/index.tsx",
+  "parser": "typescript"
+}
+["INFO" - 12:19:18 AM] Formatting completed in 8.668167ms.
+["INFO" - 12:19:22 AM] Formatting /home/archie/dropship/pages/index.tsx
+["INFO" - 12:19:22 AM] Using ignore file (if present) at /home/archie/dropship/.prettierignore
+["INFO" - 12:19:22 AM] Loaded module 'prettier@2.2.0' from '/home/archie/dropship/node_modules/prettier/index.js'
+["INFO" - 12:19:22 AM] File Info:
+{
+  "ignored": false,
+  "inferredParser": "typescript"
+}
+["INFO" - 12:19:22 AM] No local configuration (i.e. .prettierrc or .editorconfig) detected, falling back to VS Code configuration
+["INFO" - 12:19:22 AM] Prettier Options:
+{
+  "arrowParens": "always",
+  "bracketSpacing": true,
+  "endOfLine": "lf",
+  "htmlWhitespaceSensitivity": "css",
+  "insertPragma": false,
+  "jsxBracketSameLine": false,
+  "jsxSingleQuote": false,
+  "printWidth": 80,
+  "proseWrap": "preserve",
+  "quoteProps": "as-needed",
+  "requirePragma": false,
+  "semi": true,
+  "singleQuote": false,
+  "tabWidth": 2,
+  "trailingComma": "es5",
+  "useTabs": false,
+  "vueIndentScriptAndStyle": false,
+  "filepath": "/home/archie/dropship/pages/index.tsx",
+  "parser": "typescript"
+}
+["INFO" - 12:19:22 AM] Formatting completed in 40.204354ms.
+["INFO" - 12:19:33 AM] Formatting /home/archie/dropship/pages/index.tsx
+["INFO" - 12:19:33 AM] Using ignore file (if present) at /home/archie/dropship/.prettierignore
+["INFO" - 12:19:33 AM] Loaded module 'prettier@2.2.0' from '/home/archie/dropship/node_modules/prettier/index.js'
+["INFO" - 12:19:33 AM] File Info:
+{
+  "ignored": false,
+  "inferredParser": "typescript"
+}
+["INFO" - 12:19:33 AM] No local configuration (i.e. .prettierrc or .editorconfig) detected, falling back to VS Code configuration
+["INFO" - 12:19:33 AM] Prettier Options:
+{
+  "arrowParens": "always",
+  "bracketSpacing": true,
+  "endOfLine": "lf",
+  "htmlWhitespaceSensitivity": "css",
+  "insertPragma": false,
+  "jsxBracketSameLine": false,
+  "jsxSingleQuote": false,
+  "printWidth": 80,
+  "proseWrap": "preserve",
+  "quoteProps": "as-needed",
+  "requirePragma": false,
+  "semi": true,
+  "singleQuote": false,
+  "tabWidth": 2,
+  "trailingComma": "es5",
+  "useTabs": false,
+  "vueIndentScriptAndStyle": false,
+  "filepath": "/home/archie/dropship/pages/index.tsx",
+  "parser": "typescript"
+}
+["INFO" - 12:19:33 AM] Formatting completed in 8.93279ms.
+["INFO" - 12:19:40 AM] Formatting /home/archie/dropship/pages/index.tsx
+["INFO" - 12:19:40 AM] Using ignore file (if present) at /home/archie/dropship/.prettierignore
+["INFO" - 12:19:40 AM] Loaded module 'prettier@2.2.0' from '/home/archie/dropship/node_modules/prettier/index.js'
+["INFO" - 12:19:40 AM] File Info:
+{
+  "ignored": false,
+  "inferredParser": "typescript"
+}
+["INFO" - 12:19:40 AM] No local configuration (i.e. .prettierrc or .editorconfig) detected, falling back to VS Code configuration
+["INFO" - 12:19:40 AM] Prettier Options:
+{
+  "arrowParens": "always",
+  "bracketSpacing": true,
+  "endOfLine": "lf",
+  "htmlWhitespaceSensitivity": "css",
+  "insertPragma": false,
+  "jsxBracketSameLine": false,
+  "jsxSingleQuote": false,
+  "printWidth": 80,
+  "proseWrap": "preserve",
+  "quoteProps": "as-needed",
+  "requirePragma": false,
+  "semi": true,
+  "singleQuote": false,
+  "tabWidth": 2,
+  "trailingComma": "es5",
+  "useTabs": false,
+  "vueIndentScriptAndStyle": false,
+  "filepath": "/home/archie/dropship/pages/index.tsx",
+  "parser": "typescript"
+}
+["INFO" - 12:19:40 AM] Formatting completed in 38.152081ms.
+["INFO" - 12:19:45 AM] Formatting /home/archie/dropship/pages/index.tsx
+["INFO" - 12:19:45 AM] Using ignore file (if present) at /home/archie/dropship/.prettierignore
+["INFO" - 12:19:45 AM] Loaded module 'prettier@2.2.0' from '/home/archie/dropship/node_modules/prettier/index.js'
+["INFO" - 12:19:45 AM] File Info:
+{
+  "ignored": false,
+  "inferredParser": "typescript"
+}
+["INFO" - 12:19:45 AM] No local configuration (i.e. .prettierrc or .editorconfig) detected, falling back to VS Code configuration
+["INFO" - 12:19:45 AM] Prettier Options:
+{
+  "arrowParens": "always",
+  "bracketSpacing": true,
+  "endOfLine": "lf",
+  "htmlWhitespaceSensitivity": "css",
+  "insertPragma": false,
+  "jsxBracketSameLine": false,
+  "jsxSingleQuote": false,
+  "printWidth": 80,
+  "proseWrap": "preserve",
+  "quoteProps": "as-needed",
+  "requirePragma": false,
+  "semi": true,
+  "singleQuote": false,
+  "tabWidth": 2,
+  "trailingComma": "es5",
+  "useTabs": false,
+  "vueIndentScriptAndStyle": false,
+  "filepath": "/home/archie/dropship/pages/index.tsx",
+  "parser": "typescript"
+}
+["INFO" - 12:19:45 AM] Formatting completed in 11.026437ms.
+["INFO" - 12:19:53 AM] Formatting /home/archie/dropship/pages/index.tsx
+["INFO" - 12:19:53 AM] Using ignore file (if present) at /home/archie/dropship/.prettierignore
+["INFO" - 12:19:53 AM] Loaded module 'prettier@2.2.0' from '/home/archie/dropship/node_modules/prettier/index.js'
+["INFO" - 12:19:53 AM] File Info:
+{
+  "ignored": false,
+  "inferredParser": "typescript"
+}
+["INFO" - 12:19:53 AM] No local configuration (i.e. .prettierrc or .editorconfig) detected, falling back to VS Code configuration
+["INFO" - 12:19:53 AM] Prettier Options:
+{
+  "arrowParens": "always",
+  "bracketSpacing": true,
+  "endOfLine": "lf",
+  "htmlWhitespaceSensitivity": "css",
+  "insertPragma": false,
+  "jsxBracketSameLine": false,
+  "jsxSingleQuote": false,
+  "printWidth": 80,
+  "proseWrap": "preserve",
+  "quoteProps": "as-needed",
+  "requirePragma": false,
+  "semi": true,
+  "singleQuote": false,
+  "tabWidth": 2,
+  "trailingComma": "es5",
+  "useTabs": false,
+  "vueIndentScriptAndStyle": false,
+  "filepath": "/home/archie/dropship/pages/index.tsx",
+  "parser": "typescript"
+}
+["INFO" - 12:19:53 AM] Formatting completed in 24.001283ms.
+["INFO" - 12:23:58 AM] Formatting /home/archie/dropship/pages/index.tsx
+["INFO" - 12:23:58 AM] Using ignore file (if present) at /home/archie/dropship/.prettierignore
+["INFO" - 12:23:58 AM] Loaded module 'prettier@2.2.0' from '/home/archie/dropship/node_modules/prettier/index.js'
+["INFO" - 12:23:58 AM] File Info:
+{
+  "ignored": false,
+  "inferredParser": "typescript"
+}
+["INFO" - 12:23:58 AM] No local configuration (i.e. .prettierrc or .editorconfig) detected, falling back to VS Code configuration
+["INFO" - 12:23:58 AM] Prettier Options:
+{
+  "arrowParens": "always",
+  "bracketSpacing": true,
+  "endOfLine": "lf",
+  "htmlWhitespaceSensitivity": "css",
+  "insertPragma": false,
+  "jsxBracketSameLine": false,
+  "jsxSingleQuote": false,
+  "printWidth": 80,
+  "proseWrap": "preserve",
+  "quoteProps": "as-needed",
+  "requirePragma": false,
+  "semi": true,
+  "singleQuote": false,
+  "tabWidth": 2,
+  "trailingComma": "es5",
+  "useTabs": false,
+  "vueIndentScriptAndStyle": false,
+  "filepath": "/home/archie/dropship/pages/index.tsx",
+  "parser": "typescript"
+}
+["INFO" - 12:23:58 AM] Formatting completed in 41.703687ms.
+["INFO" - 12:24:21 AM] Formatting /home/archie/dropship/pages/index.tsx
+["INFO" - 12:24:21 AM] Using ignore file (if present) at /home/archie/dropship/.prettierignore
+["INFO" - 12:24:21 AM] Loaded module 'prettier@2.2.0' from '/home/archie/dropship/node_modules/prettier/index.js'
+["INFO" - 12:24:21 AM] File Info:
+{
+  "ignored": false,
+  "inferredParser": "typescript"
+}
+["INFO" - 12:24:21 AM] No local configuration (i.e. .prettierrc or .editorconfig) detected, falling back to VS Code configuration
+["INFO" - 12:24:21 AM] Prettier Options:
+{
+  "arrowParens": "always",
+  "bracketSpacing": true,
+  "endOfLine": "lf",
+  "htmlWhitespaceSensitivity": "css",
+  "insertPragma": false,
+  "jsxBracketSameLine": false,
+  "jsxSingleQuote": false,
+  "printWidth": 80,
+  "proseWrap": "preserve",
+  "quoteProps": "as-needed",
+  "requirePragma": false,
+  "semi": true,
+  "singleQuote": false,
+  "tabWidth": 2,
+  "trailingComma": "es5",
+  "useTabs": false,
+  "vueIndentScriptAndStyle": false,
+  "filepath": "/home/archie/dropship/pages/index.tsx",
+  "parser": "typescript"
+}
+["INFO" - 12:24:21 AM] Formatting completed in 40.203313ms.
+["INFO" - 12:26:41 AM] Formatting /home/archie/dropship/pages/index.tsx
+["INFO" - 12:26:41 AM] Using ignore file (if present) at /home/archie/dropship/.prettierignore
+["INFO" - 12:26:41 AM] Loaded module 'prettier@2.2.0' from '/home/archie/dropship/node_modules/prettier/index.js'
+["INFO" - 12:26:41 AM] File Info:
+{
+  "ignored": false,
+  "inferredParser": "typescript"
+}
+["INFO" - 12:26:41 AM] No local configuration (i.e. .prettierrc or .editorconfig) detected, falling back to VS Code configuration
+["INFO" - 12:26:41 AM] Prettier Options:
+{
+  "arrowParens": "always",
+  "bracketSpacing": true,
+  "endOfLine": "lf",
+  "htmlWhitespaceSensitivity": "css",
+  "insertPragma": false,
+  "jsxBracketSameLine": false,
+  "jsxSingleQuote": false,
+  "printWidth": 80,
+  "proseWrap": "preserve",
+  "quoteProps": "as-needed",
+  "requirePragma": false,
+  "semi": true,
+  "singleQuote": false,
+  "tabWidth": 2,
+  "trailingComma": "es5",
+  "useTabs": false,
+  "vueIndentScriptAndStyle": false,
+  "filepath": "/home/archie/dropship/pages/index.tsx",
+  "parser": "typescript"
+}
+["INFO" - 12:26:41 AM] Formatting completed in 8.986501ms.
+["INFO" - 12:26:50 AM] Formatting /home/archie/dropship/pages/index.tsx
+["INFO" - 12:26:50 AM] Using ignore file (if present) at /home/archie/dropship/.prettierignore
+["INFO" - 12:26:50 AM] Loaded module 'prettier@2.2.0' from '/home/archie/dropship/node_modules/prettier/index.js'
+["INFO" - 12:26:50 AM] File Info:
+{
+  "ignored": false,
+  "inferredParser": "typescript"
+}
+["INFO" - 12:26:50 AM] No local configuration (i.e. .prettierrc or .editorconfig) detected, falling back to VS Code configuration
+["INFO" - 12:26:50 AM] Prettier Options:
+{
+  "arrowParens": "always",
+  "bracketSpacing": true,
+  "endOfLine": "lf",
+  "htmlWhitespaceSensitivity": "css",
+  "insertPragma": false,
+  "jsxBracketSameLine": false,
+  "jsxSingleQuote": false,
+  "printWidth": 80,
+  "proseWrap": "preserve",
+  "quoteProps": "as-needed",
+  "requirePragma": false,
+  "semi": true,
+  "singleQuote": false,
+  "tabWidth": 2,
+  "trailingComma": "es5",
+  "useTabs": false,
+  "vueIndentScriptAndStyle": false,
+  "filepath": "/home/archie/dropship/pages/index.tsx",
+  "parser": "typescript"
+}
+["INFO" - 12:26:50 AM] Formatting completed in 10.867382ms.
+["INFO" - 12:30:02 AM] Formatting /home/archie/dropship/pages/index.tsx
+["INFO" - 12:30:02 AM] Using ignore file (if present) at /home/archie/dropship/.prettierignore
+["INFO" - 12:30:02 AM] Loaded module 'prettier@2.2.0' from '/home/archie/dropship/node_modules/prettier/index.js'
+["INFO" - 12:30:02 AM] File Info:
+{
+  "ignored": false,
+  "inferredParser": "typescript"
+}
+["INFO" - 12:30:02 AM] No local configuration (i.e. .prettierrc or .editorconfig) detected, falling back to VS Code configuration
+["INFO" - 12:30:02 AM] Prettier Options:
+{
+  "arrowParens": "always",
+  "bracketSpacing": true,
+  "endOfLine": "lf",
+  "htmlWhitespaceSensitivity": "css",
+  "insertPragma": false,
+  "jsxBracketSameLine": false,
+  "jsxSingleQuote": false,
+  "printWidth": 80,
+  "proseWrap": "preserve",
+  "quoteProps": "as-needed",
+  "requirePragma": false,
+  "semi": true,
+  "singleQuote": false,
+  "tabWidth": 2,
+  "trailingComma": "es5",
+  "useTabs": false,
+  "vueIndentScriptAndStyle": false,
+  "filepath": "/home/archie/dropship/pages/index.tsx",
+  "parser": "typescript"
+}
+["INFO" - 12:30:02 AM] Formatting completed in 81.159962ms.
+["INFO" - 12:30:04 AM] Formatting /home/archie/dropship/pages/index.tsx
+["INFO" - 12:30:04 AM] Using ignore file (if present) at /home/archie/dropship/.prettierignore
+["INFO" - 12:30:04 AM] Loaded module 'prettier@2.2.0' from '/home/archie/dropship/node_modules/prettier/index.js'
+["INFO" - 12:30:04 AM] File Info:
+{
+  "ignored": false,
+  "inferredParser": "typescript"
+}
+["INFO" - 12:30:04 AM] No local configuration (i.e. .prettierrc or .editorconfig) detected, falling back to VS Code configuration
+["INFO" - 12:30:04 AM] Prettier Options:
+{
+  "arrowParens": "always",
+  "bracketSpacing": true,
+  "endOfLine": "lf",
+  "htmlWhitespaceSensitivity": "css",
+  "insertPragma": false,
+  "jsxBracketSameLine": false,
+  "jsxSingleQuote": false,
+  "printWidth": 80,
+  "proseWrap": "preserve",
+  "quoteProps": "as-needed",
+  "requirePragma": false,
+  "semi": true,
+  "singleQuote": false,
+  "tabWidth": 2,
+  "trailingComma": "es5",
+  "useTabs": false,
+  "vueIndentScriptAndStyle": false,
+  "filepath": "/home/archie/dropship/pages/index.tsx",
+  "parser": "typescript"
+}
+["INFO" - 12:30:04 AM] Formatting completed in 39.80313ms.
+["INFO" - 12:30:26 AM] Formatting /home/archie/dropship/pages/index.tsx
+["INFO" - 12:30:26 AM] Using ignore file (if present) at /home/archie/dropship/.prettierignore
+["INFO" - 12:30:26 AM] Loaded module 'prettier@2.2.0' from '/home/archie/dropship/node_modules/prettier/index.js'
+["INFO" - 12:30:26 AM] File Info:
+{
+  "ignored": false,
+  "inferredParser": "typescript"
+}
+["INFO" - 12:30:26 AM] No local configuration (i.e. .prettierrc or .editorconfig) detected, falling back to VS Code configuration
+["INFO" - 12:30:26 AM] Prettier Options:
+{
+  "arrowParens": "always",
+  "bracketSpacing": true,
+  "endOfLine": "lf",
+  "htmlWhitespaceSensitivity": "css",
+  "insertPragma": false,
+  "jsxBracketSameLine": false,
+  "jsxSingleQuote": false,
+  "printWidth": 80,
+  "proseWrap": "preserve",
+  "quoteProps": "as-needed",
+  "requirePragma": false,
+  "semi": true,
+  "singleQuote": false,
+  "tabWidth": 2,
+  "trailingComma": "es5",
+  "useTabs": false,
+  "vueIndentScriptAndStyle": false,
+  "filepath": "/home/archie/dropship/pages/index.tsx",
+  "parser": "typescript"
+}
+["INFO" - 12:30:26 AM] Formatting completed in 11.344925ms.
+["INFO" - 1:18:50 AM] Formatting /home/archie/dropship/pages/index.tsx
+["INFO" - 1:18:50 AM] Using ignore file (if present) at /home/archie/dropship/.prettierignore
+["INFO" - 1:18:50 AM] Loaded module 'prettier@2.2.0' from '/home/archie/dropship/node_modules/prettier/index.js'
+["INFO" - 1:18:50 AM] File Info:
+{
+  "ignored": false,
+  "inferredParser": "typescript"
+}
+["INFO" - 1:18:50 AM] No local configuration (i.e. .prettierrc or .editorconfig) detected, falling back to VS Code configuration
+["INFO" - 1:18:50 AM] Prettier Options:
+{
+  "arrowParens": "always",
+  "bracketSpacing": true,
+  "endOfLine": "lf",
+  "htmlWhitespaceSensitivity": "css",
+  "insertPragma": false,
+  "jsxBracketSameLine": false,
+  "jsxSingleQuote": false,
+  "printWidth": 80,
+  "proseWrap": "preserve",
+  "quoteProps": "as-needed",
+  "requirePragma": false,
+  "semi": true,
+  "singleQuote": false,
+  "tabWidth": 2,
+  "trailingComma": "es5",
+  "useTabs": false,
+  "vueIndentScriptAndStyle": false,
+  "filepath": "/home/archie/dropship/pages/index.tsx",
+  "parser": "typescript"
+}
+["INFO" - 1:18:50 AM] Formatting completed in 12.748659ms.

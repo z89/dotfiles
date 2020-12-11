@@ -1,0 +1,18 @@
+{
+  "editor.fontLigatures": null,
+  "editor.fontFamily": "\"Termsyn\", \"monospace\"",
+  "terminal.integrated.shell.linux": "/bin/bash",
+  "explorer.confirmDelete": false,
+  "window.zoomLevel": 0,
+  "workbench.iconTheme": "vscode-icons",
+  "explorer.confirmDragAndDrop": false,
+  "workbench.colorTheme": "Palenight Theme",
+  "editor.defaultFormatter": "esbenp.prettier-vscode",
+  "[typescriptreact]": {
+    "editor.formatOnSave": true,
+    "editor.defaultFormatter": "esbenp.prettier-vscode"
+  },
+  "terminal.integrated.fontFamily": "monospace",
+  "editor.fontSize": 13,
+
+}

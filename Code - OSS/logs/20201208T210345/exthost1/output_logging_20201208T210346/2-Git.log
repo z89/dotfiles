@@ -1,0 +1,129 @@
+Looking for git in: git
+Using git 2.29.2 from git
+> git rev-parse --git-dir
+Open repository: /home/archie/dropship
+> git status -z -u
+> git symbolic-ref --short HEAD
+> git rev-parse main
+> git rev-parse --symbolic-full-name main@{u}
+> git rev-list --left-right main...refs/remotes/origin/main
+> git for-each-ref --sort -committerdate --format %(refname) %(objectname)
+> git remote --verbose
+> git config --get commit.template
+> git show --textconv :pages/index.tsx
+> git ls-files --stage -- /home/archie/dropship/pages/index.tsx
+> git cat-file -s 77f3f42f93b51b549d0b6347d27938096e32f042
+> git check-ignore -v -z --stdin
+> git status -z -u
+> git symbolic-ref --short HEAD
+> git rev-parse main
+> git rev-parse --symbolic-full-name main@{u}
+> git rev-list --left-right main...refs/remotes/origin/main
+> git for-each-ref --sort -committerdate --format %(refname) %(objectname)
+> git remote --verbose
+> git config --get commit.template
+> git show --textconv :components/layouts/main.tsx
+> git ls-files --stage -- /home/archie/dropship/components/layouts/main.tsx
+> git cat-file -s c325bc2d6390cb1bfac0433a8b764c217ea0179f
+> git status -z -u
+> git symbolic-ref --short HEAD
+> git rev-parse main
+> git rev-parse --symbolic-full-name main@{u}
+> git rev-list --left-right main...refs/remotes/origin/main
+> git for-each-ref --sort -committerdate --format %(refname) %(objectname)
+> git remote --verbose
+> git config --get commit.template
+> git ls-files --stage -- /home/archie/dropship/components/layouts/main.tsx
+> git cat-file -s c325bc2d6390cb1bfac0433a8b764c217ea0179f
+> git show --textconv :components/layouts/main.tsx
+> git status -z -u
+> git symbolic-ref --short HEAD
+> git rev-parse main
+> git rev-parse --symbolic-full-name main@{u}
+> git rev-list --left-right main...refs/remotes/origin/main
+> git for-each-ref --sort -committerdate --format %(refname) %(objectname)
+> git remote --verbose
+> git config --get commit.template
+> git status -z -u
+> git symbolic-ref --short HEAD
+> git rev-parse main
+> git rev-parse --symbolic-full-name main@{u}
+> git rev-list --left-right main...refs/remotes/origin/main
+> git for-each-ref --sort -committerdate --format %(refname) %(objectname)
+> git remote --verbose
+> git config --get commit.template
+> git status -z -u
+> git symbolic-ref --short HEAD
+> git rev-parse main
+> git rev-parse --symbolic-full-name main@{u}
+> git rev-list --left-right main...refs/remotes/origin/main
+> git for-each-ref --sort -committerdate --format %(refname) %(objectname)
+> git remote --verbose
+> git config --get commit.template
+> git status -z -u
+> git symbolic-ref --short HEAD
+> git rev-parse main
+> git rev-parse --symbolic-full-name main@{u}
+> git rev-list --left-right main...refs/remotes/origin/main
+> git for-each-ref --sort -committerdate --format %(refname) %(objectname)
+> git remote --verbose
+> git config --get commit.template
+> git status -z -u
+> git symbolic-ref --short HEAD
+> git rev-parse main
+> git rev-parse --symbolic-full-name main@{u}
+> git rev-list --left-right main...refs/remotes/origin/main
+> git for-each-ref --sort -committerdate --format %(refname) %(objectname)
+> git remote --verbose
+> git config --get commit.template
+> git status -z -u
+> git symbolic-ref --short HEAD
+> git rev-parse main
+> git rev-parse --symbolic-full-name main@{u}
+> git rev-list --left-right main...refs/remotes/origin/main
+> git for-each-ref --sort -committerdate --format %(refname) %(objectname)
+> git remote --verbose
+> git config --get commit.template
+> git show --textconv :components/footer.tsx
+> git ls-files --stage -- /home/archie/dropship/components/footer.tsx
+> git cat-file -s e5d46d1c4224400a0b3051330534a112728abe8c
+> git show --textconv :components/header.tsx
+> git ls-files --stage -- /home/archie/dropship/components/header.tsx
+> git cat-file -s 5c1d2ba73684dafc6bfc6b4bf90693c32a56b9d2
+> git show --textconv :pages/_app.tsx
+> git ls-files --stage -- /home/archie/dropship/pages/_app.tsx
+> git cat-file -s 59a3664bf5972cbfd48741ed3545e7b085ab3246
+> git show --textconv :pages/index.tsx
+> git ls-files --stage -- /home/archie/dropship/pages/index.tsx
+> git cat-file -s 77f3f42f93b51b549d0b6347d27938096e32f042
+> git show --textconv :pages/shop.tsx
+> git ls-files --stage -- /home/archie/dropship/pages/shop.tsx
+> git cat-file -s 65bc4d3c518081c2eb506cc6b6419334a624f856
+> git status -z -u
+> git symbolic-ref --short HEAD
+> git rev-parse main
+> git rev-parse --symbolic-full-name main@{u}
+> git rev-list --left-right main...refs/remotes/origin/main
+> git for-each-ref --sort -committerdate --format %(refname) %(objectname)
+> git remote --verbose
+> git config --get commit.template
+> git show --textconv :pages/index.tsx
+> git ls-files --stage -- /home/archie/dropship/pages/index.tsx
+> git cat-file -s 77f3f42f93b51b549d0b6347d27938096e32f042
+> git show --textconv :components/footer.tsx
+> git ls-files --stage -- /home/archie/dropship/components/footer.tsx
+> git cat-file -s e5d46d1c4224400a0b3051330534a112728abe8c
+> git show --textconv :components/layouts/main.tsx
+> git ls-files --stage -- /home/archie/dropship/components/layouts/main.tsx
+> git cat-file -s c325bc2d6390cb1bfac0433a8b764c217ea0179f
+> git show --textconv :components/footer.tsx
+> git ls-files --stage -- /home/archie/dropship/components/footer.tsx
+> git cat-file -s e5d46d1c4224400a0b3051330534a112728abe8c
+> git status -z -u
+> git symbolic-ref --short HEAD
+> git rev-parse main
+> git rev-parse --symbolic-full-name main@{u}
+> git rev-list --left-right main...refs/remotes/origin/main
+> git for-each-ref --sort -committerdate --format %(refname) %(objectname)
+> git remote --verbose
+> git config --get commit.template

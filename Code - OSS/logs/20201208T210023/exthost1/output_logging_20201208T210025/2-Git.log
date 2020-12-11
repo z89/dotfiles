@@ -1,0 +1,54 @@
+Looking for git in: git
+Using git 2.29.2 from git
+> git rev-parse --git-dir
+Open repository: /home/archie/dropship
+> git status -z -u
+> git symbolic-ref --short HEAD
+> git rev-parse main
+> git rev-parse --symbolic-full-name main@{u}
+> git rev-list --left-right main...refs/remotes/origin/main
+> git for-each-ref --sort -committerdate --format %(refname) %(objectname)
+> git remote --verbose
+> git config --get commit.template
+> git show --textconv :pages/index.tsx
+> git ls-files --stage -- /home/archie/dropship/pages/index.tsx
+> git cat-file -s dcdf1332792eff8137abd6737bbf826b980aa3d7
+> git check-ignore -v -z --stdin
+> git status -z -u
+> git ls-files --stage -- /home/archie/dropship/pages/index.tsx
+> git symbolic-ref --short HEAD
+> git cat-file -s 77f3f42f93b51b549d0b6347d27938096e32f042
+> git rev-parse main
+> git rev-parse --symbolic-full-name main@{u}
+> git show --textconv :pages/index.tsx
+> git rev-list --left-right main...refs/remotes/origin/main
+> git for-each-ref --sort -committerdate --format %(refname) %(objectname)
+> git remote --verbose
+> git config --get commit.template
+> git status -z -u
+> git symbolic-ref --short HEAD
+> git rev-parse main
+> git rev-parse --symbolic-full-name main@{u}
+> git rev-list --left-right main...refs/remotes/origin/main
+> git for-each-ref --sort -committerdate --format %(refname) %(objectname)
+> git remote --verbose
+> git config --get commit.template
+> git status -z -u
+> git symbolic-ref --short HEAD
+> git rev-parse main
+> git rev-parse --symbolic-full-name main@{u}
+> git rev-list --left-right main...refs/remotes/origin/main
+> git for-each-ref --sort -committerdate --format %(refname) %(objectname)
+> git remote --verbose
+> git config --get commit.template
+> git status -z -u
+> git symbolic-ref --short HEAD
+> git rev-parse main
+> git rev-parse --symbolic-full-name main@{u}
+> git ls-files --stage -- /home/archie/dropship/pages/index.tsx
+> git rev-list --left-right main...refs/remotes/origin/main
+> git cat-file -s 77f3f42f93b51b549d0b6347d27938096e32f042
+> git for-each-ref --sort -committerdate --format %(refname) %(objectname)
+> git remote --verbose
+> git show --textconv :pages/index.tsx
+> git config --get commit.template

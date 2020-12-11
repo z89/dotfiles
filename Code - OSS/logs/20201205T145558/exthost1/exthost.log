@@ -1,0 +1,326 @@
+[2020-12-05 14:55:59.795] [exthost] [info] extension host started
+[2020-12-05 14:55:59.890] [exthost] [info] ExtensionService#_doActivateExtension vscode.typescript-language-features {"startup":false,"extensionId":{"value":"vscode.typescript-language-features","_lower":"vscode.typescript-language-features"},"activationEvent":"onLanguage:typescriptreact"}
+[2020-12-05 14:55:59.890] [exthost] [info] ExtensionService#loadCommonJSModule file:///usr/lib/code/extensions/typescript-language-features/dist/extension
+[2020-12-05 14:55:59.908] [exthost] [info] ExtensionService#_doActivateExtension vscode.debug-auto-launch {"startup":true,"extensionId":{"value":"vscode.debug-auto-launch","_lower":"vscode.debug-auto-launch"},"activationEvent":"*"}
+[2020-12-05 14:55:59.908] [exthost] [info] ExtensionService#loadCommonJSModule file:///usr/lib/code/extensions/debug-auto-launch/dist/extension
+[2020-12-05 14:55:59.913] [exthost] [info] ExtensionService#_doActivateExtension vscode.emmet {"startup":true,"extensionId":{"value":"vscode.emmet","_lower":"vscode.emmet"},"activationEvent":"*"}
+[2020-12-05 14:55:59.913] [exthost] [info] ExtensionService#loadCommonJSModule file:///usr/lib/code/extensions/emmet/dist/node/emmetNodeMain
+[2020-12-05 14:55:59.927] [exthost] [info] ExtensionService#_doActivateExtension vscode.git {"startup":true,"extensionId":{"value":"vscode.github","_lower":"vscode.github"},"activationEvent":"*"}
+[2020-12-05 14:55:59.927] [exthost] [info] ExtensionService#loadCommonJSModule file:///usr/lib/code/extensions/git/dist/main
+[2020-12-05 14:55:59.947] [exthost] [info] ExtensionService#_doActivateExtension vscode.merge-conflict {"startup":true,"extensionId":{"value":"vscode.merge-conflict","_lower":"vscode.merge-conflict"},"activationEvent":"*"}
+[2020-12-05 14:55:59.947] [exthost] [info] ExtensionService#loadCommonJSModule file:///usr/lib/code/extensions/merge-conflict/dist/mergeConflictMain
+[2020-12-05 14:55:59.950] [exthost] [info] ExtensionService#_doActivateExtension vscode.search-result {"startup":true,"extensionId":{"value":"vscode.search-result","_lower":"vscode.search-result"},"activationEvent":"*"}
+[2020-12-05 14:55:59.950] [exthost] [info] ExtensionService#loadCommonJSModule file:///usr/lib/code/extensions/search-result/dist/extension.js
+[2020-12-05 14:55:59.952] [exthost] [info] ExtensionService#_doActivateExtension dlasagno.wal-theme {"startup":true,"extensionId":{"value":"dlasagno.wal-theme","_lower":"dlasagno.wal-theme"},"activationEvent":"*"}
+[2020-12-05 14:55:59.952] [exthost] [info] ExtensionService#loadCommonJSModule file:///home/archie/.vscode-oss/extensions/dlasagno.wal-theme-1.0.4/out/extension.js
+[2020-12-05 14:55:59.973] [exthost] [info] ExtensionService#_doActivateExtension vscode-icons-team.vscode-icons {"startup":true,"extensionId":{"value":"vscode-icons-team.vscode-icons","_lower":"vscode-icons-team.vscode-icons"},"activationEvent":"*"}
+[2020-12-05 14:55:59.973] [exthost] [info] ExtensionService#loadCommonJSModule file:///home/archie/.vscode-oss/extensions/vscode-icons-team.vscode-icons-11.0.0/dist/src/vscode-icons.bundle.js
+[2020-12-05 14:55:59.989] [exthost] [info] ExtensionService#_doActivateExtension vscode.npm {"startup":true,"extensionId":{"value":"vscode.npm","_lower":"vscode.npm"},"activationEvent":"workspaceContains:package.json"}
+[2020-12-05 14:55:59.989] [exthost] [info] ExtensionService#loadCommonJSModule file:///usr/lib/code/extensions/npm/dist/npmMain
+[2020-12-05 14:56:00.422] [exthost] [info] ExtensionService#_doActivateExtension ms-vscode.js-debug {"startup":false,"extensionId":{"value":"ms-vscode.js-debug","_lower":"ms-vscode.js-debug"},"activationEvent":"onCommand:extension.js-debug.clearAutoAttachVariables"}
+[2020-12-05 14:56:00.426] [exthost] [info] ExtensionService#loadCommonJSModule file:///usr/lib/code/extensions/ms-vscode.js-debug/src/extension.js
+[2020-12-05 14:56:00.498] [exthost] [info] ExtensionService#_doActivateExtension vscode.github {"startup":false,"extensionId":{"value":"vscode.github","_lower":"vscode.github"},"activationEvent":"*"}
+[2020-12-05 14:56:00.498] [exthost] [info] ExtensionService#loadCommonJSModule file:///usr/lib/code/extensions/github/dist/extension.js
+[2020-12-05 14:56:00.631] [exthost] [warning] [Decorations] CAPPING events from decorations provider vscode.git 1811
+[2020-12-05 14:56:01.818] [exthost] [info] eager extensions activated
+[2020-12-05 14:56:01.821] [exthost] [info] ExtensionService#_doActivateExtension esbenp.prettier-vscode {"startup":false,"extensionId":{"value":"esbenp.prettier-vscode","_lower":"esbenp.prettier-vscode"},"activationEvent":"onStartupFinished"}
+[2020-12-05 14:56:01.821] [exthost] [info] ExtensionService#loadCommonJSModule file:///home/archie/.vscode-oss/extensions/esbenp.prettier-vscode-5.8.0/dist/extension
+[2020-12-05 14:56:03.405] [exthost] [info] ExtensionService#_doActivateExtension vscode.configuration-editing {"startup":false,"extensionId":{"value":"vscode.configuration-editing","_lower":"vscode.configuration-editing"},"activationEvent":"onLanguage:jsonc"}
+[2020-12-05 14:56:03.405] [exthost] [info] ExtensionService#loadCommonJSModule file:///usr/lib/code/extensions/configuration-editing/dist/configurationEditingMain
+[2020-12-05 14:56:03.407] [exthost] [info] ExtensionService#_doActivateExtension vscode.json-language-features {"startup":false,"extensionId":{"value":"vscode.json-language-features","_lower":"vscode.json-language-features"},"activationEvent":"onLanguage:jsonc"}
+[2020-12-05 14:56:03.407] [exthost] [info] ExtensionService#loadCommonJSModule file:///usr/lib/code/extensions/json-language-features/client/dist/node/jsonClientMain
+[2020-12-05 14:56:13.625] [exthost] [warning] [Decorations] CAPPING events from decorations provider vscode.git 1829
+[2020-12-05 14:56:39.576] [exthost] [warning] [Decorations] CAPPING events from decorations provider vscode.git 1297
+[2020-12-05 14:56:44.682] [exthost] [warning] [Decorations] CAPPING events from decorations provider vscode.git 1280
+[2020-12-05 14:56:45.517] [exthost] [info] ExtensionService#_doActivateExtension vscode.extension-editing {"startup":false,"extensionId":{"value":"vscode.extension-editing","_lower":"vscode.extension-editing"},"activationEvent":"onLanguage:typescript"}
+[2020-12-05 14:56:45.517] [exthost] [info] ExtensionService#loadCommonJSModule file:///usr/lib/code/extensions/extension-editing/dist/extensionEditingMain
+[2020-12-05 14:56:58.405] [exthost] [warning] [Decorations] CAPPING events from decorations provider vscode.git 1284
+[2020-12-05 14:57:14.287] [exthost] [warning] [Decorations] CAPPING events from decorations provider vscode.git 1284
+[2020-12-05 14:57:19.361] [exthost] [warning] [Decorations] CAPPING events from decorations provider vscode.git 1285
+[2020-12-05 14:57:27.229] [exthost] [warning] [Decorations] CAPPING events from decorations provider vscode.git 1289
+[2020-12-05 14:57:39.792] [exthost] [warning] [Decorations] CAPPING events from decorations provider vscode.git 1293
+[2020-12-05 14:57:44.852] [exthost] [warning] [Decorations] CAPPING events from decorations provider vscode.git 1297
+[2020-12-05 14:57:49.947] [exthost] [warning] [Decorations] CAPPING events from decorations provider vscode.git 1301
+[2020-12-05 14:57:56.339] [exthost] [warning] [Decorations] CAPPING events from decorations provider vscode.git 1305
+[2020-12-05 14:58:40.677] [exthost] [warning] [Decorations] CAPPING events from decorations provider vscode.git 1309
+[2020-12-05 14:59:04.091] [exthost] [warning] [Decorations] CAPPING events from decorations provider vscode.git 1313
+[2020-12-05 14:59:16.684] [exthost] [warning] [Decorations] CAPPING events from decorations provider vscode.git 1317
+[2020-12-05 14:59:21.749] [exthost] [warning] [Decorations] CAPPING events from decorations provider vscode.git 1319
+[2020-12-05 14:59:26.860] [exthost] [warning] [Decorations] CAPPING events from decorations provider vscode.git 1319
+[2020-12-05 14:59:35.844] [exthost] [info] ExtensionService#_doActivateExtension vscode.css-language-features {"startup":false,"extensionId":{"value":"vscode.css-language-features","_lower":"vscode.css-language-features"},"activationEvent":"onLanguage:css"}
+[2020-12-05 14:59:35.844] [exthost] [info] ExtensionService#loadCommonJSModule file:///usr/lib/code/extensions/css-language-features/client/dist/node/cssClientMain
+[2020-12-05 14:59:36.718] [exthost] [warning] [Decorations] CAPPING events from decorations provider vscode.git 1323
+[2020-12-05 14:59:50.147] [exthost] [warning] [Decorations] CAPPING events from decorations provider vscode.git 1325
+[2020-12-05 14:59:55.664] [exthost] [warning] [Decorations] CAPPING events from decorations provider vscode.git 1327
+[2020-12-05 15:00:00.779] [exthost] [warning] [Decorations] CAPPING events from decorations provider vscode.git 1329
+[2020-12-05 15:00:05.886] [exthost] [warning] [Decorations] CAPPING events from decorations provider vscode.git 1333
+[2020-12-05 15:00:12.557] [exthost] [warning] [Decorations] CAPPING events from decorations provider vscode.git 1335
+[2020-12-05 15:00:17.626] [exthost] [warning] [Decorations] CAPPING events from decorations provider vscode.git 1337
+[2020-12-05 15:00:22.983] [exthost] [warning] [Decorations] CAPPING events from decorations provider vscode.git 1339
+[2020-12-05 15:00:30.064] [exthost] [warning] [Decorations] CAPPING events from decorations provider vscode.git 1341
+[2020-12-05 15:01:05.914] [exthost] [warning] [Decorations] CAPPING events from decorations provider vscode.git 1345
+[2020-12-05 15:01:25.643] [exthost] [warning] [Decorations] CAPPING events from decorations provider vscode.git 1347
+[2020-12-05 15:01:42.095] [exthost] [warning] [Decorations] CAPPING events from decorations provider vscode.git 1349
+[2020-12-05 15:02:01.343] [exthost] [warning] [Decorations] CAPPING events from decorations provider vscode.git 1353
+[2020-12-05 15:02:06.446] [exthost] [warning] [Decorations] CAPPING events from decorations provider vscode.git 1357
+[2020-12-05 15:02:41.963] [exthost] [warning] [Decorations] CAPPING events from decorations provider vscode.git 1359
+[2020-12-05 15:04:02.319] [exthost] [warning] [Decorations] CAPPING events from decorations provider vscode.git 1363
+[2020-12-05 15:05:19.104] [exthost] [warning] [Decorations] CAPPING events from decorations provider vscode.git 1367
+[2020-12-05 15:07:14.423] [exthost] [warning] [Decorations] CAPPING events from decorations provider vscode.git 1371
+[2020-12-05 15:07:20.867] [exthost] [warning] [Decorations] CAPPING events from decorations provider vscode.git 1375
+[2020-12-05 15:07:41.403] [exthost] [warning] [Decorations] CAPPING events from decorations provider vscode.git 1379
+[2020-12-05 15:07:49.602] [exthost] [warning] [Decorations] CAPPING events from decorations provider vscode.git 1381
+[2020-12-05 15:07:50.106] [exthost] [info] ExtensionService#_doActivateExtension vscode.html-language-features {"startup":false,"extensionId":{"value":"vscode.html-language-features","_lower":"vscode.html-language-features"},"activationEvent":"onLanguage:html"}
+[2020-12-05 15:07:50.106] [exthost] [info] ExtensionService#loadCommonJSModule file:///usr/lib/code/extensions/html-language-features/client/dist/node/htmlClientMain
+[2020-12-05 15:08:11.811] [exthost] [warning] [Decorations] CAPPING events from decorations provider vscode.git 1383
+[2020-12-05 15:08:17.256] [exthost] [warning] [Decorations] CAPPING events from decorations provider vscode.git 1385
+[2020-12-05 15:08:42.153] [exthost] [warning] [Decorations] CAPPING events from decorations provider vscode.git 1389
+[2020-12-05 15:09:17.136] [exthost] [warning] [Decorations] CAPPING events from decorations provider vscode.git 1393
+[2020-12-05 15:09:35.176] [exthost] [warning] [Decorations] CAPPING events from decorations provider vscode.git 1397
+[2020-12-05 15:10:47.552] [exthost] [error] [vscode.typescript-language-features] provider FAILED
+[2020-12-05 15:10:47.554] [exthost] [error] Error: <semantic> TypeScript Server Error (4.0.3)
+Debug Failure. Did not expect JsxClosingFragment to have an Identifier in its trivia
+Error: Debug Failure. Did not expect JsxClosingFragment to have an Identifier in its trivia
+    at addSyntheticNodes (/usr/lib/code/extensions/node_modules/typescript/lib/tsserver.js:142386:30)
+    at createChildren (/usr/lib/code/extensions/node_modules/typescript/lib/tsserver.js:142375:9)
+    at NodeObject.getChildren (/usr/lib/code/extensions/node_modules/typescript/lib/tsserver.js:142319:56)
+    at findRightmostToken (/usr/lib/code/extensions/node_modules/typescript/lib/tsserver.js:111753:26)
+    at findRightmostToken (/usr/lib/code/extensions/node_modules/typescript/lib/tsserver.js:111755:29)
+    at findRightmostToken (/usr/lib/code/extensions/node_modules/typescript/lib/tsserver.js:111755:29)
+    at findRightmostToken (/usr/lib/code/extensions/node_modules/typescript/lib/tsserver.js:111755:29)
+    at findRightmostToken (/usr/lib/code/extensions/node_modules/typescript/lib/tsserver.js:111755:29)
+    at findRightmostToken (/usr/lib/code/extensions/node_modules/typescript/lib/tsserver.js:111755:29)
+    at findRightmostToken (/usr/lib/code/extensions/node_modules/typescript/lib/tsserver.js:111755:29)
+    at findRightmostToken (/usr/lib/code/extensions/node_modules/typescript/lib/tsserver.js:111755:29)
+    at find (/usr/lib/code/extensions/node_modules/typescript/lib/tsserver.js:111728:47)
+    at find (/usr/lib/code/extensions/node_modules/typescript/lib/tsserver.js:111732:32)
+    at Object.findPrecedingToken (/usr/lib/code/extensions/node_modules/typescript/lib/tsserver.js:111705:22)
+    at Object.getCompletionsAtPosition (/usr/lib/code/extensions/node_modules/typescript/lib/tsserver.js:115124:35)
+    at Proxy.getCompletionsAtPosition (/usr/lib/code/extensions/node_modules/typescript/lib/tsserver.js:143489:35)
+    at IOSession.Session.getCompletions (/usr/lib/code/extensions/node_modules/typescript/lib/tsserver.js:154328:64)
+    at Session.handlers.ts.Map.ts.getEntries._a.<computed> (/usr/lib/code/extensions/node_modules/typescript/lib/tsserver.js:153212:61)
+    at /usr/lib/code/extensions/node_modules/typescript/lib/tsserver.js:154962:88
+    at IOSession.Session.executeWithRequestId (/usr/lib/code/extensions/node_modules/typescript/lib/tsserver.js:154953:28)
+    at IOSession.Session.executeCommand (/usr/lib/code/extensions/node_modules/typescript/lib/tsserver.js:154962:33)
+    at IOSession.Session.onMessage (/usr/lib/code/extensions/node_modules/typescript/lib/tsserver.js:154986:35)
+    at Interface.<anonymous> (/usr/lib/code/extensions/node_modules/typescript/lib/tsserver.js:157202:27)
+    at Interface.emit (events.js:223:5)
+    at Interface._onLine (readline.js:315:10)
+    at Interface._normalWrite (readline.js:460:12)
+    at Socket.ondata (readline.js:172:10)
+    at Socket.emit (events.js:223:5)
+    at addChunk (_stream_readable.js:309:12)
+    at readableAddChunk (_stream_readable.js:290:11)
+    at Socket.Readable.push (_stream_readable.js:224:10)
+    at Pipe.onStreamRead (internal/stream_base_commons.js:181:23)
+	at Function.create (/usr/lib/code/extensions/typescript-language-features/dist/extension.js:1:76476)
+	at dispatchResponse (/usr/lib/code/extensions/typescript-language-features/dist/extension.js:1:70351)
+	at dispatchMessage (/usr/lib/code/extensions/typescript-language-features/dist/extension.js:1:69210)
+	at /usr/lib/code/extensions/typescript-language-features/dist/extension.js:1:68720
+	at l.fire (/usr/lib/code/out/vs/workbench/services/extensions/node/extensionHostProcess.js:46:67)
+	at g.onLengthData (/usr/lib/code/extensions/typescript-language-features/dist/extension.js:45:60018)
+	at Socket.<anonymous> (/usr/lib/code/extensions/typescript-language-features/dist/extension.js:45:59666)
+	at Socket.emit (events.js:223:5)
+	at addChunk (_stream_readable.js:309:12)
+	at readableAddChunk (_stream_readable.js:290:11)
+	at Socket.Readable.push (_stream_readable.js:224:10)
+	at Pipe.onStreamRead (internal/stream_base_commons.js:181:23)
+[2020-12-05 15:10:47.747] [exthost] [error] [vscode.typescript-language-features] provider FAILED
+[2020-12-05 15:10:47.747] [exthost] [error] Error: <semantic> TypeScript Server Error (4.0.3)
+Debug Failure. Did not expect JsxClosingFragment to have an Identifier in its trivia
+Error: Debug Failure. Did not expect JsxClosingFragment to have an Identifier in its trivia
+    at addSyntheticNodes (/usr/lib/code/extensions/node_modules/typescript/lib/tsserver.js:142386:30)
+    at createChildren (/usr/lib/code/extensions/node_modules/typescript/lib/tsserver.js:142375:9)
+    at NodeObject.getChildren (/usr/lib/code/extensions/node_modules/typescript/lib/tsserver.js:142319:56)
+    at findRightmostToken (/usr/lib/code/extensions/node_modules/typescript/lib/tsserver.js:111753:26)
+    at findRightmostToken (/usr/lib/code/extensions/node_modules/typescript/lib/tsserver.js:111755:29)
+    at findRightmostToken (/usr/lib/code/extensions/node_modules/typescript/lib/tsserver.js:111755:29)
+    at findRightmostToken (/usr/lib/code/extensions/node_modules/typescript/lib/tsserver.js:111755:29)
+    at findRightmostToken (/usr/lib/code/extensions/node_modules/typescript/lib/tsserver.js:111755:29)
+    at findRightmostToken (/usr/lib/code/extensions/node_modules/typescript/lib/tsserver.js:111755:29)
+    at findRightmostToken (/usr/lib/code/extensions/node_modules/typescript/lib/tsserver.js:111755:29)
+    at findRightmostToken (/usr/lib/code/extensions/node_modules/typescript/lib/tsserver.js:111755:29)
+    at find (/usr/lib/code/extensions/node_modules/typescript/lib/tsserver.js:111728:47)
+    at find (/usr/lib/code/extensions/node_modules/typescript/lib/tsserver.js:111732:32)
+    at Object.findPrecedingToken (/usr/lib/code/extensions/node_modules/typescript/lib/tsserver.js:111705:22)
+    at Object.getCompletionsAtPosition (/usr/lib/code/extensions/node_modules/typescript/lib/tsserver.js:115124:35)
+    at Proxy.getCompletionsAtPosition (/usr/lib/code/extensions/node_modules/typescript/lib/tsserver.js:143489:35)
+    at IOSession.Session.getCompletions (/usr/lib/code/extensions/node_modules/typescript/lib/tsserver.js:154328:64)
+    at Session.handlers.ts.Map.ts.getEntries._a.<computed> (/usr/lib/code/extensions/node_modules/typescript/lib/tsserver.js:153212:61)
+    at /usr/lib/code/extensions/node_modules/typescript/lib/tsserver.js:154962:88
+    at IOSession.Session.executeWithRequestId (/usr/lib/code/extensions/node_modules/typescript/lib/tsserver.js:154953:28)
+    at IOSession.Session.executeCommand (/usr/lib/code/extensions/node_modules/typescript/lib/tsserver.js:154962:33)
+    at IOSession.Session.onMessage (/usr/lib/code/extensions/node_modules/typescript/lib/tsserver.js:154986:35)
+    at Interface.<anonymous> (/usr/lib/code/extensions/node_modules/typescript/lib/tsserver.js:157202:27)
+    at Interface.emit (events.js:223:5)
+    at Interface._onLine (readline.js:315:10)
+    at Interface._normalWrite (readline.js:460:12)
+    at Socket.ondata (readline.js:172:10)
+    at Socket.emit (events.js:223:5)
+    at addChunk (_stream_readable.js:309:12)
+    at readableAddChunk (_stream_readable.js:290:11)
+    at Socket.Readable.push (_stream_readable.js:224:10)
+    at Pipe.onStreamRead (internal/stream_base_commons.js:181:23)
+	at Function.create (/usr/lib/code/extensions/typescript-language-features/dist/extension.js:1:76476)
+	at dispatchResponse (/usr/lib/code/extensions/typescript-language-features/dist/extension.js:1:70351)
+	at dispatchMessage (/usr/lib/code/extensions/typescript-language-features/dist/extension.js:1:69210)
+	at /usr/lib/code/extensions/typescript-language-features/dist/extension.js:1:68720
+	at l.fire (/usr/lib/code/out/vs/workbench/services/extensions/node/extensionHostProcess.js:46:67)
+	at g.onLengthData (/usr/lib/code/extensions/typescript-language-features/dist/extension.js:45:60018)
+	at Socket.<anonymous> (/usr/lib/code/extensions/typescript-language-features/dist/extension.js:45:59666)
+	at Socket.emit (events.js:223:5)
+	at addChunk (_stream_readable.js:309:12)
+	at readableAddChunk (_stream_readable.js:290:11)
+	at Socket.Readable.push (_stream_readable.js:224:10)
+	at Pipe.onStreamRead (internal/stream_base_commons.js:181:23)
+[2020-12-05 15:10:49.821] [exthost] [warning] [Decorations] CAPPING events from decorations provider vscode.git 1397
+[2020-12-05 15:11:42.518] [exthost] [warning] [Decorations] CAPPING events from decorations provider vscode.git 1401
+[2020-12-05 15:12:08.708] [exthost] [warning] [Decorations] CAPPING events from decorations provider vscode.git 1405
+[2020-12-05 15:12:29.515] [exthost] [warning] [Decorations] CAPPING events from decorations provider vscode.git 1407
+[2020-12-05 15:12:35.881] [exthost] [warning] [Decorations] CAPPING events from decorations provider vscode.git 1409
+[2020-12-05 15:12:42.002] [exthost] [warning] [Decorations] CAPPING events from decorations provider vscode.git 1411
+[2020-12-05 15:12:48.729] [exthost] [warning] [Decorations] CAPPING events from decorations provider vscode.git 1415
+[2020-12-05 15:12:53.818] [exthost] [warning] [Decorations] CAPPING events from decorations provider vscode.git 1417
+[2020-12-05 15:13:18.751] [exthost] [warning] [Decorations] CAPPING events from decorations provider vscode.git 1419
+[2020-12-05 15:13:23.877] [exthost] [warning] [Decorations] CAPPING events from decorations provider vscode.git 1421
+[2020-12-05 15:13:43.047] [exthost] [warning] [Decorations] CAPPING events from decorations provider vscode.git 1425
+[2020-12-05 15:15:04.275] [exthost] [warning] [Decorations] CAPPING events from decorations provider vscode.git 1429
+[2020-12-05 15:15:09.381] [exthost] [warning] [Decorations] CAPPING events from decorations provider vscode.git 1429
+[2020-12-05 15:15:14.491] [exthost] [warning] [Decorations] CAPPING events from decorations provider vscode.git 1429
+[2020-12-05 15:15:57.927] [exthost] [warning] [Decorations] CAPPING events from decorations provider vscode.git 1433
+[2020-12-05 15:16:03.043] [exthost] [warning] [Decorations] CAPPING events from decorations provider vscode.git 1437
+[2020-12-05 15:16:27.485] [exthost] [warning] [Decorations] CAPPING events from decorations provider vscode.git 1441
+[2020-12-05 15:16:45.831] [exthost] [warning] [Decorations] CAPPING events from decorations provider vscode.git 1443
+[2020-12-05 15:16:50.940] [exthost] [warning] [Decorations] CAPPING events from decorations provider vscode.git 1445
+[2020-12-05 15:17:05.216] [exthost] [warning] [Decorations] CAPPING events from decorations provider vscode.git 1447
+[2020-12-05 15:17:10.333] [exthost] [warning] [Decorations] CAPPING events from decorations provider vscode.git 1449
+[2020-12-05 15:17:20.705] [exthost] [warning] [Decorations] CAPPING events from decorations provider vscode.git 1451
+[2020-12-05 15:17:26.863] [exthost] [warning] [Decorations] CAPPING events from decorations provider vscode.git 1453
+[2020-12-05 15:17:31.968] [exthost] [warning] [Decorations] CAPPING events from decorations provider vscode.git 1455
+[2020-12-05 15:17:37.052] [exthost] [warning] [Decorations] CAPPING events from decorations provider vscode.git 1457
+[2020-12-05 15:17:42.136] [exthost] [warning] [Decorations] CAPPING events from decorations provider vscode.git 1459
+[2020-12-05 15:18:10.076] [exthost] [warning] [Decorations] CAPPING events from decorations provider vscode.git 1463
+[2020-12-05 15:18:15.188] [exthost] [warning] [Decorations] CAPPING events from decorations provider vscode.git 1465
+[2020-12-05 15:18:20.298] [exthost] [warning] [Decorations] CAPPING events from decorations provider vscode.git 1465
+[2020-12-05 15:18:25.416] [exthost] [warning] [Decorations] CAPPING events from decorations provider vscode.git 1467
+[2020-12-05 15:18:30.498] [exthost] [warning] [Decorations] CAPPING events from decorations provider vscode.git 1471
+[2020-12-05 15:18:35.613] [exthost] [warning] [Decorations] CAPPING events from decorations provider vscode.git 1473
+[2020-12-05 15:18:41.426] [exthost] [warning] [Decorations] CAPPING events from decorations provider vscode.git 1475
+[2020-12-05 15:18:53.518] [exthost] [warning] [Decorations] CAPPING events from decorations provider vscode.git 1477
+[2020-12-05 15:19:23.316] [exthost] [warning] [Decorations] CAPPING events from decorations provider vscode.git 1477
+[2020-12-05 15:21:09.725] [exthost] [warning] [Decorations] CAPPING events from decorations provider vscode.git 1477
+[2020-12-05 15:22:32.112] [exthost] [warning] [Decorations] CAPPING events from decorations provider vscode.git 764
+[2020-12-05 15:22:34.688] [exthost] [info] ExtensionService#_doActivateExtension vscode.image-preview {"startup":false,"extensionId":{"value":"vscode.image-preview","_lower":"vscode.image-preview"},"activationEvent":"onCustomEditor:imagePreview.previewEditor"}
+[2020-12-05 15:22:34.688] [exthost] [info] ExtensionService#loadCommonJSModule file:///usr/lib/code/extensions/image-preview/dist/extension
+[2020-12-05 15:24:21.976] [exthost] [warning] [Decorations] CAPPING events from decorations provider vscode.git 764
+[2020-12-05 18:00:17.006] [exthost] [error] [vscode.typescript-language-features] provider FAILED
+[2020-12-05 18:00:17.007] [exthost] [error] Error: <semantic> TypeScript Server Error (4.0.3)
+Debug Failure. Did not expect JsxClosingFragment to have an Identifier in its trivia
+Error: Debug Failure. Did not expect JsxClosingFragment to have an Identifier in its trivia
+    at addSyntheticNodes (/usr/lib/code/extensions/node_modules/typescript/lib/tsserver.js:142386:30)
+    at createChildren (/usr/lib/code/extensions/node_modules/typescript/lib/tsserver.js:142375:9)
+    at NodeObject.getChildren (/usr/lib/code/extensions/node_modules/typescript/lib/tsserver.js:142319:56)
+    at findRightmostToken (/usr/lib/code/extensions/node_modules/typescript/lib/tsserver.js:111753:26)
+    at findRightmostToken (/usr/lib/code/extensions/node_modules/typescript/lib/tsserver.js:111755:29)
+    at find (/usr/lib/code/extensions/node_modules/typescript/lib/tsserver.js:111728:47)
+    at find (/usr/lib/code/extensions/node_modules/typescript/lib/tsserver.js:111732:32)
+    at find (/usr/lib/code/extensions/node_modules/typescript/lib/tsserver.js:111732:32)
+    at find (/usr/lib/code/extensions/node_modules/typescript/lib/tsserver.js:111732:32)
+    at find (/usr/lib/code/extensions/node_modules/typescript/lib/tsserver.js:111732:32)
+    at find (/usr/lib/code/extensions/node_modules/typescript/lib/tsserver.js:111732:32)
+    at find (/usr/lib/code/extensions/node_modules/typescript/lib/tsserver.js:111732:32)
+    at find (/usr/lib/code/extensions/node_modules/typescript/lib/tsserver.js:111732:32)
+    at find (/usr/lib/code/extensions/node_modules/typescript/lib/tsserver.js:111732:32)
+    at findPrecedingToken (/usr/lib/code/extensions/node_modules/typescript/lib/tsserver.js:111705:22)
+    at Object.findTokenOnLeftOfPosition (/usr/lib/code/extensions/node_modules/typescript/lib/tsserver.js:111679:16)
+    at getInfo (/usr/lib/code/extensions/node_modules/typescript/lib/tsserver.js:138356:35)
+    at Object.getAvailableActions (/usr/lib/code/extensions/node_modules/typescript/lib/tsserver.js:138302:28)
+    at /usr/lib/code/extensions/node_modules/typescript/lib/tsserver.js:130651:128
+    at getIterator (/usr/lib/code/extensions/node_modules/typescript/lib/tsserver.js:567:23)
+    at Object.next (/usr/lib/code/extensions/node_modules/typescript/lib/tsserver.js:562:35)
+    at Object.arrayFrom (/usr/lib/code/extensions/node_modules/typescript/lib/tsserver.js:1308:88)
+    at Object.getApplicableRefactors (/usr/lib/code/extensions/node_modules/typescript/lib/tsserver.js:130650:23)
+    at Proxy.getApplicableRefactors (/usr/lib/code/extensions/node_modules/typescript/lib/tsserver.js:144233:32)
+    at IOSession.Session.getApplicableRefactors (/usr/lib/code/extensions/node_modules/typescript/lib/tsserver.js:154612:53)
+    at Session.handlers.ts.Map.ts.getEntries._a.<computed> (/usr/lib/code/extensions/node_modules/typescript/lib/tsserver.js:153357:61)
+    at /usr/lib/code/extensions/node_modules/typescript/lib/tsserver.js:154962:88
+    at IOSession.Session.executeWithRequestId (/usr/lib/code/extensions/node_modules/typescript/lib/tsserver.js:154953:28)
+    at IOSession.Session.executeCommand (/usr/lib/code/extensions/node_modules/typescript/lib/tsserver.js:154962:33)
+    at IOSession.Session.onMessage (/usr/lib/code/extensions/node_modules/typescript/lib/tsserver.js:154986:35)
+    at Interface.<anonymous> (/usr/lib/code/extensions/node_modules/typescript/lib/tsserver.js:157202:27)
+    at Interface.emit (events.js:223:5)
+    at Interface._onLine (readline.js:315:10)
+    at Interface._normalWrite (readline.js:460:12)
+    at Socket.ondata (readline.js:172:10)
+    at Socket.emit (events.js:223:5)
+    at addChunk (_stream_readable.js:309:12)
+    at readableAddChunk (_stream_readable.js:290:11)
+    at Socket.Readable.push (_stream_readable.js:224:10)
+    at Pipe.onStreamRead (internal/stream_base_commons.js:181:23)
+	at Function.create (/usr/lib/code/extensions/typescript-language-features/dist/extension.js:1:76476)
+	at dispatchResponse (/usr/lib/code/extensions/typescript-language-features/dist/extension.js:1:70351)
+	at dispatchMessage (/usr/lib/code/extensions/typescript-language-features/dist/extension.js:1:69210)
+	at /usr/lib/code/extensions/typescript-language-features/dist/extension.js:1:68720
+	at l.fire (/usr/lib/code/out/vs/workbench/services/extensions/node/extensionHostProcess.js:46:67)
+	at g.onLengthData (/usr/lib/code/extensions/typescript-language-features/dist/extension.js:45:60018)
+	at Socket.<anonymous> (/usr/lib/code/extensions/typescript-language-features/dist/extension.js:45:59666)
+	at Socket.emit (events.js:223:5)
+	at addChunk (_stream_readable.js:309:12)
+	at readableAddChunk (_stream_readable.js:290:11)
+	at Socket.Readable.push (_stream_readable.js:224:10)
+	at Pipe.onStreamRead (internal/stream_base_commons.js:181:23)
+[2020-12-05 18:00:20.106] [exthost] [error] [vscode.typescript-language-features] provider FAILED
+[2020-12-05 18:00:20.106] [exthost] [error] Error: <semantic> TypeScript Server Error (4.0.3)
+Debug Failure. Did not expect JsxClosingFragment to have an Identifier in its trivia
+Error: Debug Failure. Did not expect JsxClosingFragment to have an Identifier in its trivia
+    at addSyntheticNodes (/usr/lib/code/extensions/node_modules/typescript/lib/tsserver.js:142386:30)
+    at createChildren (/usr/lib/code/extensions/node_modules/typescript/lib/tsserver.js:142375:9)
+    at NodeObject.getChildren (/usr/lib/code/extensions/node_modules/typescript/lib/tsserver.js:142319:56)
+    at findRightmostToken (/usr/lib/code/extensions/node_modules/typescript/lib/tsserver.js:111753:26)
+    at findRightmostToken (/usr/lib/code/extensions/node_modules/typescript/lib/tsserver.js:111755:29)
+    at findRightmostToken (/usr/lib/code/extensions/node_modules/typescript/lib/tsserver.js:111755:29)
+    at findRightmostToken (/usr/lib/code/extensions/node_modules/typescript/lib/tsserver.js:111755:29)
+    at findRightmostToken (/usr/lib/code/extensions/node_modules/typescript/lib/tsserver.js:111755:29)
+    at findRightmostToken (/usr/lib/code/extensions/node_modules/typescript/lib/tsserver.js:111755:29)
+    at findRightmostToken (/usr/lib/code/extensions/node_modules/typescript/lib/tsserver.js:111755:29)
+    at findRightmostToken (/usr/lib/code/extensions/node_modules/typescript/lib/tsserver.js:111755:29)
+    at find (/usr/lib/code/extensions/node_modules/typescript/lib/tsserver.js:111728:47)
+    at find (/usr/lib/code/extensions/node_modules/typescript/lib/tsserver.js:111732:32)
+    at findPrecedingToken (/usr/lib/code/extensions/node_modules/typescript/lib/tsserver.js:111705:22)
+    at Object.findTokenOnLeftOfPosition (/usr/lib/code/extensions/node_modules/typescript/lib/tsserver.js:111679:16)
+    at getInfo (/usr/lib/code/extensions/node_modules/typescript/lib/tsserver.js:138356:35)
+    at Object.getAvailableActions (/usr/lib/code/extensions/node_modules/typescript/lib/tsserver.js:138302:28)
+    at /usr/lib/code/extensions/node_modules/typescript/lib/tsserver.js:130651:128
+    at getIterator (/usr/lib/code/extensions/node_modules/typescript/lib/tsserver.js:567:23)
+    at Object.next (/usr/lib/code/extensions/node_modules/typescript/lib/tsserver.js:562:35)
+    at Object.arrayFrom (/usr/lib/code/extensions/node_modules/typescript/lib/tsserver.js:1308:88)
+    at Object.getApplicableRefactors (/usr/lib/code/extensions/node_modules/typescript/lib/tsserver.js:130650:23)
+    at Proxy.getApplicableRefactors (/usr/lib/code/extensions/node_modules/typescript/lib/tsserver.js:144233:32)
+    at IOSession.Session.getApplicableRefactors (/usr/lib/code/extensions/node_modules/typescript/lib/tsserver.js:154612:53)
+    at Session.handlers.ts.Map.ts.getEntries._a.<computed> (/usr/lib/code/extensions/node_modules/typescript/lib/tsserver.js:153357:61)
+    at /usr/lib/code/extensions/node_modules/typescript/lib/tsserver.js:154962:88
+    at IOSession.Session.executeWithRequestId (/usr/lib/code/extensions/node_modules/typescript/lib/tsserver.js:154953:28)
+    at IOSession.Session.executeCommand (/usr/lib/code/extensions/node_modules/typescript/lib/tsserver.js:154962:33)
+    at IOSession.Session.onMessage (/usr/lib/code/extensions/node_modules/typescript/lib/tsserver.js:154986:35)
+    at Interface.<anonymous> (/usr/lib/code/extensions/node_modules/typescript/lib/tsserver.js:157202:27)
+    at Interface.emit (events.js:223:5)
+    at Interface._onLine (readline.js:315:10)
+    at Interface._normalWrite (readline.js:460:12)
+    at Socket.ondata (readline.js:172:10)
+    at Socket.emit (events.js:223:5)
+    at addChunk (_stream_readable.js:309:12)
+    at readableAddChunk (_stream_readable.js:290:11)
+    at Socket.Readable.push (_stream_readable.js:224:10)
+    at Pipe.onStreamRead (internal/stream_base_commons.js:181:23)
+	at Function.create (/usr/lib/code/extensions/typescript-language-features/dist/extension.js:1:76476)
+	at dispatchResponse (/usr/lib/code/extensions/typescript-language-features/dist/extension.js:1:70351)
+	at dispatchMessage (/usr/lib/code/extensions/typescript-language-features/dist/extension.js:1:69210)
+	at /usr/lib/code/extensions/typescript-language-features/dist/extension.js:1:68720
+	at l.fire (/usr/lib/code/out/vs/workbench/services/extensions/node/extensionHostProcess.js:46:67)
+	at g.onLengthData (/usr/lib/code/extensions/typescript-language-features/dist/extension.js:45:60018)
+	at Socket.<anonymous> (/usr/lib/code/extensions/typescript-language-features/dist/extension.js:45:59666)
+	at Socket.emit (events.js:223:5)
+	at addChunk (_stream_readable.js:309:12)
+	at readableAddChunk (_stream_readable.js:290:11)
+	at Socket.Readable.push (_stream_readable.js:224:10)
+	at Pipe.onStreamRead (internal/stream_base_commons.js:181:23)
