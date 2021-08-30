@@ -1,8 +1,9 @@
 # made by z89 & available at: https://github.com/z89/dotfiles
 # i3wm complete reference: https://i3wm.org/docs/userguide.html
-# desktop version
- 
+# laptop version
+
 set $mod Mod4
+
 
 ######### i3 WINDOW ##########
 ##############################
@@ -198,6 +199,10 @@ bindsym $mod+u [instance="dropdown"] scratchpad show; move position center
 # take screenshot using scrot (using Print key)
 bindsym --release Print exec scrot
 bindsym --release Shift+Print exec scrot -s
+
+# brightness controls (mostly for laptops)
+bindsym XF86MonBrightnessUp exec --no-startup-id "light -A 5"
+bindsym XF86MonBrightnessDown exec --no-startup-id "light -U 5"
 
 # Use pactl to adjust volume in PulseAudio.
 set $refresh_i3status killall -SIGUSR1 i3status
