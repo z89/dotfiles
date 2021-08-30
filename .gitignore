@@ -1,7 +1,6 @@
 # Ignore everything in the root
 /*
 # Un-ignore all of subtree
-!.config/dunst/
 !.config/gtk-3.0/
 !.config/i3/
 !.config/polybar
