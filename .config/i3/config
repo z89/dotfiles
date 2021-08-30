@@ -1,0 +1,261 @@
+# made by z89 & available at: https://github.com/z89/dotfiles
+# i3wm complete reference: https://i3wm.org/docs/userguide.html
+# desktop version
+ 
+set $mod Mod4
+
+######### i3 WINDOW ##########
+##############################
+
+# i3 font
+font pango:Misc Termsyn 8
+
+# activate smart borders
+smart_borders on
+
+# no border if there is only a single container
+#hide_edge_borders smart_no_gaps
+
+# i3-gaps settings
+gaps inner 10
+gaps outer 10
+
+
+######### COLORS ##########
+###########################
+
+set $coloract "{active}"
+set $colorin "{inactive}"
+set $terminal termite
+set_from_resource $color15 i3wm.color15 "{color15}"
+set_from_resource $split i3wm.color10 "{color10}"
+set_from_resource $coloru i3wm.color2 "{color2}"
+set_from_resource $color0 i3wm.color0 "{color0}"
+set_from_resource $color7 i3wm.color7 "{color7}"
+set_from_resource $color8 i3wm.color8 "{color8}"
+
+# class                 border    backgr    text       indicator  child_border
+client.focused          $color7   $color7   $color15   $color7    $color7
+client.focused_inactive $color0   $color0   $color15   $color0    $color0
+client.unfocused        $color0   $color0   $color15   $color0    $color0
+client.urgent           $coloru   $coloru   $color15   $coloru    $coloru
+client.placeholder      $color0   $color8   $color15   $color0    $color8
+client.background       $color0
+
+
+###### KEYBINDINGS #######
+##########################
+
+floating_modifier $mod
+
+# dynamic gaps via keybinds
+bindsym $mod+m          gaps outer all plus  5
+bindsym $mod+Shift+m    gaps outer all minus 5
+bindsym $mod+n          gaps inner all plus  5
+bindsym $mod+Shift+n    gaps inner all minus 5
+
+# change focus
+bindsym $mod+h focus left
+bindsym $mod+j focus down
+bindsym $mod+k focus up
+bindsym $mod+l focus right
+
+# move focused window
+bindsym $mod+Shift+h move left
+bindsym $mod+Shift+j move down
+bindsym $mod+Shift+k move up
+bindsym $mod+Shift+l move right
+
+# alternatively, you can use the cursor keys:
+bindsym $mod+Shift+Left  move left
+bindsym $mod+Shift+Down  move down
+bindsym $mod+Shift+Up    move up
+bindsym $mod+Shift+Right move right
+
+# split in horizontal and vertical orientation
+bindsym $mod+b split h
+bindsym $mod+v split v
+
+# enter fullscreen mode for the focused container
+bindsym $mod+f fullscreen toggle
+
+# toggle tiling / floating
+bindsym $mod+Shift+space floating toggle
+bindsym $mod+o sticky toggle
+
+# change focus between tiling / floating windows
+bindsym $mod+space focus mode_toggle
+
+# switch between workspaces
+bindsym $mod+period workspace next
+bindsym $mod+comma workspace prev
+
+# switch to workspace
+bindsym $mod+1 workspace $ws1
+bindsym $mod+2 workspace $ws2
+bindsym $mod+3 workspace $ws3
+bindsym $mod+4 workspace $ws4
+bindsym $mod+5 workspace $ws5
+bindsym $mod+6 workspace $ws6
+bindsym $mod+7 workspace $ws7
+bindsym $mod+8 workspace $ws8
+bindsym $mod+9 workspace $ws9
+bindsym $mod+0 workspace $ws10
+
+# move focused container to workspace
+bindsym $mod+Shift+1 move container to workspace $ws1
+bindsym $mod+Shift+2 move container to workspace $ws2
+bindsym $mod+Shift+3 move container to workspace $ws3
+bindsym $mod+Shift+4 move container to workspace $ws4
+bindsym $mod+Shift+5 move container to workspace $ws5
+bindsym $mod+Shift+6 move container to workspace $ws6
+bindsym $mod+Shift+7 move container to workspace $ws7
+bindsym $mod+Shift+8 move container to workspace $ws8
+bindsym $mod+Shift+9 move container to workspace $ws9
+bindsym $mod+Shift+0 move container to workspace $ws10
+
+# focus the parent container
+bindsym $mod+p focus parent
+
+# reload the configuration file
+bindsym $mod+Shift+c reload
+
+# restart i3 inplace (preserves your layout/session, can be used to upgrade i3)
+bindsym $mod+Shift+r restart
+
+# resize window (you can also use the mouse)
+mode "resize" {
+        # These bindings trigger as soon as you enter the resize mode
+
+        # Pressing left will shrink the window’s width.
+        # Pressing right will grow the window’s width.
+        # Pressing up will shrink the window’s height.
+        # Pressing down will grow the window’s height.
+        bindsym j resize shrink width 10 px or 10 ppt
+        bindsym k resize grow height 10 px or 10 ppt
+        bindsym l resize shrink height 10 px or 10 ppt
+        bindsym semicolon resize grow width 10 px or 10 ppt
+
+        # same bindings, but for the arrow keys
+        bindsym Left resize shrink width 10 px or 10 ppt
+        bindsym Down resize grow height 10 px or 10 ppt
+        bindsym Up resize shrink height 10 px or 10 ppt
+        bindsym Right resize grow width 10 px or 10 ppt
+
+        # back to normal: Enter or Escape or $mod+r
+        bindsym Return mode "default"
+        bindsym Escape mode "default"
+        bindsym $mod+r mode "default"
+}
+
+bindsym $mod+r mode "resize"
+
+
+###### DEFINE WORKSPACES ######
+##############################
+
+# define workspaces
+set $ws1 "1"
+set $ws2 "2"
+set $ws3 "3"
+set $ws4 "4"
+set $ws5 "5"
+set $ws6 "6"
+set $ws7 "7"
+set $ws8 "8"
+set $ws9 "9"
+set $ws10 "10"
+
+
+###### EXECUTE PROGRAMS ######
+##############################
+
+# choose randomized wallpaper to switch pywal colors
+bindsym $mod+Shift+a exec wpg -m
+
+# start a terminal
+bindsym $mod+Return exec i3-sensible-terminal
+
+# kill focused window
+bindsym $mod+Shift+q kill
+
+# start rofi (program launcher)
+bindsym $mod+d exec --no-startup-id $HOME/.config/rofi/launcher.sh
+
+# switch to chromium workspace (ws2)
+bindsym $mod+c exec i3-msg 'workspace "2"'
+
+# switch to education workspace (ws7)
+bindsym $mod+e exec i3-msg 'workspace "7"'
+
+# switch to chromium workspace (ws2)
+bindsym $mod+s exec i3-msg 'workspace "8"'
+bindsym $mod+Shift+s exec playerctl --player=spotify play-pause
+
+# start scratchpad terminal
+bindsym $mod+u [instance="dropdown"] scratchpad show; move position center
+
+# take screenshot using scrot (using Print key)
+bindsym --release Print exec scrot
+bindsym --release Shift+Print exec scrot -s
+
+# Use pactl to adjust volume in PulseAudio.
+set $refresh_i3status killall -SIGUSR1 i3status
+bindsym XF86AudioRaiseVolume exec --no-startup-id pactl set-sink-volume @DEFAULT_SINK@ +10% && $refresh_i3status
+bindsym XF86AudioLowerVolume exec --no-startup-id pactl set-sink-volume @DEFAULT_SINK@ -10% && $refresh_i3status
+bindsym XF86AudioMute exec --no-startup-id pactl set-sink-mute @DEFAULT_SINK@ toggle && $refresh_i3status
+bindsym XF86AudioMicMute exec --no-startup-id pactl set-source-mute @DEFAULT_SOURCE@ toggle && $refresh_i3status
+
+
+###### WINDOWS ######
+#####################
+
+for_window [class=.*] border pixel 0
+for_window [class="Termite"] border pixel 2
+
+# move applications to specificied workspaces
+for_window [class="notion-app-navtivefier"] move to workspace $ws7
+for_window [class="Spotify"] move to workspace $ws8
+for_window [class="privateinternetaccess"] move to workspace $ws9
+
+
+##### SCRATCHPAD PROPERTIES #####
+#################################
+
+for_window [instance="dropdown"] floating enable
+for_window [instance="dropdown"] resize set 625 400
+for_window [instance="dropdown"] border pixel 4
+
+
+##### i3 STARTUP #####
+######################
+
+# start compton for blur & transparency
+exec_always compton --blur-background --blur-method kawase --blur-strength 5 --opacity-rule 80:'class_g="Termite"' --opacity-rule 65:'class_g="Rofi"' --opacity-rule 90:'class_g="code-oss"' --opacity-rule 80:'class_g="Spotify"'  --opacity-rule 80:'class_g="org.gnome.Nautilus"' --backend glx
+
+# start wpgtk for pywal colors
+exec_always --no-startup-id ~/.config/wpg/wp_init.sh
+
+# start pia (private-internet-access-vpn)
+exec_always --no-startup-id /opt/piavpn/bin/pia-client
+
+# start notion
+exec --no-startup-id /bin/notion-app-navtivefier
+
+# start nm-applet (networkmanager)
+exec_always --no-startup-id nm-applet
+
+# force reset of fontconfig cache (fixes polybar font bug)
+exec_always fc-cache -f
+
+# start spotify
+exec --no-startup-id /bin/spotify
+
+# start polybar
+exec_always --no-startup-id $HOME/.config/polybar/launch.sh
+
+# refresh dunstrc
+exec_always --no-startup-id $HOME/.config/dunst/dunstwal.sh
+
+# refresh pywal colors
+exec_always --no-startup-id wal -R
