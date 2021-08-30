@@ -1,6 +1,6 @@
 [colors]
-	background = "#332269"
-	foreground = "#6F8FC9"
+	background = "#a58897"
+	foreground = "#ecc3d8"
 
 [global]
     ### Display ###
@@ -18,7 +18,7 @@
     horizontal_padding = 12
     frame_width = 3
 
-    frame_color = "#6F8FC9"
+    frame_color = "#bf8890"
     separator_color = auto
     sort = yes
     idle_threshold = 120
@@ -76,17 +76,17 @@
     context = ctrl+shift+period
 
 [urgency_low]
-    background = "#332269"
-    foreground = "#6F8FC9"
+    background = colors.background
+    foreground = colors.foreground
     timeout = 10
 
 [urgency_normal]
-    background = "#332269"
-    foreground = "#6F8FC9"
+    background = colors.background
+    foreground = colors.foreground
     timeout = 10
 
 [urgency_critical]
-    background = "#332269"
-    foreground = "#6F8FC9"
-    frame_color = "#6F8FC9"
+    background = colors.background
+    foreground = colors.foreground
+    frame_color = "#BC849C"
     timeout = 0
