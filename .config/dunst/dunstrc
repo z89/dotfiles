@@ -1,0 +1,78 @@
+# z89 dunstrc config
+
+[colors]
+	background = "#31124c"
+	foreground = "#D26961"
+
+[global]
+    ### Display ###
+    follow = mouse
+    geometry = "0x5-10+20"
+    indicate_hidden = yes
+    shrink = yes
+    transparency = 0
+    notification_height = 0
+    separator_height = 3
+    padding = 12
+    horizontal_padding = 12
+    frame_width = 2
+    frame_color = "#D26961"
+    separator_color = auto
+    sort = yes
+    idle_threshold = 60
+
+    ### Text ###
+    font = Hack Nerd Font 9
+    line_height = 2
+    markup = full
+    format = "<b>%s </b>\n%b"
+    alignment = left
+    show_age_threshold = 60
+    word_wrap = yes
+    ellipsize = middle
+    ignore_newline = no
+    stack_duplicates = true
+    hide_duplicate_count = false
+    show_indicators = yes
+
+    ### Icons ###
+    icon_position = left
+    max_icon_size = 64
+    icon_path = .icons/flattrcolor/status/24:.icons/flattrcolor/devices/48:.icons/flattrcolor/apps/scalable:.icons/flattrcolor/actions/scalable
+
+    ### History ###
+    sticky_history = yes
+    history_length = 20
+
+    ### Misc/Advanced ###
+    #dmenu = /usr/bin/rofi -show run -p dunst:
+    #browser = /usr/bin/google-chrome-stable
+    #always_run_script = true
+    #title = Dunst
+    #class = Dunst
+    #startup_notification = false
+    #force_xinerama = false
+
+[experimental]
+    #per_monitor_dpi = false
+
+[shortcuts]
+    close = ctrl+space
+    close_all = ctrl+shift+space
+    context = ctrl+shift+period
+
+[urgency_low]
+    background = "#31124c"
+    foreground = "#D26961"
+    timeout = 10
+
+[urgency_normal]
+    background = "#31124c"
+    foreground = "#D26961"
+    timeout = 10
+
+[urgency_critical]
+    background = "#31124c"
+    foreground = "#D26961"
+    frame_color = "#D26961"
+    timeout = 0
