@@ -1,6 +1,6 @@
 [colors]
-	background = "#332269"
-	foreground = "#6F8FC9"
+	background = "{color0}"
+	foreground = "{color7}"
 
 [global]
     ### Display ###
@@ -8,23 +8,22 @@
     monitor = 0
     follow = mouse
 
-    geometry = "540x5-10+32"
+    geometry = "540x5-20+20"
     indicate_hidden = yes
     shrink = yes
     transparency = 0
     notification_height = 0
     separator_height = 3
     padding = 12
-    horizontal_padding = 12
-    frame_width = 3
+    horizontal_padding = 15
+    frame_width = 2
 
-    frame_color = "#6F8FC9"
+    frame_color = "{color7}"
     separator_color = auto
     sort = yes
-    idle_threshold = 120
 
     ### Text ###
-    font = go mono 9
+    font = Misc Termsyn 9
     line_height = 0
 
     markup = full
@@ -76,17 +75,17 @@
     context = ctrl+shift+period
 
 [urgency_low]
-    background = "#332269"
-    foreground = "#6F8FC9"
+    background = colors.background
+    foreground = colors.foreground
     timeout = 10
 
 [urgency_normal]
-    background = "#332269"
-    foreground = "#6F8FC9"
+    background = colors.background
+    foreground = colors.foreground
     timeout = 10
 
 [urgency_critical]
-    background = "#332269"
-    foreground = "#6F8FC9"
-    frame_color = "#6F8FC9"
+    background = colors.background
+    foreground = colors.foreground
+    frame_color = "{color9}"
     timeout = 0
