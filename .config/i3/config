@@ -236,7 +236,7 @@ for_window [instance="dropdown"] border pixel 4
 ######################
 
 # start compton for blur & transparency
-exec_always compton --blur-background --blur-method kawase --blur-strength 5 --opacity-rule 80:'class_g="Termite"' --opacity-rule 65:'class_g="Rofi"' --opacity-rule 90:'class_g="code-oss"' --opacity-rule 80:'class_g="Spotify"'  --opacity-rule 80:'class_g="org.gnome.Nautilus"' --backend glx
+exec_always compton --config /home/archie/.config/compton/compton.conf --blur-background --blur-method kawase --blur-strength 5 --opacity-rule 80:'class_g="Termite"' --opacity-rule 65:'class_g="Rofi"' --opacity-rule 90:'class_g="code-oss"' --opacity-rule 80:'class_g="Spotify"'  --opacity-rule 80:'class_g="org.gnome.Nautilus"' --backend glx
 
 # start wpgtk for pywal colors
 exec_always --no-startup-id ~/.config/wpg/wp_init.sh
