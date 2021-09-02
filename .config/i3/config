@@ -115,9 +115,6 @@ bindsym $mod+Shift+8 move container to workspace $ws8
 bindsym $mod+Shift+9 move container to workspace $ws9
 bindsym $mod+Shift+0 move container to workspace $ws10
 
-# focus the parent container
-bindsym $mod+p focus parent
-
 # reload the configuration file
 bindsym $mod+Shift+c reload
 
@@ -186,12 +183,15 @@ bindsym $mod+d exec --no-startup-id $HOME/.config/rofi/launcher.sh
 # switch to chromium workspace (ws2)
 bindsym $mod+c exec i3-msg 'workspace "2"'
 
-# switch to education workspace (ws7)
+# switch to notion workspace (ws7)
 bindsym $mod+e exec i3-msg 'workspace "7"'
 
-# switch to chromium workspace (ws2)
+# switch to spotify workspace (ws8)
 bindsym $mod+s exec i3-msg 'workspace "8"'
 bindsym $mod+Shift+s exec playerctl --player=spotify play-pause
+
+# switch to vpn workspace (ws9)
+bindsym $mod+p exec i3-msg 'workspace "9"'
 
 # start scratchpad terminal
 bindsym $mod+u [instance="dropdown"] scratchpad show; move position center
@@ -219,7 +219,7 @@ for_window [class=.*] border pixel 0
 for_window [class="Termite"] border pixel 2
 
 # move applications to specificied workspaces
-for_window [class="notion-app-navtivefier"] move to workspace $ws7
+for_window [class="notion-nativefier-46aee8"] move to workspace $ws7
 for_window [class="Spotify"] move to workspace $ws8
 for_window [class="privateinternetaccess"] move to workspace $ws9
 
@@ -244,9 +244,6 @@ exec_always --no-startup-id ~/.config/wpg/wp_init.sh
 # start pia (private-internet-access-vpn)
 exec_always --no-startup-id /opt/piavpn/bin/pia-client
 
-# start notion
-exec --no-startup-id /bin/notion-app-navtivefier
-
 # start nm-applet (networkmanager)
 exec_always --no-startup-id nm-applet
 
@@ -255,6 +252,9 @@ exec_always fc-cache -f
 
 # start spotify
 exec --no-startup-id /bin/spotify
+
+# start notion 
+exec --no-startup-id /bin/notion-app-nativefier
 
 # start polybar
 exec_always --no-startup-id $HOME/.config/polybar/launch.sh
