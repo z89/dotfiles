@@ -1,7 +1,7 @@
 # Ignore everything in the root
 /*
 # Un-ignore all of subtree
-!.config/compton/
+!.config/compton.conf
 !.config/wpg/templates/
 !.config/dunst/
 !.config/gtk-3.0/
