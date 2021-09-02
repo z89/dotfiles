@@ -3,16 +3,14 @@
 # Un-ignore all of subtree
 !.config/compton/compton.conf
 !.config/wpg/templates/
-!.config/dunst/
 !.config/gtk-3.0/
 !.config/i3/
 !.config/polybar/
 !.config/rofi/
 !.config/termite/
 !Pictures/
-!.bashrc
-!.bash_profile
-!.xprofile
+!.zshrc
+!.zprofile
 !.gitignore
 !README.md
 !install_package_list.sh
