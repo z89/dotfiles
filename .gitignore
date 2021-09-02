@@ -11,6 +11,7 @@
 !Pictures/
 !.zshrc
 !.zprofile
+!.zsh-themes/custom-z89.zsh-theme
 !.gitignore
 !README.md
 !install_package_list.sh
