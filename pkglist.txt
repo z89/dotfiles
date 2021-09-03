@@ -3,6 +3,7 @@ acpid
 arc-gtk-theme
 autoconf
 automake
+awesome-terminal-fonts
 base
 bc
 binutils
@@ -39,19 +40,22 @@ inetutils
 iwd
 jre-openjdk
 libtool
-libxcb
 light
 linux
 linux-firmware
 lvm2
 lxappearance
+ly
 m4
 make
 mkinitcpio
 nautilus
 neofetch
+nerd-fonts-fira-code
 network-manager-applet
+networkmanager
 nm-connection-editor
+notion-app-nativefier
 npm
 ntfs-3g
 obs-studio
@@ -62,9 +66,11 @@ papirus-icon-theme
 pass
 patch
 pavucontrol
+pipes.sh
 pkgconf
 playerctl
 polybar
+powerline-fonts
 pulseaudio
 python-pywal
 python2
@@ -73,6 +79,7 @@ rofi
 scrot
 sed
 spotify
+steam-native-runtime
 sudo
 termite
 texinfo
@@ -84,7 +91,7 @@ vim
 vlc
 wget
 which
-wpgtk-git
+wpgtk
 xdotool
 xf86-video-amdgpu
 xf86-video-vesa
@@ -106,7 +113,6 @@ xorg-sessreg
 xorg-setxkbmap
 xorg-smproxy
 xorg-x11perf
-xorg-xauth
 xorg-xbacklight
 xorg-xcmsdb
 xorg-xcursorgen
@@ -138,4 +144,7 @@ xorg-xwud
 yad
 yarn
 yay
+zenmonitor
 zscroll-git
+zsh
+zsh-completions
