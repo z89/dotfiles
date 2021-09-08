@@ -8,6 +8,7 @@
 !.config/polybar/
 !.config/rofi/
 !.config/termite/
+!docs/
 !Pictures/
 !.zshrc
 !.zprofile
