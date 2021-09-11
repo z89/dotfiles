@@ -217,7 +217,7 @@ bindsym XF86AudioMicMute exec --no-startup-id pactl set-source-mute @DEFAULT_SOU
 
 for_window [class=.*] border pixel 0
 for_window [class="Termite"] border pixel 2
-
+for_window [class="Electron"] border pixel 4
 # move applications to specificied workspaces
 for_window [class="notion-nativefier-46aee8"] move to workspace $ws7
 for_window [class="Spotify"] move to workspace $ws8
