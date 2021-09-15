@@ -3,13 +3,12 @@
 # Un-ignore all of subtree
 !.config/compton/compton.conf
 !.config/wpg/templates/
-!.config/gtk-3.0/
 !.config/i3/
 !.config/polybar/
 !.config/rofi/
 !.config/termite/
 !docs/
-!Pictures/
+!Picturesl/wallpapers/
 !.zshrc
 !.zprofile
 !.zsh-themes/custom-z89.zsh-theme
