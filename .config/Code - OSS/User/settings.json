@@ -11,5 +11,6 @@
     },
     "gitlens.advanced.messages": {
         "suppressRebaseSwitchToTextWarning": true
-    }
+    },
+    "explorer.confirmDragAndDrop": false
 }
