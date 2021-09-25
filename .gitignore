@@ -8,6 +8,7 @@
 !.config/rofi/
 !.config/termite/
 !docs/
+!.config/dunst/
 !Picturesl/wallpapers/
 !.zshrc
 !.zprofile
