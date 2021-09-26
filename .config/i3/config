@@ -222,7 +222,8 @@ for_window [class="Electron"] border pixel 4
 for_window [class="notion-nativefier-46aee8"] move to workspace $ws7
 for_window [class="Spotify"] move to workspace $ws8
 for_window [class="privateinternetaccess"] move to workspace $ws9
-
+for_window [class="Org.gnome.Nautilus"] floating enable
+for_window [class="Org.gnome.Nautilus"] resize set 1400 650
 
 ##### SCRATCHPAD PROPERTIES #####
 #################################
