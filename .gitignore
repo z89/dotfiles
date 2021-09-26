@@ -8,6 +8,7 @@
 !.config/rofi/
 !.config/termite/
 !docs/
+!.config/gtk-3.0/gtk.css
 !.config/dunst/
 !Picturesl/wallpapers/
 !.zshrc
