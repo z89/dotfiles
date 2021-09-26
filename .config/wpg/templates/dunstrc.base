@@ -1,6 +1,6 @@
 [colors]
 	background = "{color0}"
-	foreground = "{color7}"
+	foreground = "{color8}"
 
 [global]
     ### Display ###
@@ -8,7 +8,7 @@
     monitor = 0
     follow = mouse
 
-    geometry = "540x5-20+20"
+    geometry = "540x5-15+20"
     indicate_hidden = yes
     shrink = yes
     transparency = 0
@@ -18,7 +18,7 @@
     horizontal_padding = 15
     frame_width = 2
 
-    frame_color = "{color7}"
+    frame_color = "{color8}"
     separator_color = auto
     sort = yes
 
