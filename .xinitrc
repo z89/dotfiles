@@ -1,1 +1,1 @@
-xset r rate 180 40
+xset r rate 180 40 &
