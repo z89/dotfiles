@@ -37,7 +37,7 @@ font-1 = Symbols Nerd Font:style=Regular:size=9;1
 modules-left = i3 
 modules-center = 
 ;modules-right = spotify spotify-prev spotify-play spotify-play-pause spotify-next wifi-ssid ip calendar volume
-modules-right =  spotify spotify-prev spotify-play spotify-play-pause spotify-next wifi-ssid ip volume
+modules-right =  wifi-ssid ip volume
 
 tray-detached = false
 tray-position = right
