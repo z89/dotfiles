@@ -37,7 +37,7 @@ font-1 = Symbols Nerd Font:style=Regular:size=9;1
 modules-left = i3 
 modules-center = 
 ;modules-right = spotify spotify-prev spotify-play spotify-play-pause spotify-next wifi-ssid ip calendar volume
-modules-right =  wifi-ssid ip volume
+modules-right =  wifi-ssid ip volume date
 
 tray-detached = false
 tray-position = right
@@ -84,6 +84,35 @@ label-urgent-padding = 2
 
 label-separator = " "
 
+[module/date]
+type = internal/date
+
+; Seconds to sleep between updates
+; Default: 1.0
+interval = 1.0
+
+; See "https://en.cppreference.com/w/cpp/io/manip/put_time" for details on how to format the date string
+; NOTE: if you want to use syntax tags here you need to use %%{...}
+date = %Y-%m-%d%
+
+; Optional time format
+time = %H:%M
+
+; if `date-alt` or `time-alt` is defined, clicking
+; the module will toggle between formats
+date-alt = %A, %d %B %Y
+time-alt = %H:%M:%S
+
+; Available tags:
+;   <label> (default)
+format = 🕓 <label>
+
+; Available tokens:
+;   %date%
+;   %time%
+; Default: %date%
+label = %date% %time%
+label-font = 3
 
 ;###### SPOTIFY MODULE ######
 ;############################
