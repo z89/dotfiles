@@ -20,7 +20,7 @@ foreground-darker =  ${xrdb:color6}
 ;####### BAR ########
 ;####################
 
-[bar/z89]
+[bar/taskbar]
 monitor = ${env:MONITOR:}
 width = 100%
 height = 28
