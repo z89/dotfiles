@@ -1,5 +1,6 @@
 #!/bin/sh
-
+### Created by ilsenatorov
+### Change WALLPAPERDIR to the directory where you store wallpapers
 
 WALLPAPERDIR=~/Pictures/wallpapers/
 
