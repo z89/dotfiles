@@ -23,7 +23,7 @@
     sort = yes
 
     ### Text ###
-    font = Misc Termsyn 9
+    font = Misc Termsyn 8
     line_height = 0
 
     markup = full
