@@ -1,4 +1,3 @@
-android-file-transfer
 autoconf
 automake
 base
@@ -9,8 +8,6 @@ chromium
 code
 dhcpcd
 discord
-docker
-docker-compose
 dunst
 fakeroot
 feh
@@ -54,7 +51,6 @@ noto-fonts-emoji
 ntp
 nvidia
 pacman
-paper-icon-theme
 pass
 patch
 pavucontrol
@@ -66,7 +62,6 @@ popcorntime
 postman-bin
 pulseaudio
 python-pywal
-ranger
 rofi
 sed
 spotify
