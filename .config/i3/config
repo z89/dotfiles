@@ -244,6 +244,9 @@ for_window [instance="dropdown"] border pixel 4
 # start the picom compositor
 exec_always picom 
 
+# set the typematic rate  & mouse sensitivty
+exec_always --no-startup-id ~/tuning.sh
+
 # start wpgtk for pywal colors
 exec_always --no-startup-id ~/.config/wpg/wp_init.sh
 
