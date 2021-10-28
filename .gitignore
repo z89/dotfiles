@@ -1,7 +1,6 @@
 # Ignore everything in the root
 /*
 # Un-ignore all of subtree
-!.config/compton/compton.conf
 !.config/wpg/templates/
 !.config/picom/
 !.config/i3/
