@@ -24,6 +24,7 @@ gcc
 gettext
 git
 git-credential-manager-core-bin
+go-ipfs
 grep
 groff
 gvfs-mtp
@@ -49,6 +50,7 @@ networkmanager
 nm-connection-editor
 nodejs-express-generator
 notion-app-nativefier
+noto-fonts-emoji
 ntp
 nvidia
 pacman
@@ -61,6 +63,7 @@ pkgconf
 playerctl
 polybar
 popcorntime
+postman-bin
 pulseaudio
 python-pywal
 ranger
@@ -72,6 +75,7 @@ sudo
 termite
 termsyn-font
 texinfo
+tslint
 ttf-nerd-fonts-symbols
 tty-clock
 typescript
