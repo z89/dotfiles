@@ -3,6 +3,7 @@
 # Un-ignore all of subtree
 !.config/wpg/templates/
 !.config/picom/
+!tuning.sh
 !.config/i3/
 !.config/polybar/
 !.config/rofi/
