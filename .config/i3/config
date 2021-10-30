@@ -167,6 +167,8 @@ set $ws10 "10"
 
 ###### EXECUTE PROGRAMS ######
 ##############################
+# close dunst notications
+bindsym $mod+ctrl+space exec dunstctl close-all &
 
 # choose randomized wallpaper to switch pywal colors
 bindsym $mod+Shift+a exec wpg -m && /home/archie/.confg/dunst/dunstwal.sh
