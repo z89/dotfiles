@@ -1,3 +1,4 @@
+acpid
 autoconf
 automake
 base
@@ -61,6 +62,7 @@ polybar
 popcorntime
 postman-bin
 pulseaudio
+python-pip
 python-pywal
 rofi
 sed
