@@ -12,6 +12,7 @@
 !.config/gtk-3.0/gtk.css
 !Picturesl/wallpapers/
 !.zshrc
+!.config/Code\ -\ OSS/User/settings.json
 !.zprofile
 !.zsh-themes/custom-z89.zsh-theme
 !.gitignore
