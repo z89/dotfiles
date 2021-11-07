@@ -48,7 +48,6 @@ networkmanager
 nm-connection-editor
 nodejs-express-generator
 notion-app-nativefier
-noto-fonts-emoji
 ntp
 nvidia
 pacman
