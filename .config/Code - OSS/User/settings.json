@@ -1,0 +1,11 @@
+{
+    "terminal.integrated.fontFamily": "'monospace', 'Symbols Nerd Font'",
+    "terminal.integrated.fontSize": 12,
+
+    "workbench.colorTheme": "Wal",
+    "go.toolsManagement.autoUpdate": true,
+    "editor.fontSize": 12,
+    "explorer.confirmDelete": false,
+    "json.maxItemsComputed": 10000,
+    "explorer.confirmDragAndDrop": false,
+}
