@@ -1,1 +1,1 @@
-yay -Qqe > pkglist.txt
+yay -Qqe > package.list

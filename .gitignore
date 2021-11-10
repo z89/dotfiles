@@ -18,7 +18,7 @@
 !.gitignore
 !README.md
 !install_package_list.sh
-!pkglist.txt
+!package.list
 !update_package_list.sh
 
 
