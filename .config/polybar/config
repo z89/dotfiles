@@ -17,10 +17,11 @@ foreground =  ${xrdb:color7}
 foreground-darker =  ${xrdb:color6}
 
 
+
 ;####### BAR ########
 ;####################
 
-[bar/taskbar]
+[bar/primary]
 monitor = ${env:MONITOR:}
 width = 100%
 height = 28
@@ -37,11 +38,29 @@ font-1 = Symbols Nerd Font:style=Regular:size=9;1
 modules-left = i3 
 modules-center = 
 ;modules-right = spotify spotify-prev spotify-play spotify-play-pause spotify-next wifi-ssid ip calendar volume
-modules-right =  wifi-ssid ip volume date
+modules-right =  wifi-ssid ip date volume
 
+tray-padding = 6
 tray-detached = false
 tray-position = right
-tray-padding = 4
+
+[bar/secondary]
+monitor = ${env:MONITOR:}
+width = 100%
+height = 28
+fixed-center = true
+override-redirect = false
+wm-restack = i3
+
+background = ${colors.background}
+foreground = ${colors.foreground}
+
+font-0 = Misc Termsyn:style=Regular:size=8;1
+font-1 = Symbols Nerd Font:style=Regular:size=9;1
+
+modules-left = i3 
+modules-center = 
+modules-right = 
 
 ;###### i3 MODULE ######
 ;#######################
@@ -82,69 +101,25 @@ label-urgent-foreground = ${colors.background}
 label-urgent-background = ${colors.background-alert}
 label-urgent-padding = 2
 
-label-separator = " "
+
+;###### DATE MODULE ######
+;############################
 
 [module/date]
 type = internal/date
 
-; Seconds to sleep between updates
-; Default: 1.0
 interval = 1.0
 
-; See "https://en.cppreference.com/w/cpp/io/manip/put_time" for details on how to format the date string
-; NOTE: if you want to use syntax tags here you need to use %%{...}
-date = %d/%m/%Y
+date =   %d/%m/%Y
 
-; Optional time format
-time = %l:%M %p 
+time =  %l:%M %p  
 
-; if `date-alt` or `time-alt` is defined, clicking
-; the module will toggle between formats
-date-alt = %A, %d %B %Y
-time-alt = %H:%M:%S
+date-alt =   %A, %d %B %Y
+time-alt =   %H:%M:%S
 
-; Available tags:
-;   <label> (default)
-format = 🕓 <label>
-
-; Available tokens:
-;   %date%
-;   %time%
-; Default: %date%
-label = %date% %time%
-
-;###### SPOTIFY MODULE ######
-;############################
-
-[module/spotify]
-type = custom/script
-tail = true
-format-prefix = "   "
 format = <label>
-exec = ~/.config/polybar/scripts/spotify_player/scrolling_label.sh
-click-left = i3-msg 'workspace "8"'
-label-padding = 1
 
-
-[module/spotify-prev]
-type = custom/script
-exec = echo "玲" 
-format = <label>
-click-left = playerctl previous spotify
-label-padding = 1
-
-[module/spotify-next]
-type = custom/script
-exec = echo "怜   |"
-format = <label>
-click-left = playerctl next spotify
-label-padding = 1
-
-[module/spotify-play-pause]
-type = custom/script
-click-left = playerctl play-pause -p spotify
-exec = ~/.config/polybar/scripts/spotify_player/spotify_status.sh --play-pause
-interval = 0.1
+label = %date%   %time%
 
  
 ;###### NETWORK MODULE ######
@@ -158,7 +133,7 @@ label-padding = 2
 
 [module/ip]
 type = custom/script
-exec =  echo "$(~/.config/polybar/scripts/ip/ip.sh -f)   |"
+exec =  echo "$(~/.config/polybar/scripts/ip/ip.sh -f)   | "
 interval = 1
 label-padding = 2
 click-left =  ~/.config/polybar/scripts/ip/ip.sh -u
@@ -182,13 +157,45 @@ label-padding = 1
 type = internal/pulseaudio
 
 format-volume = <ramp-volume>  <label-volume>
-label-muted = ""
+label-muted = "  "
 label-volume = "%percentage%%"
-ramp-volume-0 = ""
-ramp-volume-1 = ""
-ramp-volume-2 = "墳"
-ramp-volume-3 = ""
+ramp-volume-0 = "  "
+ramp-volume-1 = "  "
+ramp-volume-2 = "  墳"
+ramp-volume-3 = "  "
 
 format-volume-padding = 1
 format-muted-padding = 1
 
+;###### SPOTIFY MODULE ######
+;############################
+
+[module/spotify]
+type = custom/script
+tail = true
+format-prefix = "   "
+format = <label>
+exec = ~/.config/polybar/scripts/spotify_player/scrolling_label.sh
+click-left = i3-msg 'workspace "8"'
+label-padding = 1
+
+
+[module/spotify-prev]
+type = custom/script
+exec = echo "玲" 
+format = <label>
+click-left = playerctl previous spotify
+label-padding = 1
+
+[module/spotify-next]
+type = custom/script
+exec = echo "怜   -"
+format = <label>
+click-left = playerctl next spotify
+label-padding = 1
+
+[module/spotify-play-pause]
+type = custom/script
+click-left = playerctl play-pause -p spotify
+exec = ~/.config/polybar/scripts/spotify_player/spotify_status.sh --play-pause
+interval = 0.1
