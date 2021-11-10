@@ -91,6 +91,18 @@ bindsym $mod+space focus mode_toggle
 bindsym $mod+period workspace next
 bindsym $mod+comma workspace prev
 
+# execute workspaces
+workspace $ws1 output DVI-D-0
+workspace $ws2 output HDMI-0
+workspace $ws3 output DVI-D-0
+workspace $ws4 output DVI-D-0
+workspace $ws5 output DVI-D-0
+workspace $ws6 output DVI-D-0
+workspace $ws7 output HDMI-0
+workspace $ws8 output HDMI-0
+workspace $ws9 output HDMI-0
+workspace $ws10 output HDMI-0
+
 # switch to workspace
 bindsym $mod+1 workspace $ws1
 bindsym $mod+2 workspace $ws2
@@ -164,7 +176,6 @@ set $ws8 "8"
 set $ws9 "9"
 set $ws10 "10"
 
-
 ###### EXECUTE PROGRAMS ######
 ##############################
 # close dunst notications
@@ -223,6 +234,7 @@ bindsym XF86AudioMicMute exec --no-startup-id pactl set-source-mute @DEFAULT_SOU
 for_window [class=.*] border pixel 0
 for_window [class="Termite"] border pixel 2
 for_window [class="Electron"] border pixel 4
+
 # move applications to specificied workspaces
 for_window [class="notion-nativefier-46aee8"] move to workspace $ws7
 for_window [class="Spotify"] move to workspace $ws8
@@ -275,3 +287,4 @@ exec_always --no-startup-id $HOME/.config/dunst/dunstwal.sh
 
 # refresh pywal colors
 exec_always --no-startup-id wal -R
+
