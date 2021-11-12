@@ -38,7 +38,7 @@ font-1 = Symbols Nerd Font:style=Regular:size=9;1
 modules-left = i3 
 modules-center = 
 ;modules-right = spotify spotify-prev spotify-play spotify-play-pause spotify-next wifi-ssid ip calendar volume
-modules-right =  wifi-ssid ip date volume
+modules-right =  wifi-ssid ip date calendar volume
 
 tray-padding = 6
 tray-detached = false
@@ -110,7 +110,7 @@ type = internal/date
 
 interval = 1.0
 
-date =   %d/%m/%Y
+date =   %d/%m/%Y  
 
 time =  %l:%M %p  
 
@@ -119,7 +119,7 @@ time-alt =   %H:%M:%S
 
 format = <label>
 
-label = %date%   %time%
+label = %date%
 
  
 ;###### NETWORK MODULE ######
@@ -149,7 +149,6 @@ interval = 1
 click-left = ~/.config/polybar/scripts/calendar/calendar.sh --popup &
 label-padding = 1
 
-
 ;###### VOLUME MODULE ######
 ;###########################
 
@@ -157,12 +156,12 @@ label-padding = 1
 type = internal/pulseaudio
 
 format-volume = <ramp-volume>  <label-volume>
-label-muted = "  "
+label-muted = " "
 label-volume = "%percentage%%"
-ramp-volume-0 = "  "
-ramp-volume-1 = "  "
-ramp-volume-2 = "  墳"
-ramp-volume-3 = "  "
+ramp-volume-0 = " "
+ramp-volume-1 = " "
+ramp-volume-2 = " 墳"
+ramp-volume-3 = " "
 
 format-volume-padding = 1
 format-muted-padding = 1
