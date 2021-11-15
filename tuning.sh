@@ -7,4 +7,4 @@ xset r rate 200 40
 xinput set-prop "pointer:Razer Razer Mamba Dock" "libinput Accel Speed" -1
 
 # wired mode // specific razer mouse configuration for razer mamba
-#xinput set-prop "pointer:Razer Razer Mamba" "libinput Accel Speed" -1
+xinput set-prop "pointer:Razer Razer Mamba" "libinput Accel Speed" -1
