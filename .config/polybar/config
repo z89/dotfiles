@@ -134,7 +134,6 @@ label-padding = 2
 [module/ip]
 type = custom/script
 exec =  echo "$(~/.config/polybar/scripts/ip/ip.sh -f)   | "
-interval = 1
 label-padding = 2
 click-left =  ~/.config/polybar/scripts/ip/ip.sh -u
 
@@ -145,7 +144,6 @@ click-left =  ~/.config/polybar/scripts/ip/ip.sh -u
 [module/calendar]
 type = custom/script
 exec =  ~/.config/polybar/scripts/calendar/calendar.sh
-interval = 1
 click-left = ~/.config/polybar/scripts/calendar/calendar.sh --popup &
 label-padding = 1
 
