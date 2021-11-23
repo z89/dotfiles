@@ -35,6 +35,7 @@ htop
 i3-gaps
 ipfs-cluster-bin
 iwd
+jre-openjdk
 libmtp
 libtool
 libxcb
@@ -81,6 +82,7 @@ ttf-nerd-fonts-symbols
 tty-clock
 typescript
 vim
+vlc
 wget
 which
 wpgtk
