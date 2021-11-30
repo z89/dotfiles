@@ -8,4 +8,5 @@
     "explorer.confirmDelete": false,
     "json.maxItemsComputed": 10000,
     "explorer.confirmDragAndDrop": false,
+    "typescript.updateImportsOnFileMove.enabled": "always",
 }
