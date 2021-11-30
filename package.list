@@ -69,12 +69,13 @@ postman-bin
 pulseaudio
 python-pip
 python-pywal
+reflector
 rofi
 sed
 spotify
 steam
 sudo
-termite
+termite-aperezdc-git
 termsyn-font
 texinfo
 tslint
