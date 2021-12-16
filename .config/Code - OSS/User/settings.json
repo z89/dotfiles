@@ -1,5 +1,5 @@
 {
-    "terminal.integrated.fontFamily": "'monospace', 'Symbols Nerd Font'",
+    "terminal.integrated.fontFamily": "'monospace', 'FiraCode Nerd Font', 'Symbols Nerd Font'",
     "terminal.integrated.fontSize": 12,
 
     "workbench.colorTheme": "Wal",
@@ -13,4 +13,5 @@
     "editor.cursorBlinking": "phase",
     "editor.cursorSmoothCaretAnimation": true,
     "editor.smoothScrolling": true,
+    "javascript.updateImportsOnFileMove.enabled": "always",
 }
