@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-theme="custom"
+theme="wpg"
 dir="$HOME/.config/wpg/templates"
 
-rofi -no-lazy-grab -show drun -modi drun -theme $dir/"$theme"
+rofi -no-lazy-grab -show drun -modi drun -icon-theme "Papirus" -show-icons -theme $dir/"$theme"
