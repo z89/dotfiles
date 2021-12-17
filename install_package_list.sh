@@ -1,1 +1,1 @@
-yay -S - < pkglist.txt
+yay -S - < package.list
