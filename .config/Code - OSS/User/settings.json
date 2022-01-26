@@ -14,4 +14,11 @@
     "editor.cursorSmoothCaretAnimation": true,
     "editor.smoothScrolling": true,
     "javascript.updateImportsOnFileMove.enabled": "always",
+    "editor.inlineSuggest.enabled": true,
+    "github.copilot.enable": {
+        "*": true,
+        "yaml": false,
+        "plaintext": true,
+        "markdown": false
+    },
 }
