@@ -240,6 +240,7 @@ for_window [class="notion-nativefier-46aee8"] move to workspace $ws7
 for_window [class="Spotify"] move to workspace $ws8
 for_window [class="privateinternetaccess"] move to workspace $ws9
 for_window [class="Org.gnome.Nautilus"] floating enable
+for_window [class="Chromium" window_role="pop-up"] floating enable, move position center
 for_window [class="Org.gnome.Nautilus"] resize set 1400 650
 for_window [class="Lxappearance"] floating enable
 for_window [class="Wpg"] floating enable
