@@ -275,10 +275,10 @@ exec_always --no-startup-id nm-applet
 exec_always fc-cache -f
 
 # start spotify
-exec --no-startup-id /bin/spotify
+# exec --no-startup-id /bin/spotify
 
 # start notion 
-exec --no-startup-id /bin/notion-app-nativefier
+# exec --no-startup-id /bin/notion-app-nativefier
 
 # start polybar
 exec_always --no-startup-id $HOME/.config/polybar/launch.sh
