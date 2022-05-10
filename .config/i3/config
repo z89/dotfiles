@@ -27,7 +27,6 @@ gaps outer 10
 
 set $coloract "{active}"
 set $colorin "{inactive}"
-set $terminal termite
 set_from_resource $color15 i3wm.color15 "{color15}"
 set_from_resource $split i3wm.color10 "{color10}"
 set_from_resource $coloru i3wm.color2 "{color2}"
@@ -240,10 +239,12 @@ for_window [class="notion-nativefier-46aee8"] move to workspace $ws7
 for_window [class="Spotify"] move to workspace $ws8
 for_window [class="privateinternetaccess"] move to workspace $ws9
 for_window [class="Org.gnome.Nautilus"] floating enable
-for_window [class="Chromium" window_role="pop-up"] floating enable, move position center
 for_window [class="Org.gnome.Nautilus"] resize set 1400 650
+for_window [class="Chromium" window_role="pop-up"] floating enable, move position center
 for_window [class="Lxappearance"] floating enable
 for_window [class="Wpg"] floating enable
+for_window [class="org.gnome.clocks"] floating enable
+for_window [class="org.gnome.clocks"] resize set 400 800
 
 ##### SCRATCHPAD PROPERTIES #####
 #################################
