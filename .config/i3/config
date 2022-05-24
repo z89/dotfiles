@@ -208,6 +208,9 @@ bindsym $mod+Shift+s exec playerctl --player=spotify play-pause
 # switch to vpn workspace (ws9)
 bindsym $mod+p exec i3-msg 'workspace "9"'
 
+# lock session using xscreensaver
+bindsym $mod+Ctrl+l exec xscreensaver-command --lock
+
 # start scratchpad terminal
 bindsym $mod+u [instance="dropdown"] scratchpad show; move position center
 

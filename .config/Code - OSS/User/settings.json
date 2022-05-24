@@ -1,24 +1,26 @@
 {
-    "terminal.integrated.fontFamily": "'monospace', 'FiraCode Nerd Font', 'Symbols Nerd Font'",
-    "terminal.integrated.fontSize": 12,
+  "terminal.integrated.fontFamily": "'monospace', 'FiraCode Nerd Font', 'Symbols Nerd Font'",
+  "terminal.integrated.fontSize": 12,
+  "editor.formatOnSave": true,
+  "editor.defaultFormatter": "esbenp.prettier-vscode",
+  "workbench.colorTheme": "Wal",
+  "go.toolsManagement.autoUpdate": true,
+  "editor.fontSize": 12,
+  "explorer.confirmDelete": false,
+  "json.maxItemsComputed": 10000,
+  "explorer.confirmDragAndDrop": false,
+  "typescript.updateImportsOnFileMove.enabled": "always",
 
-    "workbench.colorTheme": "Wal",
-    "go.toolsManagement.autoUpdate": true,
-    "editor.fontSize": 12,
-    "explorer.confirmDelete": false,
-    "json.maxItemsComputed": 10000,
-    "explorer.confirmDragAndDrop": false,
-    "typescript.updateImportsOnFileMove.enabled": "always",
-    
-    "editor.cursorBlinking": "phase",
-    "editor.cursorSmoothCaretAnimation": true,
-    "editor.smoothScrolling": true,
-    "javascript.updateImportsOnFileMove.enabled": "always",
-    "editor.inlineSuggest.enabled": true,
-    "github.copilot.enable": {
-        "*": true,
-        "yaml": false,
-        "plaintext": true,
-        "markdown": false
-    },
+  "editor.cursorBlinking": "phase",
+  "editor.cursorSmoothCaretAnimation": true,
+  "editor.smoothScrolling": true,
+  "javascript.updateImportsOnFileMove.enabled": "always",
+  "editor.inlineSuggest.enabled": true,
+  "github.copilot.enable": {
+    "*": true,
+    "yaml": false,
+    "plaintext": true,
+    "markdown": false
+  },
+  "prettier.printWidth": 250
 }
