@@ -1,5 +1,7 @@
 {
-  "terminal.integrated.fontFamily": "'monospace', 'FiraCode Nerd Font', 'Symbols Nerd Font'",
+  "terminal.integrated.fontFamily": "'monospace', 'Fira Code', 'Symbols Nerd Font'",
+  "editor.fontFamily": "Fira Code",
+  "editor.fontLigatures": true,
   "terminal.integrated.fontSize": 12,
   "editor.formatOnSave": true,
   "editor.defaultFormatter": "esbenp.prettier-vscode",
@@ -10,7 +12,6 @@
   "json.maxItemsComputed": 10000,
   "explorer.confirmDragAndDrop": false,
   "typescript.updateImportsOnFileMove.enabled": "always",
-
   "editor.cursorBlinking": "phase",
   "editor.cursorSmoothCaretAnimation": true,
   "editor.smoothScrolling": true,
