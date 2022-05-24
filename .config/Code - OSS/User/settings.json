@@ -1,5 +1,5 @@
 {
-  "terminal.integrated.fontFamily": "'monospace', 'Fira Code', 'Symbols Nerd Font'",
+  "terminal.integrated.fontFamily": "'Fira Code', 'Symbols Nerd Font', 'monospace'",
   "editor.fontFamily": "Fira Code",
   "editor.fontLigatures": true,
   "terminal.integrated.fontSize": 12,
