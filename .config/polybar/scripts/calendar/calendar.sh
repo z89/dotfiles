@@ -26,7 +26,7 @@ else
     xPos=$(echo "scale=3;($primaryX) - 300" | bc)
 fi
 
-TIME="$(date +"   %I:%M %p")"
+TIME="$(date +"   %I:%M %p   |")"
 
 case "$1" in
 
