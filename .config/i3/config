@@ -204,6 +204,8 @@ bindsym $mod+e exec i3-msg 'workspace "7"'
 # switch to spotify workspace (ws8)
 bindsym $mod+s exec i3-msg 'workspace "8"'
 bindsym $mod+Shift+s exec playerctl --player=spotify play-pause
+bindsym $mod+Ctrl+Shift+Right exec playerctl --player=spotify next
+bindsym $mod+Ctrl+Shift+Left exec playerctl --player=spotify previous
 
 # switch to vpn workspace (ws9)
 bindsym $mod+p exec i3-msg 'workspace "9"'
