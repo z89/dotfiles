@@ -1,0 +1,28 @@
+{
+    "wallpaper": "/home/archie/.config/wpg/wallpapers/3.png",
+    "alpha": "100",
+
+    "special": {
+        "background": "#071B16",
+        "foreground": "#e0eeef",
+        "cursor": "#e0eeef"
+    },
+    "colors": {
+        "color0": "#071B16",
+        "color1": "#639597",
+        "color2": "#7AB9C1",
+        "color3": "#95B8BB",
+        "color4": "#ACD2D4",
+        "color5": "#B6CAF7",
+        "color6": "#C2D3F4",
+        "color7": "#e0eeef",
+        "color8": "#9ca6a7",
+        "color9": "#639597",
+        "color10": "#7AB9C1",
+        "color11": "#95B8BB",
+        "color12": "#ACD2D4",
+        "color13": "#B6CAF7",
+        "color14": "#C2D3F4",
+        "color15": "#e0eeef"
+    }
+}

@@ -1,6 +1,7 @@
 # Ignore everything in the root
 /*
 # Un-ignore all of subtree
+!.config/wpg/schemes
 !.config/wpg/templates/
 !.config/picom/
 !tuning.sh
