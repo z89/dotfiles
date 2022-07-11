@@ -1,180 +1,103 @@
 /*-*- mode: css; -*-*/
 
-* {{
-    color0:		{color0};
-    color1:		{color1};
-    color2:		{color2};
-    color3:		{color3};
-    color4:		{color4};
-    color5:		{color5};
-    color6:		{color6};
-    color7:		{color7};
-    color8:		{color8};
-    color9:		{color9};
-    color10:	{color10};
-    color11:	{color11};
-    color12:	{color12};
-    color13:	{color13};
-    color14:	{color14};
-    color15:	{color15};
-    active:		{active};
-    inactive:	{inactive};
+* {
+    color0:		        {color0};
+    color1:		        {color1};
+    color2:		        {color2};
+    color3:		        {color3};
+    color4:		        {color4};
+    color5:		        {color5};
+    color6:		        {color6};
+    color7:		        {color7};
+    color8:		        {color8};
+    color9:		        {color9};
+    color10:	        {color10};
+    color11:	        {color11};
+    color12:	        {color12};
+    color13:	        {color13};
+    color14:	        {color14};
+    color15:	        {color15};
 
-    font: "Symbols Nerd Font 9";
+    font: 				"Symbols Nerd Font 9";
+	
+	active:				{active};
+	background:			@color0;
+    foreground:			@color15;
+   	background-color:	@background;
+    separatorcolor:		@color8;
 
-	background:						@color0;
-    foreground:						@color15;
+}
 
-    background-color:				@background;
-    border-color:					@background;
-    separatorcolor:					@color8;
-    scrollbar-handle:				@color9;
+/*				*/
+/*	 ROFI MENU	*/
+/*				*/
 
-    normal-background:				@background;
-    normal-foreground:				@foreground;
-    alternate-normal-background:	@background;
-    alternate-normal-foreground:	@foreground;
-    selected-normal-background:		@active;
-    selected-normal-foreground:		@foreground;
+window {
+	width: 				100%;
+    fullscreen: 		false;
+    background-color: 	@background;
+	border-color: 		@active;
+    border:           	0;
+    padding:          	50% 20% 50% 20%;
+}
 
-    active-background:				@inactive;
-    active-foreground:				@foreground;
-    alternate-active-background:	@active;
-    alternate-active-foreground:	@foreground;
-    selected-active-background:		@active;
-    selected-active-foreground:		@foreground;
+/*				*/
+/*	 ITEM LIST	*/
+/*				*/
 
-    urgent-background:				@color8;
-    urgent-foreground:				@color15;
-    alternate-urgent-background:	@color8;
-    alternate-urgent-foreground:	@color15;
-    selected-urgent-background:		@color14;
-    selected-urgent-foreground:		@foreground;
-}}
+listview {
+	lines: 				8;
+    padding:      		2em 0 0 0;
+    border-color: 		@separatorcolor;
+    spacing:      		10px;
+    scrollbar:    		@scrollbar;
+}
 
+/*				*/
+/*	   ITEM		*/
+/*				*/
 
-window {{
-    fullscreen: true;
-    background-color: @background;
-	border-color: @active;
-    border:           0;
-    padding:          280px 300px 280px 300px;
-}}
+element {
+    border:  			0;
+    padding: 			1em;
+}
 
-mainbox {{
-    border:  0px;
-	border-color: @active;
-    padding: 0;
-}}
+element-icon {
+ 	margin: 			0 1em 0 1.5em;
+}
 
-message {{
-    border:       2px 0 0;
-    border-color: @separatorcolor;
-    padding:      0px;
-}}
+element-text {
+	text-color:			@foreground;
+}
 
-textbox {{
-    highlight:  @highlight;
-    text-color: @color15;
-}}
+element.selected {
+	background-color:	@color2;
+}
 
-listview {{
-    padding:      40px 0 0;
-    border-color: @separatorcolor;
-    spacing:      10px;
-    scrollbar:    @scrollbar;
-}}
+element-text.selected {
+	background-color:	@color2;
+}
 
-element {{
-    border:  0;
-    padding: 15px 10px 15px 10px;
-}}
+element-icon.selected {
+	background-color:	@color2;
+}
 
-element-icon {{
-  margin: 0 40px 0 0;
-}}
+/*				*/
+/*	 INPUT BAR	*/
+/*				*/
 
-element.normal.normal {{
-    background-color: @normal-background;
-    text-color:       @normal-foreground;
-}}
+inputbar {
+	children:			[textbox-prompt-sep, entry ];
+}
 
-element.normal.urgent {{
-    background-color: @urgent-background;
-    text-color:       @urgent-foreground;
-}}
+entry {
+	text-color:			@foreground;
+}
 
-element.normal.active {{
-    background-color: @active-background;
-    text-color:       @active-foreground;
-}}
-
-element.selected.normal {{
-    border:  2px;
-	border-color: @active-background;
-}}
-
-element.selected.urgent {{
-    background-color: @selected-urgent-background;
-    text-color:       @selected-urgent-foreground;
-}}
-
-element.selected.active {{
-    background-color: @selected-active-background;
-    text-color:       @selected-active-foreground;
-}}
-
-element.alternate.normal {{
-    background-color: @alternate-normal-background;
-    text-color:       @alternate-normal-foreground;
-}}
-
-element.alternate.urgent {{
-    background-color: @alternate-urgent-background;
-    text-color:       @alternate-urgent-foreground;
-}}
-
-element.alternate.active {{
-    background-color: @alternate-active-background;
-    text-color:       @alternate-active-foreground;
-}}
-
-scrollbar {{
-    width:        4px;
-    border:       0;
-    handle-color: @scrollbar-handle;
-    handle-width: 8px;
-    padding:      0;
-}}
-
-sidebar {{
-    border:       2px 0 0;
-    border-color: @separatorcolor;
-}}
-
-inputbar {{
-    spacing:    1;
-    text-color: @normal-foreground;
-    padding:    0px;
-    children:   [textbox-prompt-sep, entry, case-indicator ];
-}}
-
-case-indicator,
-entry,
-prompt,
-button {{
-    spacing:    0;
-    text-color: @normal-foreground;
-}}
-
-textbox-prompt-sep {{
-    expand:     false;
-    str:        ":";
-    text-color: @normal-foreground;
-    margin:     0 0.3em 0 0;
-}}
-
-element-text, element-icon {{
-	text-color: @foreground;
-	background-color: transparent;
-}}
+textbox-prompt-sep {
+	expand:				false; // prevent centering
+	font:				"Symbols Nerd Font 12";
+	str:				"";
+	text-color:			@foreground;
+	margin:				0.12em 2em 0 0;
+}
