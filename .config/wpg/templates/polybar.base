@@ -9,26 +9,26 @@
 ;####################
 
 [colors]
-background = ${xrdb:color0}
-background-active = ${xrdb:color1}
-background-alert = ${xrdb:color3}
+background = {color0}
+background-active = {color1}
+background-alert = {color3}
 enable-ipc = true
-foreground =  ${xrdb:color7}
-foreground-darker =  ${xrdb:color6}
+foreground =  {color7}
+foreground-darker =  {color6}
 
 ;####### BAR ########
 ;####################
 
 [bar/primary]
-monitor = ${env:MONITOR:}
+monitor = DVI-D-0
 width = 100%
 height = 28
 fixed-center = true
 override-redirect = false
 wm-restack = i3
 
-background = ${colors.background}
-foreground = ${colors.foreground}
+background = {color0}
+foreground = {color7}
 
 font-0 = Misc Termsyn:style=Regular:size=8;1
 font-1 = Symbols Nerd Font:style=Regular:size=9;1
@@ -43,15 +43,15 @@ tray-detached = false
 tray-position = right
 
 [bar/secondary]
-monitor = ${env:MONITOR:}
+monitor = HDMI-0
 width = 100%
 height = 28
 fixed-center = true
 override-redirect = false
 wm-restack = i3
 
-background = ${colors.background}
-foreground = ${colors.foreground}
+background = {color0}
+foreground = {color7}
 
 font-0 = Misc Termsyn:style=Regular:size=8;1
 font-1 = Symbols Nerd Font:style=Regular:size=9;1
@@ -84,8 +84,8 @@ ws-icon-8 = 9;ﱾ
 ws-icon-9 = 10;漣
 
 label-focused =  "%icon%"
-label-focused-foreground = ${colors.background}
-label-focused-background = ${colors.background-active}
+label-focused-foreground = {color0}
+label-focused-background = {color1}
 label-focused-padding = 2
  
 label-unfocused =  %icon%
@@ -95,8 +95,8 @@ label-visible =  %icon%
 label-visible-padding = 2
 
 label-urgent =  %icon%
-label-urgent-foreground = ${colors.background}
-label-urgent-background = ${colors.background-alert}
+label-urgent-foreground = {color0}
+label-urgent-background = {color3}
 label-urgent-padding = 2
 
 
