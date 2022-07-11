@@ -1,73 +1,73 @@
 /*-*- mode: css; -*-*/
 
 * {
-    color0:		        {color0};
-    color1:		        {color1};
-    color2:		        {color2};
-    color3:		        {color3};
-    color4:		        {color4};
-    color5:		        {color5};
-    color6:		        {color6};
-    color7:		        {color7};
-    color8:		        {color8};
-    color9:		        {color9};
-    color10:	        {color10};
-    color11:	        {color11};
-    color12:	        {color12};
-    color13:	        {color13};
-    color14:	        {color14};
-    color15:	        {color15};
+	color0:		        {color0};
+	color1:		        {color1};
+	color2:		        {color2};
+	color3:		        {color3};
+	color4:		        {color4};
+	color5:		        {color5};
+	color6:		        {color6};
+	color7:		        {color7};
+	color8:		        {color8};
+	color9:		        {color9};
+	color10:	        {color10};
+	color11:	        {color11};
+	color12:	        {color12};
+	color13:	        {color13};
+	color14:	        {color14};
+	color15:	        {color15};
 
-    font: 				"Symbols Nerd Font 9";
+    	font: 			"Symbols Nerd Font 9";
 	
-	active:				{active};
-	background:			@color0;
-    foreground:			@color15;
+	active:			{active};
+	background:		@color0;
+	foreground:		@color15;
    	background-color:	@background;
-    separatorcolor:		@color8;
+    	separatorcolor:		@color8;
 
 }
 
-/*				*/
+/*			*/
 /*	 ROFI MENU	*/
-/*				*/
+/*			*/
 
 window {
-	width: 				100%;
-    fullscreen: 		false;
-    background-color: 	@background;
+	width: 			100%;
+    	fullscreen: 		false;
+    	background-color: 	@background;
 	border-color: 		@active;
-    border:           	0;
-    padding:          	50% 20% 50% 20%;
+    	border:           	0;
+    	padding:          	50% 20% 50% 20%;
 }
 
-/*				*/
+/*			*/
 /*	 ITEM LIST	*/
-/*				*/
+/*			*/
 
 listview {
-	lines: 				8;
-    padding:      		2em 0 0 0;
-    border-color: 		@separatorcolor;
-    spacing:      		10px;
-    scrollbar:    		@scrollbar;
+	lines: 			8;
+	padding:      		2em 0 0 0;
+	border-color: 		@separatorcolor;
+	spacing:      		10px;
+	scrollbar:    		@scrollbar;
 }
 
-/*				*/
+/*			*/
 /*	   ITEM		*/
-/*				*/
+/*			*/
 
 element {
-    border:  			0;
-    padding: 			1em;
+	border:  		0;
+	padding: 		1em;
 }
 
 element-icon {
- 	margin: 			0 1em 0 1.5em;
+ 	margin: 		0 1em 0 1.5em;
 }
 
 element-text {
-	text-color:			@foreground;
+	text-color:		@foreground;
 }
 
 element.selected {
@@ -82,22 +82,22 @@ element-icon.selected {
 	background-color:	@color2;
 }
 
-/*				*/
+/*			*/
 /*	 INPUT BAR	*/
-/*				*/
+/*			*/
 
 inputbar {
-	children:			[textbox-prompt-sep, entry ];
+	children:		[textbox-prompt-sep, entry ];
 }
 
 entry {
-	text-color:			@foreground;
+	text-color:		@foreground;
 }
 
 textbox-prompt-sep {
-	expand:				false; // prevent centering
-	font:				"Symbols Nerd Font 12";
-	str:				"";
-	text-color:			@foreground;
-	margin:				0.12em 2em 0 0;
+	expand:			false; // prevent centering
+	font:			"Symbols Nerd Font 12";
+	str:			"";
+	text-color:		@foreground;
+	margin:			0.12em 2em 0 0;
 }
