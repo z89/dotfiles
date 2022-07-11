@@ -268,17 +268,11 @@ exec_always picom
 # set the typematic rate  & mouse sensitivty
 exec_always --no-startup-id ~/tuning.sh
 
-# start wpgtk for pywal colors
-exec_always --no-startup-id ~/.config/wpg/wp_init.sh
-
 # start pia (private-internet-access-vpn)
 exec_always --no-startup-id /opt/piavpn/bin/pia-client
 
 # start nm-applet (networkmanager)
 exec_always --no-startup-id nm-applet
-
-# force reset of fontconfig cache (fixes polybar font bug)
-exec_always fc-cache -f
 
 # start spotify
 # exec --no-startup-id /bin/spotify
@@ -289,9 +283,15 @@ exec_always fc-cache -f
 # start polybar
 exec_always --no-startup-id $HOME/.config/polybar/launch.sh
 
+# start wpgtk for pywal colors
+exec_always --no-startup-id ~/.config/wpg/wp_init.sh
+
 # refresh dunstrc
 exec_always --no-startup-id $HOME/.config/dunst/dunstwal.sh
 
+# force reset of fontconfig cache (fixes polybar font bug)
+#exec_always fc-cache -f
+
 # refresh pywal colors
-exec_always --no-startup-id wal -R
+#exec_always --no-startup-id wal -R
 

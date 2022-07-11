@@ -83,6 +83,8 @@ plugins=(
 	zsh-syntax-highlighting
 )
 
+ZSH_AUTOSUGGEST_HIGHLIGHT_STYLE='fg=13'
+
 source $ZSH/oh-my-zsh.sh
 
 # User configuration
