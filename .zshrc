@@ -113,7 +113,7 @@ source $ZSH/oh-my-zsh.sh
 # alias zshconfig="mate ~/.zshrc"
 # alias ohmyzsh="mate ~/.oh-my-zsh"
 
-(cat ~/.config/wpg/sequences &)
+(cat $HOME/.config/wpg/sequences &)
 
 # create a zkbd compatible hash;
 # to add other keys to this hash, see: man 5 terminfo
