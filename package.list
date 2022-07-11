@@ -10,6 +10,11 @@ bc
 bind
 binutils
 bison
+bluedevil
+blueman
+bluetooth-autoconnect
+bluez
+bluez-utils
 chromium
 cmatrix
 code
@@ -98,11 +103,13 @@ pavucontrol
 picom
 pkgconf
 playerctl
+plocate
 polybar
 popcorntime
 postman-bin
 private-internet-access-vpn
 pulseaudio
+pulseaudio-bluetooth
 python-pip
 python-pywal
 rng-tools
