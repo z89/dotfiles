@@ -284,7 +284,7 @@ exec_always --no-startup-id nm-applet
 exec_always --no-startup-id $HOME/.config/polybar/launch.sh
 
 # start wpgtk for pywal colors
-exec_always --no-startup-id ~/.config/wpg/wp_init.sh
+#exec_always --no-startup-id ~/.config/wpg/wp_init.sh
 
 # refresh dunstrc
 exec_always --no-startup-id $HOME/.config/dunst/dunstwal.sh
@@ -293,5 +293,4 @@ exec_always --no-startup-id $HOME/.config/dunst/dunstwal.sh
 #exec_always fc-cache -f
 
 # refresh pywal colors
-#exec_always --no-startup-id wal -R
-
+exec_always --no-startup-id wal -R -e
