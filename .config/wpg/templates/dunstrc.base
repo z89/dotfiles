@@ -5,7 +5,6 @@
     monitor = 0
     follow = mouse
 
-    # geometry = "540x5-10+32" depreciated  
     offset = "10x32"
 
     indicate_hidden = false
@@ -16,7 +15,7 @@
     horizontal_padding = 12
     frame_width = 3
 
-    frame_color = "{active}" 
+    frame_color = "{color7}" 
     separator_color = auto
     sort = yes
     idle_threshold = 120
@@ -76,17 +75,16 @@
 [urgency_low]
     background = "{color0}"
     foreground = "{color7}"
-    timeout = 10
+    timeout = 5
 
 [urgency_normal]
-    background = colors.background
-    foreground = colors.foreground
-    timeout = 10
+    background = "{color0}"
+    foreground = "{color7}"
+    timeout = 5
 
 [urgency_critical]
-    background = colors.background
-    foreground = colors.foreground
-    frame_color = "{color9}"
-    timeout = 0
+    background = "{color0}"
+    foreground = "{color7}"
+    timeout = 5
 
 
