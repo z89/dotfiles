@@ -126,6 +126,7 @@ tor-browser
 tslint
 ttf-fira-code
 ttf-nerd-fonts-symbols
+ttf-wps-fonts
 typescript
 vim
 vlc
@@ -135,6 +136,7 @@ wget
 which
 wireguard-tools
 wpgtk
+wps-office
 xdotool
 xf86-video-vesa
 xorg-bdftopcf
