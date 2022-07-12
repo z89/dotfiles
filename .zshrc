@@ -113,7 +113,11 @@ source $ZSH/oh-my-zsh.sh
 # alias zshconfig="mate ~/.zshrc"
 # alias ohmyzsh="mate ~/.oh-my-zsh"
 
+# wpg sequences
 (cat $HOME/.config/wpg/sequences &)
+
+# don't verify history (eg. execute sudo !! immediately)
+unsetopt HIST_VERIFY
 
 # create a zkbd compatible hash;
 # to add other keys to this hash, see: man 5 terminfo
