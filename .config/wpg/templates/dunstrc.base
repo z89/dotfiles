@@ -1,90 +1,90 @@
 
 [global]
-    ### Display ###
+# find config wiki @ https://github.com/dunst-project/dunst/blob/master/docs/dunst.5.pod
 
-    monitor = 0
-    follow = mouse
+	###############
+	##  DISPLAY  ##
+	###############
 
-    offset = "10x32"
+	monitor=0 # required for following
+    	follow = none # don't follow between monitors
+	offset = "10x32" # top right corner adjustment
+    	separator_height = 3 # height between notifications
 
-    indicate_hidden = false
-    shrink = yes
-    transparency = 0
-    separator_height = 3
-    padding = 12
-    horizontal_padding = 12
-    frame_width = 3
+	##############
+	##  VISUAL  ##
+	##############
 
-    frame_color = "{color7}" 
-    separator_color = auto
-    sort = yes
-    idle_threshold = 120
+	# padding
+	padding = 12 # distance from the content to the border vertically (in px)
+    	horizontal_padding = 12 # distance from the content to the border horizontally (in px)
+	
+	# border
+	frame_width = 3 # a.k.a border width (in px)
+	frame_color = "{color7}" # a.k.a border color 
+   	separator_color = foreground # color between notifications
+    	
+	# text
+	font = Misc Termsyn 8 # configure font
+    	line_height = 0 # adjust height between lines
 
-    ### Text ###
-    font = Misc Termsyn 8
-    line_height = 0
+	# formatting 
+	format = "<b>%s </b>\n%b" # bold summary, newline, then display body
+    	alignment = center # text alignment within notification
 
-    markup = full
+	# icon
+	icon_position = left # position of icon
+   	max_icon_size = 64 # size of icon (in px)
+	icon_path = .icons/flattrcolor/status/24:.icons/flattrcolor/devices/48:.icons/flattrcolor/apps/scalable:.icons/flattrcolor/actions/scalable
+	
+	
+	##############
+	##  CONFIG  ##
+	##############	
+	
+	notifcation_limit = 0 # no limit to no. of notifcations
+	indicate_hidden = false # show how many notifications are hidden (not required due to 0 limit)
+    	transparency = 0 # transparency of notification	
+    	sort = false # sort urgency order
+    	idle_threshold = 120 # don't timeout notifications for user idling longer than 120s
+    	markup = full # allow html markup inside notifications
+	show_age_threshold = 60 # show age of notification (if older than 60s)
+   	word_wrap = yes # wrap long sentences inside notifications
+    	ellipsize = middle
+    	ignore_newline = false # replace newlines with whitespace
+    	stack_duplicates = true # stack duplicate notifications
+    	hide_duplicate_count = false # hide the count of duplicate stack
+    	show_indicators = true # show an indicator if notification contains actions
 
-    # The format of the message.  Possible variables are:
-    #   %a  appname
-    #   %s  summary
-    #   %b  body
-    #   %i  iconname (including its path)
-    #   %I  iconname (without its path)
-    #   %p  progress value if set ([  0%] to [100%]) or nothing
-    #   %n  progress value if set without any extra characters
-    #   %%  Literal %
-    # Markup is allowed
-    format = "<b>%s </b>\n%b"
-    alignment = left
-    show_age_threshold = 60
-    word_wrap = yes
-    ellipsize = middle
-    ignore_newline = yes
-    stack_duplicates = true
-    hide_duplicate_count = false
-    show_indicators = yes
+	# history
+	sticky_history = true # won't timeout notifications automatically 
+	history_length = 20 # maximum number of notifications that will be kept in history 
 
-    ### Icons ###
-    icon_position = left
-    max_icon_size = 64
-    icon_path = .icons/flattrcolor/status/24:.icons/flattrcolor/devices/48:.icons/flattrcolor/apps/scalable:.icons/flattrcolor/actions/scalable
+	# shortcuts
+	close = ctrl+space
+	# close_all = ctrl+shift+space
+	context = ctrl+shift+period
 
-    ### History ###
-    sticky_history = yes
-    history_length = 20
+	[urgency_low]
+	background = "{color0}"
+	foreground = "{color7}"
+	timeout = 5
 
-    ### Misc/Advanced ###
-    dmenu = /usr/bin/rofi -show run -p dunst:
-    browser = /usr/bin/google-chrome-stable
-    always_run_script = true
-    title = Dunst
-    class = Dunst
-    # startup_notification = false
-    force_xinerama = false
+	[urgency_normal]
+	background = "{color0}"
+	foreground = "{color7}"
+	timeout = 5
 
-[experimental]
-    per_monitor_dpi = false
-
-# [shortcuts]
-#    close = ctrl+space
-#    close_all = ctrl+shift+space
-#    context = ctrl+shift+period
-
-[urgency_low]
-    background = "{color0}"
-    foreground = "{color7}"
-    timeout = 5
-
-[urgency_normal]
-    background = "{color0}"
-    foreground = "{color7}"
-    timeout = 5
-
-[urgency_critical]
-    background = "{color0}"
-    foreground = "{color7}"
-    timeout = 5
-
-
+	[urgency_critical]
+	background = "{color0}"
+	foreground = "{color7}"
+	timeout = 5
+	
+	# misc    
+	dmenu = /usr/bin/rofi -show run -p dunst:
+	browser = /usr/bin/chromium
+	always_run_script = true
+	title = Dunst
+	class = Dunst
+	startup_notification = false
+	force_xinerama = false
