@@ -71,15 +71,15 @@ element-text {{
 }}
 
 element.selected {{
-	background-color:	@color8;
+	background-color:	@color4;
 }}
 
 element-text.selected {{
-	background-color:	@color8;
+	background-color:	@color4;
 }}
 
 element-icon.selected {{
-	background-color:	@color8;
+	background-color:	@color4;
 }}
 
 /*			*/
