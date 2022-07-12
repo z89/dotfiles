@@ -19,6 +19,7 @@ chromium
 cmatrix
 code
 cups
+dex
 dhcpcd
 dunst
 evhz-git
@@ -87,6 +88,8 @@ network-manager-applet
 networkmanager
 nm-connection-editor
 notion-app-nativefier
+noto-fonts-cjk-jp-vf
+noto-fonts-emoji-apple
 ntfs-3g
 ntp
 nvidia-dkms
