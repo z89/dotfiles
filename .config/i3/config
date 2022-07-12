@@ -283,8 +283,8 @@ exec_always --no-startup-id nm-applet
 # start polybar
 exec_always --no-startup-id $HOME/.config/polybar/launch.sh
 
-# start wpgtk for pywal colors
-#exec_always --no-startup-id ~/.config/wpg/wp_init.sh
+# start blueman (bluetooth manager & applet)
+exec_always --no-startup-id dex ~/.config/autostart/blueman.desktop
 
 # refresh dunstrc
 exec_always --no-startup-id $HOME/.config/dunst/dunstwal.sh
