@@ -25,22 +25,17 @@ gaps outer 10
 ######### COLORS ##########
 ###########################
 
-set $coloract "{active}"
-set $colorin "{inactive}"
-set_from_resource $color15 i3wm.color15 "{color15}"
-set_from_resource $split i3wm.color10 "{color10}"
-set_from_resource $coloru i3wm.color2 "{color2}"
-set_from_resource $color0 i3wm.color0 "{color0}"
-set_from_resource $color7 i3wm.color7 "{color7}"
-set_from_resource $color8 i3wm.color8 "{color8}"
+set_from_resource $light i3wm.color15 "{color15}"
+set_from_resource $dark i3wm.color0 "{color15}"
 
-# class                 border    backgr    text       indicator  child_border
-client.focused          $color7   $color7   $color15   $color7    $color7
-client.focused_inactive $color0   $color0   $color15   $color0    $color0
-client.unfocused        $color0   $color0   $color15   $color0    $color0
-client.urgent           $coloru   $coloru   $color15   $coloru    $coloru
-client.placeholder      $color0   $color8   $color15   $color0    $color8
-client.background       $color0
+# class                 border  backgr. text    indicator child_border
+client.focused          $light #285577 #ffffff #2e9ef4    $light
+client.focused_inactive #333333 #5f676a #ffffff #484e50   #5f676a
+client.unfocused        #333333 #222222 #888888 #292d2e   #222222
+client.urgent           #2f343a #900000 #ffffff #900000   #900000
+client.placeholder      #000000 #0c0c0c #ffffff #000000   #0c0c0c
+
+client.background       #ffffff
 
 
 ###### KEYBINDINGS #######
@@ -236,7 +231,7 @@ bindsym XF86AudioMicMute exec --no-startup-id pactl set-source-mute @DEFAULT_SOU
 #####################
 
 for_window [class=.*] border pixel 0
-for_window [class="Termite"] border pixel 2
+for_window [class="Termite"] border pixel 8
 for_window [class="Electron"] border pixel 4
 
 # move applications to specificied workspaces
