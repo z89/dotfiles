@@ -26,16 +26,16 @@ gaps outer 10
 ###########################
 
 set_from_resource $light i3wm.color15 "{color15}"
-set_from_resource $dark i3wm.color0 "{color15}"
+set_from_resource $dark i3wm.color0 "{color0}"
 
-# class                 border  backgr. text    indicator child_border
-client.focused          $light #285577 #ffffff #2e9ef4    $light
-client.focused_inactive #333333 #5f676a #ffffff #484e50   #5f676a
-client.unfocused        #333333 #222222 #888888 #292d2e   #222222
-client.urgent           #2f343a #900000 #ffffff #900000   #900000
-client.placeholder      #000000 #0c0c0c #ffffff #000000   #0c0c0c
+# class                 border	background	text	indicator	child_border
+client.focused          $light	$light 		$light 	$light  	$light
+client.focused_inactive $dark 	$dark 		$light	$dark   	$dark
+client.unfocused        $dark 	$dark 		$light 	$dark   	$dark
+client.urgent           $dark 	$dark 		$light 	$dark   	$dark
+client.placeholder      $dark 	$dark 		$light 	$dark   	$dark
 
-client.background       #ffffff
+client.background       $light
 
 
 ###### KEYBINDINGS #######
@@ -231,7 +231,7 @@ bindsym XF86AudioMicMute exec --no-startup-id pactl set-source-mute @DEFAULT_SOU
 #####################
 
 for_window [class=.*] border pixel 0
-for_window [class="Termite"] border pixel 8
+for_window [class="Termite"] border pixel 2
 for_window [class="Electron"] border pixel 4
 
 # move applications to specificied workspaces
