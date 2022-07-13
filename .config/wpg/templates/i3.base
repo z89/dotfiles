@@ -242,8 +242,6 @@ for_window [class="Org.gnome.Nautilus"] resize set 1400 650
 for_window [class="Chromium" window_role="pop-up"] floating enable, move position center
 for_window [class="Lxappearance"] floating enable
 for_window [class="Wpg"] floating enable
-for_window [class="org.gnome.clocks"] floating enable
-for_window [class="org.gnome.clocks"] resize set 400 800
 
 ##### SCRATCHPAD PROPERTIES #####
 #################################
