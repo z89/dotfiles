@@ -35,6 +35,11 @@ source $ZSH/oh-my-zsh.sh
 
 export EDITOR='vim'
 
+# remove ls highlight color
+_ls_colors=":ow=01;33"
+zstyle ':completion:*:default' list-colors "${(s.:.)_ls_colors}"
+LS_COLORS+=$_ls_colors
+
 # wpg sequences
 (cat $HOME/.config/wpg/sequences &)
 
