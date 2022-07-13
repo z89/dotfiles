@@ -104,6 +104,7 @@ pass
 patch
 pavucontrol
 picom
+pipes.sh
 pkgconf
 playerctl
 plocate
@@ -115,6 +116,7 @@ pulseaudio
 pulseaudio-bluetooth
 python-pip
 python-pywal
+python2
 rng-tools
 rofi
 samba
@@ -189,6 +191,7 @@ xorg-xwayland
 xorg-xwd
 xorg-xwininfo
 xorg-xwud
+xsettingsd
 yad
 yarn
 yay
