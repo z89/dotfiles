@@ -9,7 +9,6 @@
 	monitor=0 # required for following
     	follow = none # don't follow between monitors
 	offset = "10x32" # top right corner adjustment
-    	separator_height = 3 # height between notifications
 
 	##############
 	##  VISUAL  ##
@@ -55,7 +54,8 @@
     	stack_duplicates = true # stack duplicate notifications
     	hide_duplicate_count = false # hide the count of duplicate stack
     	show_indicators = true # show an indicator if notification contains actions
-
+	gap_size = 8
+	
 	# history
 	sticky_history = true # won't timeout notifications automatically 
 	history_length = 20 # maximum number of notifications that will be kept in history 
