@@ -21,12 +21,11 @@ smart_borders on
 gaps inner 10
 gaps outer 10
 
-
 ######### COLORS ##########
 ###########################
 
-set_from_resource $light i3wm.color15 "{color15}"
-set_from_resource $dark i3wm.color0 "{color0}"
+set_from_resource $light i3wm.color15 "#ecc3d8"
+set_from_resource $dark i3wm.color0 "#35345d"
 
 # class                 border	background	text	indicator	child_border
 client.focused          $light	$light 		$light 	$light  	$light
