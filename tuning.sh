@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # typematic rate [time: 200ms, repeat rate: 40p/s]
-xset r rate 200 40
+xset r rate 300 50
 
 # wireless mode // configuration for razer mamba mouse while wireless (undocked)
 xinput set-prop "pointer:Razer Razer Mamba Dock" "libinput Accel Speed" -1
