@@ -7,6 +7,7 @@ autoconf
 automake
 base
 bc
+bdfresize
 bind
 binutils
 bison
@@ -32,6 +33,7 @@ findutils
 fish
 flameshot
 flex
+fonttosfnt
 gawk
 gcc
 gettext
@@ -40,7 +42,7 @@ git-credential-manager-core-bin
 gnome-keyring
 go-ipfs
 grep
-groff
+gucharmap
 gvfs-mtp
 gzip
 htop
@@ -50,6 +52,7 @@ iw
 iwd
 jdk17-openjdk
 jre-openjdk
+lf
 lib32-giflib
 lib32-gnutls
 lib32-gst-plugins-base-libs
@@ -62,7 +65,6 @@ lib32-libva
 lib32-libxcomposite
 lib32-libxinerama
 lib32-libxslt
-lib32-mpg123
 lib32-ocl-icd
 lib32-openal
 lib32-v4l-utils
@@ -80,7 +82,6 @@ lxappearance-gtk3
 m4
 make
 minecraft-launcher
-mpg123
 nautilus
 ncdu
 neofetch
@@ -92,12 +93,9 @@ noto-fonts-cjk-jp-vf
 noto-fonts-emoji-apple
 ntfs-3g
 ntp
-nvidia-dkms
-nvidia-settings
 ocl-icd
 openal
 osbuddy
-otf-nerd-fonts-fira-code
 pacman
 papirus-icon-theme
 pass
@@ -141,23 +139,17 @@ wget
 which
 wireguard-tools
 wpgtk
-wps-office
+xclip
 xdotool
 xf86-video-vesa
 xorg-bdftopcf
-xorg-docs
 xorg-font-util
 xorg-fonts-100dpi
 xorg-fonts-75dpi
 xorg-fonts-encodings
 xorg-iceauth
-xorg-mkfontscale
-xorg-server
 xorg-server-common
 xorg-server-devel
-xorg-server-xephyr
-xorg-server-xnest
-xorg-server-xvfb
 xorg-sessreg
 xorg-setxkbmap
 xorg-smproxy
@@ -169,6 +161,7 @@ xorg-xcursorgen
 xorg-xdpyinfo
 xorg-xdriinfo
 xorg-xev
+xorg-xfd
 xorg-xgamma
 xorg-xhost
 xorg-xinput
@@ -187,7 +180,6 @@ xorg-xrefresh
 xorg-xset
 xorg-xsetroot
 xorg-xvinfo
-xorg-xwayland
 xorg-xwd
 xorg-xwininfo
 xorg-xwud
