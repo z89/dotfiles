@@ -9,11 +9,9 @@
 ;####################
 
 [colors]
-background = {color0}
 background-active = {color1}
 background-alert = {color3}
 enable-ipc = true
-foreground =  {color7}
 foreground-darker =  {color6}
 
 ;####### BAR ########
@@ -114,7 +112,7 @@ interval = 0.5
 ; New in version 3.6.0
 warn-percentage = 95
 format = <label>
-label = "  %percentage%% "
+label = "  %percentage%% "
 label-warn =   %percentage%%
 label-padding = 2
 
@@ -129,7 +127,7 @@ type = internal/memory
 interval = 3
 
 warn-percentage = 95
-label =   %gb_used%
+label =   %gb_used%
 format = <label> 
 
 ;###### DATE MODULE ######
@@ -140,8 +138,8 @@ type = internal/date
 
 interval = 1.0
 
-date =   %d/%m/%Y  
-date-alt =   %A, %d %B %Y
+date =   %d/%m/%Y  
+date-alt =   %A, %d %B %Y
 
 format = <label>
 
@@ -159,18 +157,17 @@ label = %date%
 
 [module/ip]
 type = custom/script
-exec =  echo " |   $(~/.config/polybar/scripts/ip/ip.sh -f)   | "
+exec =  echo " |   $(~/.config/polybar/scripts/ip.sh -f)   | "
 label-padding = 2
-click-left =  ~/.config/polybar/scripts/ip/ip.sh -u
-
+click-left =  ~/.config/polybar/scripts/ip.sh -s
 
 ;###### CALENDAR MODULE ######
 ;############################
 
-[module/calendar]
+[module/calendar] 
 type = custom/script
-exec =  ~/.config/polybar/scripts/calendar/calendar.sh
-click-left = ~/.config/polybar/scripts/calendar/calendar.sh --popup &
+exec =  ~/.config/polybar/scripts/calendar.sh
+click-left = ~/.config/polybar/scripts/calendar.sh --popup &
 label-padding = 1
 
 ;###### VOLUME MODULE ######
