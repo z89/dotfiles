@@ -1,27 +1,39 @@
 {
   "terminal.integrated.fontFamily": "'Fira Code', 'Symbols Nerd Font'",
+  "terminal.integrated.fontSize": 12,
+
   "editor.fontFamily": "Fira Code",
   "editor.fontLigatures": true,
-  "terminal.integrated.fontSize": 12,
-  "editor.formatOnSave": true,
-  "editor.defaultFormatter": "esbenp.prettier-vscode",
-  "workbench.colorTheme": "Wal",
-  "go.toolsManagement.autoUpdate": true,
   "editor.fontSize": 12,
-  "explorer.confirmDelete": false,
-  "json.maxItemsComputed": 10000,
-  "explorer.confirmDragAndDrop": false,
-  "typescript.updateImportsOnFileMove.enabled": "always",
+  "editor.formatOnSave": true,
   "editor.cursorBlinking": "phase",
   "editor.cursorSmoothCaretAnimation": true,
   "editor.smoothScrolling": true,
-  "javascript.updateImportsOnFileMove.enabled": "always",
   "editor.inlineSuggest.enabled": true,
+
+  "editor.defaultFormatter": "esbenp.prettier-vscode",
+  "prettier.printWidth": 250,
+  "prettier.quoteProps": "preserve",
+
+  "workbench.colorTheme": "Wal",
+  "workbench.tree.indent": 10,
+
+  "explorer.confirmDelete": false,
+  "explorer.confirmDragAndDrop": false,
+
+  "json.maxItemsComputed": 10000,
+
+  "typescript.updateImportsOnFileMove.enabled": "always",
+  "javascript.updateImportsOnFileMove.enabled": "always",
+
   "github.copilot.enable": {
     "*": true,
-    "yaml": false,
+    "yaml": true,
     "plaintext": true,
     "markdown": true
   },
-  "prettier.printWidth": 250
+  "git.confirmSync": false,
+  "git.enableSmartCommit": true,
+  "terminal.integrated.defaultProfile.linux": "zsh",
+  "terminal.integrated.gpuAcceleration": "canvas"
 }
