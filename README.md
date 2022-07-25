@@ -1,4 +1,4 @@
-# dotfiles (desktop branch)
+# dotfiles 
 
 a collection of my dotfiles for my arch setup, below are some previews with different pywal generated colorschemes:
 

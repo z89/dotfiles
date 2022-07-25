@@ -35,9 +35,9 @@
 window {{
 	width: 			100%;
     	fullscreen: 		false;
-    	background-color: 	@background;
 	border-color: 		@active;
-    	border:           	0;
+    	background-color: 	@background;
+	order:           	0;
     	padding:          	50% 20% 50% 20%;
 }}
 
@@ -50,8 +50,15 @@ listview {{
 	padding:      		2em 0 0 0;
 	border-color: 		@separatorcolor;
 	spacing:      		10px;
-	scrollbar:    		@scrollbar;
 }}
+
+/*			*/
+/*	  ERROR		*/
+/*			*/
+
+textbox {{
+	text-color:		@foreground;
+}} 
 
 /*			*/
 /*	   ITEM		*/
@@ -60,6 +67,7 @@ listview {{
 element {{
 	border:  		0;
 	padding: 		1em;
+	text-color:		@foreground;
 }}
 
 element-icon {{
@@ -71,15 +79,15 @@ element-text {{
 }}
 
 element.selected {{
-	background-color:	{active};
+	background-color:	white / 8%;
 }}
 
 element-text.selected {{
-	background-color:	{active};
+	background-color:	white / 0%;
 }}
 
 element-icon.selected {{
-	background-color:	{active};
+	background-color:	white / 8%;
 }}
 
 /*			*/

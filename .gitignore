@@ -5,11 +5,9 @@
 !.config/wpg/templates/
 !.config/picom/
 !tuning.sh
-!.config/i3/
 !.config/polybar/
 !.config/rofi/
 !.config/termite/
-!docs/
 !.config/gtk-3.0/gtk.css
 !Picturesl/wallpapers/
 !.zshrc
