@@ -8,12 +8,15 @@ automake
 base
 bc
 bdfresize
+bind
 binutils
 bison
 bluedevil
+blueman
 bluez
 bluez-utils
 chromium
+cloudflared
 cmatrix
 code
 cups
@@ -90,6 +93,7 @@ nm-connection-editor
 nmap
 notion-app-nativefier
 noto-fonts-emoji
+npm
 ntfs-3g
 ntp
 nvidia
@@ -122,6 +126,7 @@ rofi
 runelite
 sed
 spotify
+steam
 stripe-cli-bin
 sudo
 termite-aperezdc-git
@@ -146,8 +151,10 @@ wps-office
 xclicker
 xclip
 xdotool
+xf86-video-nouveau
 xf86-video-vesa
 xorg-bdftopcf
+xorg-docs
 xorg-font-util
 xorg-fonts-100dpi
 xorg-fonts-75dpi
@@ -155,6 +162,9 @@ xorg-fonts-encodings
 xorg-iceauth
 xorg-server-common
 xorg-server-devel
+xorg-server-xephyr
+xorg-server-xnest
+xorg-server-xvfb
 xorg-sessreg
 xorg-setxkbmap
 xorg-smproxy
@@ -185,6 +195,7 @@ xorg-xrefresh
 xorg-xset
 xorg-xsetroot
 xorg-xvinfo
+xorg-xwayland
 xorg-xwd
 xorg-xwininfo
 xorg-xwud
