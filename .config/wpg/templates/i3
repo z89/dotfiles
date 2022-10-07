@@ -248,10 +248,10 @@ exec_always --no-startup-id dex ~/.config/autostart/blueman.desktop
 exec_always --no-startup-id $HOME/.config/dunst/dunstwal.sh
 
 # start spotify
-exec_always /bin/spotify
+exec /bin/spotify
 
 # start notion 
-# exec_always /bin/notion-app-nativefier
+# exec /bin/notion-app-nativefier
 
 # start polybar
 exec_always --no-startup-id $HOME/.config/polybar/launch.sh
