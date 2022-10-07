@@ -13,6 +13,7 @@
 !Picturesl/wallpapers/
 !.zshrc
 !.config/Code\ -\ OSS/User/settings.json
+!.config/Code\ -\ OSS/User/keybindings.json
 !.zprofile
 !.zsh-themes/custom-z89.zsh-theme
 !.gitignore
