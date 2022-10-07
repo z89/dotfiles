@@ -232,29 +232,14 @@ for_window [class="Wpg"] resize set 1400 650, move position center
 ##### i3 STARTUP #####
 ######################
 
-# start picom compositor
-exec_always picom 
-
-# set typematic rate & mouse sensitivty
-exec_always --no-startup-id ~/tuning.sh
-
 # start pia (private-internet-access-vpn)
 exec_always --no-startup-id /opt/piavpn/bin/pia-client
 
 # start nm-applet (network manager applet)
 exec_always --no-startup-id nm-applet
 
-# start spotify
-# exec --no-startup-id /bin/spotify
-
-# start notion 
-# exec --no-startup-id /bin/notion-app-nativefier
-
 # start redshift
-exec_always --no-startup-id /bin/redshift-gtk
-
-# start polybar
-exec_always --no-startup-id $HOME/.config/polybar/launch.sh
+exec_always --no-startup-id $HOME/.config/redshift/launch.sh
 
 # start blueman (bluetooth manager & applet)
 exec_always --no-startup-id dex ~/.config/autostart/blueman.desktop
@@ -262,9 +247,23 @@ exec_always --no-startup-id dex ~/.config/autostart/blueman.desktop
 # refresh dunstrc
 exec_always --no-startup-id $HOME/.config/dunst/dunstwal.sh
 
+# start spotify
+exec_always /bin/spotify
+
+# start notion 
+# exec_always /bin/notion-app-nativefier
+
+# start polybar
+exec_always --no-startup-id $HOME/.config/polybar/launch.sh
+
+# start picom compositor
+exec_always --no-startup-id picom
+
 # force reset of fontconfig cache (fixes polybar font bug)
 #exec_always fc-cache -f
 
 # refresh pywal colors
 exec_always --no-startup-id wal -R -e
 
+# set typematic rate & mouse sensitivty
+exec_always --no-startup-id ~/tuning.sh
