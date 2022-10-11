@@ -87,7 +87,7 @@ element-text.selected {{
 }}
 
 element-icon.selected {{
-	background-color:	white / 8%;
+	background-color:	transparent;
 }}
 
 /*			*/
