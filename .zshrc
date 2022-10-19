@@ -1,6 +1,7 @@
 export GPG_TTY=$(tty)
 export ZSH="/home/archie/.oh-my-zsh"
 export EDITOR='vim'
+export TERM=termite
 
 # use gpg-agent instead of ssh-agent
 unset SSH_AGENT_PID
