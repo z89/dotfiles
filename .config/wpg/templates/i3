@@ -41,7 +41,7 @@ bindsym $mod+Shift+c reload
 bindsym $mod+Shift+r restart
 
 # start a terminal
-bindsym $mod+Return exec i3-sensible-terminal
+bindsym $mod+Return exec termite
 
 # kill focused window
 bindsym $mod+Shift+q kill
