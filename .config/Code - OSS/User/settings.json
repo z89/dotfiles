@@ -12,7 +12,7 @@
   "editor.inlineSuggest.enabled": true,
 
   "editor.defaultFormatter": "esbenp.prettier-vscode",
-  "prettier.printWidth": 250,
+  "prettier.printWidth": 180,
   "prettier.quoteProps": "preserve",
 
   "workbench.colorTheme": "Wal",
@@ -35,5 +35,7 @@
   "git.confirmSync": false,
   "git.enableSmartCommit": true,
   "terminal.integrated.defaultProfile.linux": "zsh",
-  "terminal.integrated.gpuAcceleration": "canvas"
+  "terminal.integrated.gpuAcceleration": "canvas",
+  "go.toolsManagement.autoUpdate": true,
+  "terminal.external.linuxExec": "zsh"
 }
