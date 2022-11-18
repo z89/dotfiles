@@ -12,7 +12,7 @@
   "editor.inlineSuggest.enabled": true,
 
   "editor.defaultFormatter": "esbenp.prettier-vscode",
-  "prettier.printWidth": 180,
+  "prettier.printWidth": 200,
   "prettier.quoteProps": "preserve",
 
   "workbench.colorTheme": "Wal",
