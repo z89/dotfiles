@@ -9,6 +9,7 @@
   "editor.cursorBlinking": "phase",
   "editor.cursorSmoothCaretAnimation": true,
   "editor.smoothScrolling": true,
+  "workbench.list.smoothScrolling": false,
   "editor.inlineSuggest.enabled": true,
 
   "editor.defaultFormatter": "esbenp.prettier-vscode",
@@ -35,7 +36,10 @@
   "git.confirmSync": false,
   "git.enableSmartCommit": true,
   "terminal.integrated.defaultProfile.linux": "zsh",
-  "terminal.integrated.gpuAcceleration": "canvas",
+  "terminal.integrated.gpuAcceleration": "auto",
   "go.toolsManagement.autoUpdate": true,
-  "terminal.external.linuxExec": "zsh"
+  "terminal.external.linuxExec": "zsh",
+  "arduino.useArduinoCli": true,
+  "arduino.path": "/usr/bin/",
+  "arduino.commandPath": "arduino-ide"
 }
