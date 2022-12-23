@@ -10,14 +10,14 @@ set $mod Mod4
 smart_borders on
 
 # defaut i3-gaps margins
-gaps inner 10
-gaps outer 10
+gaps inner 30
+gaps outer 30
 
 ######### COLORS ##########
 ###########################
 
-set_from_resource $light i3wm.color15 "#ecc3d8"
-set_from_resource $dark i3wm.color0 "#35345d"
+set_from_resource $light i3wm.color15 "#ebc2d7"
+set_from_resource $dark i3wm.color0 "#34335c"
 
 # class                 border	background	text	indicator	child_border
 client.focused          $light	$light 		$light 	$light  	$light
@@ -33,9 +33,6 @@ client.background       $light
 
 # i3 modifier key
 floating_modifier $mod
-
-# reload the configuration file
-bindsym $mod+Shift+c reload
 
 # restart i3 inplace (preserves your layout/session, can be used to upgrade i3)
 bindsym $mod+Shift+r restart
@@ -82,19 +79,37 @@ bindsym $mod+f fullscreen toggle
 # toggle tiling / floating
 bindsym $mod+Shift+space floating toggle
 
+# resize and center a single window for ultrawide monitors
+bindsym $mod+y floating enable; resize set 55ppt 85ppt; move position center
+
+# center a window
+bindsym $mod+Shift+c floating enable; move position center
+
 # make floating window sticky
 bindsym $mod+o sticky toggle
 
 # change focus between tiling / floating windows
 bindsym $mod+space focus mode_toggle
 
-# execute workspaces
-workspace $ws1 output DVI-D-0
+# execute workspaces for dual monitors
+# workspace $ws1 output DVI-D-0
+# workspace $ws2 output HDMI-0
+# workspace $ws3 output DVI-D-0
+# workspace $ws4 output DVI-D-0
+# workspace $ws5 output DVI-D-0
+# workspace $ws6 output DVI-D-0
+# workspace $ws7 output HDMI-0
+# workspace $ws8 output HDMI-0
+# workspace $ws9 output HDMI-0
+# workspace $ws10 output HDMI-0
+
+# execute workspaces for single monitor
+workspace $ws1 output HDMI-0
 workspace $ws2 output HDMI-0
-workspace $ws3 output DVI-D-0
-workspace $ws4 output DVI-D-0
-workspace $ws5 output DVI-D-0
-workspace $ws6 output DVI-D-0
+workspace $ws3 output HDMI-0
+workspace $ws4 output HDMI-0
+workspace $ws5 output HDMI-0
+workspace $ws6 output HDMI-0
 workspace $ws7 output HDMI-0
 workspace $ws8 output HDMI-0
 workspace $ws9 output HDMI-0
@@ -129,13 +144,12 @@ bindsym $mod+r mode "resize"
 
 # resize containers
 mode "resize" {
-        bindsym j resize shrink width 10 px or 10 ppt
+        bindsym h resize shrink width 10 px or 10 ppt
         bindsym k resize grow height 10 px or 10 ppt
-        bindsym l resize shrink height 10 px or 10 ppt
-        bindsym semicolon resize grow width 10 px or 10 ppt
+        bindsym j resize shrink height 10 px or 10 ppt
+        bindsym l resize grow width 10 px or 10 ppt
 
         # back to normal: Enter or Escape or $mod+r
-        bindsym Return mode "default"
         bindsym Escape mode "default"
         bindsym $mod+r mode "default"
 }
