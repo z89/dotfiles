@@ -80,7 +80,7 @@ bindsym $mod+f fullscreen toggle
 bindsym $mod+Shift+space floating toggle
 
 # resize and center a single window for ultrawide monitors
-bindsym $mod+y floating enable; resize set 55ppt 85ppt; move position center
+bindsym $mod+y floating enable; resize set 2800 1200; move position center
 
 # center a window
 bindsym $mod+Shift+c floating enable; move position center
@@ -230,7 +230,7 @@ for_window [class="Termite"] border pixel 2
 
 # move windows to designated workspaces on startup
 for_window [class="notion-nativefier-46aee8"] move to workspace $ws7
-for_window [class="Spotify"] move to workspace $ws8
+for_window [class="Spotify"] floating enable, resize set 55ppt 85ppt, move position center, move to workspace $ws8
 for_window [class="privateinternetaccess"] move to workspace $ws9
 for_window [class="Chromium" window_role="pop-up"] floating enable, move position center
 
