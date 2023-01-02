@@ -1,1 +1,0 @@
-yay -Qqe > package.list
