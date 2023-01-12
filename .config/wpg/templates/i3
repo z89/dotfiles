@@ -228,20 +228,17 @@ bindsym XF86AudioMicMute exec --no-startup-id pactl set-source-mute @DEFAULT_SOU
 for_window [class=.*] border pixel 0
 for_window [class="Termite"] border pixel 2
 
+# open applications as floating windows
+for_window [class="org.gnome.Nautilus"] floating enable, resize set 50ppt 80ppt, move position center
+for_window [class="Termite"] floating enable, resize set 55ppt 85ppt, move position center
+for_window [class="Chromium"] floating enable, resize set 55ppt 85ppt, move position center
+for_window [class="Wpg"] floating enable, resize set 30ppt 50ppt, move position center
+for_window [class="Lxappearance"] floating enable, resize set 30ppt 50ppt, move position center
+
 # move windows to designated workspaces on startup
 for_window [class="notion-nativefier-46aee8"] move to workspace $ws7
 for_window [class="Spotify"] floating enable, resize set 55ppt 85ppt, move position center, move to workspace $ws8
 for_window [class="privateinternetaccess"] move to workspace $ws9
-for_window [class="Chromium" window_role="pop-up"] floating enable, move position center
-
-for_window [class="Org.gnome.Nautilus"] floating enable
-for_window [class="Org.gnome.Nautilus"] resize set 1400 650, move position center
-
-for_window [class="Lxappearance"] floating enable
-for_window [class="Lxappearance"] resize set 1400 650, move position center
-
-for_window [class="Wpg"] floating enable
-for_window [class="Wpg"] resize set 1400 650, move position center
 
 ##### i3 STARTUP #####
 ######################
