@@ -7,7 +7,7 @@
   "editor.fontSize": 12,
   "editor.formatOnSave": true,
   "editor.cursorBlinking": "phase",
-  "editor.cursorSmoothCaretAnimation": true,
+  "editor.cursorSmoothCaretAnimation": "on",
   "editor.smoothScrolling": true,
   "workbench.list.smoothScrolling": false,
   "editor.inlineSuggest.enabled": true,
