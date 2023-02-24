@@ -28,18 +28,28 @@
     "when": "editorTextFocus && vim.active && vim.use<C-w> && !inDebugRepl"
   },
 
-  // select prev suggestion in intellisense
+  // next & prev selections in intellisense
   {
     "key": "alt+k",
     "command": "selectPrevSuggestion",
     "when": "suggestWidgetMultipleSuggestions && suggestWidgetVisible && textInputFocus"
   },
 
-  // next next suggestion in intellisense
   {
     "key": "alt+j",
     "command": "selectNextSuggestion",
     "when": "suggestWidgetMultipleSuggestions && suggestWidgetVisible && textInputFocus"
+  },
+
+  // next & prev selections in quickfix
+  {
+    "key": "ctrl+alt+k",
+    "command": "selectPrevCodeAction"
+  },
+
+  {
+    "key": "ctrl+alt+j",
+    "command": "selectNextCodeAction"
   },
 
   // create new file in explorer
