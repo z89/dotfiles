@@ -41,5 +41,6 @@
   "terminal.external.linuxExec": "zsh",
   "arduino.useArduinoCli": true,
   "arduino.path": "/usr/bin/",
-  "arduino.commandPath": "arduino-ide"
+  "arduino.commandPath": "arduino-ide",
+  "git.openRepositoryInParentFolders": "never"
 }
