@@ -91,18 +91,6 @@ bindsym $mod+o sticky toggle
 # change focus between tiling / floating windows
 bindsym $mod+space focus mode_toggle
 
-# execute workspaces for dual monitors
-# workspace $ws1 output DVI-D-0
-# workspace $ws2 output HDMI-0
-# workspace $ws3 output DVI-D-0
-# workspace $ws4 output DVI-D-0
-# workspace $ws5 output DVI-D-0
-# workspace $ws6 output DVI-D-0
-# workspace $ws7 output HDMI-0
-# workspace $ws8 output HDMI-0
-# workspace $ws9 output HDMI-0
-# workspace $ws10 output HDMI-0
-
 # execute workspaces for single monitor
 workspace $ws1 output HDMI-0
 workspace $ws2 output HDMI-0
@@ -180,10 +168,10 @@ bindsym $mod+ctrl+space exec dunstctl close-all &
 bindsym $mod+Shift+a exec wpg -m && /home/archie/.confg/dunst/dunstwal.sh
 
 # open nautilus file explorer
-bindsym $mod+Shift+e exec nautilus &
+bindsym $mod+Shift+e exec nautilus
 
 # open calculator
-bindsym $mod+ctrl+c exec deepin-calculator &
+bindsym $mod+ctrl+c exec deepin-calculator
 
 # start rofi (program launcher)
 bindsym $mod+d exec --no-startup-id $HOME/.config/rofi/launcher.sh
