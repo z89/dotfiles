@@ -31,7 +31,8 @@
     "*": true,
     "yaml": true,
     "plaintext": true,
-    "markdown": true
+    "markdown": true,
+    "javascript": true
   },
   "git.confirmSync": false,
   "git.enableSmartCommit": true,
