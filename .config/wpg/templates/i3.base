@@ -222,6 +222,7 @@ for_window [class="Termite"] floating enable, resize set 55ppt 85ppt, move posit
 for_window [class="Chromium"] floating enable, resize set 55ppt 85ppt, move position center
 for_window [class="Wpg"] floating enable, resize set 30ppt 50ppt, move position center
 for_window [class="Lxappearance"] floating enable, resize set 30ppt 50ppt, move position center
+for_window [class="code-oss"] floating enable, resize set 55ppt 85ppt, move position center
 
 # move windows to designated workspaces on startup
 for_window [class="notion-nativefier-46aee8"] move to workspace $ws7

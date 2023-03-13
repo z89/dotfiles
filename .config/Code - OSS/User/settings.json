@@ -31,8 +31,7 @@
     "*": true,
     "yaml": true,
     "plaintext": true,
-    "markdown": true,
-    "javascript": true
+    "markdown": true
   },
   "git.confirmSync": false,
   "git.enableSmartCommit": true,
@@ -40,8 +39,5 @@
   "terminal.integrated.gpuAcceleration": "auto",
   "go.toolsManagement.autoUpdate": true,
   "terminal.external.linuxExec": "zsh",
-  "arduino.useArduinoCli": true,
-  "arduino.path": "/usr/bin/",
-  "arduino.commandPath": "arduino-ide",
   "git.openRepositoryInParentFolders": "never"
 }
