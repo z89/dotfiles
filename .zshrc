@@ -2,6 +2,8 @@ export GPG_TTY=$(tty)
 export ZSH="/home/archie/.oh-my-zsh"
 export EDITOR='vim'
 export TERM=termite
+export PATH=~/.local/aws-cdk/bin/:$PATH
+export PATH=~/.local/bin/:$PATH
 
 # use gpg-agent instead of ssh-agent
 unset SSH_AGENT_PID
@@ -9,6 +11,15 @@ unset SSH_AGENT_PID
 if [ "${gnupg_SSH_AUTH_SOCK_by:-0}" -ne $$ ]; then
   export SSH_AUTH_SOCK="$(gpgconf --list-dirs agent-ssh-socket)"
 fi
+
+# exit ranger on S command
+ranger() {
+    if [ -z "$RANGER_LEVEL" ]; then
+        /usr/bin/ranger "$@"
+    else
+        exit
+    fi
+}
 
 gpg-connect-agent updatestartuptty /bye >/dev/null
 
