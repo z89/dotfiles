@@ -92,16 +92,16 @@ bindsym $mod+o sticky toggle
 bindsym $mod+space focus mode_toggle
 
 # execute workspaces for single monitor
-workspace $ws1 output HDMI-0
-workspace $ws2 output HDMI-0
-workspace $ws3 output HDMI-0
-workspace $ws4 output HDMI-0
-workspace $ws5 output HDMI-0
-workspace $ws6 output HDMI-0
-workspace $ws7 output HDMI-0
-workspace $ws8 output HDMI-0
-workspace $ws9 output HDMI-0
-workspace $ws10 output HDMI-0
+workspace $ws1 output HDMI-A-1
+workspace $ws2 output HDMI-A-1
+workspace $ws3 output HDMI-A-1
+workspace $ws4 output HDMI-A-1
+workspace $ws5 output HDMI-A-1
+workspace $ws6 output HDMI-A-1
+workspace $ws7 output HDMI-A-1
+workspace $ws8 output HDMI-A-1
+workspace $ws9 output HDMI-A-1
+workspace $ws10 output HDMI-A-1
 
 # switch to workspace
 bindsym $mod+1 workspace $ws1

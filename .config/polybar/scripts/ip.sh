@@ -4,7 +4,7 @@ state="$(cat /dev/shm/state)"
 ! [[ -f "/dev/shm/state" ]] && echo "internal" > /dev/shm/state
 
 ip=$(curl -s https://ipinfo.io/ip)
-ethernet=$(ip -4 addr show enp5s0 | grep -oP "(?<=inet ).*(?=/)")
+ethernet=$(ip -4 addr show enp6s0 | grep -oP "(?<=inet ).*(?=/)")
 wireless=$(ip -4 addr show wlan0 | grep -oP "(?<=inet ).*(?=/)")
 
 ## external network address
