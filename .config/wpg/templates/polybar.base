@@ -70,16 +70,16 @@ enable-click = true
 enable-scroll = true
 wrapping-scroll = true
 
-ws-icon-0 = 1;
+ws-icon-0 = 1;
 ws-icon-1 = 2;
 ws-icon-2 = 3;
 ws-icon-3 = 4;
 ws-icon-4 = 5;
 ws-icon-5 = 6;
-ws-icon-6 = 7;拾
-ws-icon-7 = 8;阮
-ws-icon-8 = 9;ﱾ
-ws-icon-9 = 10;漣
+ws-icon-6 = 7;
+ws-icon-7 = 8;
+ws-icon-8 = 9;󰒒
+ws-icon-9 = 10;
 
 label-focused =  "%icon%"
 label-focused-foreground = {color0}
@@ -127,7 +127,7 @@ type = internal/memory
 interval = 3
 
 warn-percentage = 95
-label =   %gb_used%
+label =   %gb_used%
 format = <label> 
 
 ;###### DATE MODULE ######
@@ -138,8 +138,8 @@ type = internal/date
 
 interval = 1.0
 
-date =   %d/%m/%Y  
-date-alt =   %A, %d %B %Y
+date =   %d/%m/%Y  
+date-alt =   %A, %d %B %Y
 
 format = <label>
 
@@ -181,7 +181,7 @@ label-muted = " "
 label-volume = "%percentage%%"
 ramp-volume-0 = " "
 ramp-volume-1 = " "
-ramp-volume-2 = " 墳"
+ramp-volume-2 = " 󰕾"
 ramp-volume-3 = " "
 
 format-volume-padding = 1
