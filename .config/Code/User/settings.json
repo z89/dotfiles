@@ -1,6 +1,7 @@
 {
   "terminal.integrated.fontFamily": "'Fira Code', 'Symbols Nerd Font'",
   "terminal.integrated.fontSize": 12,
+  "terminal.integrated.gpuAcceleration": "off",
 
   "editor.fontFamily": "Fira Code",
   "editor.fontLigatures": true,
@@ -33,11 +34,10 @@
     "plaintext": true,
     "markdown": true
   },
+
   "git.confirmSync": false,
   "git.enableSmartCommit": true,
   "terminal.integrated.defaultProfile.linux": "zsh",
-  "terminal.integrated.gpuAcceleration": "canvas",
-  "go.toolsManagement.autoUpdate": true,
-  "terminal.external.linuxExec": "zsh",
-  "git.openRepositoryInParentFolders": "never"
+  "git.openRepositoryInParentFolders": "never",
+  "security.workspace.trust.untrustedFiles": "open"
 }

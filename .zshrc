@@ -1,9 +1,18 @@
 export GPG_TTY=$(tty)
-export ZSH="/home/archie/.oh-my-zsh"
+export ZSH="$HOME/.oh-my-zsh"
+ZSH_THEME="custom-z89"
+
+plugins=(
+	git
+	zsh-autosuggestions
+	zsh-syntax-highlighting
+)
+
+source $ZSH/oh-my-zsh.sh
+
 export EDITOR='vim'
 export TERM=termite
-export PATH=~/.local/aws-cdk/bin/:$PATH
-export PATH=~/.local/bin/:$PATH
+export PATH=$HOME/bin:/usr/local/bin:$PATH
 
 # use gpg-agent instead of ssh-agent
 unset SSH_AGENT_PID
@@ -30,8 +39,6 @@ compinit
 autoload -Uz promptinit
 promptinit
 
-ZSH_THEME="custom-z89"
-
 # Uncomment the following line to use case-sensitive completion.
 CASE_SENSITIVE="false"
 
@@ -42,15 +49,6 @@ DISABLE_MAGIC_FUNCTIONS="true"
 ENABLE_CORRECTION="false"
 
 COMPLETION_WAITING_DOTS="true"
-
-plugins=(
-	git
-	zsh-autosuggestions
-	zsh-syntax-highlighting
-)
-
-source $ZSH/oh-my-zsh.sh
-
 
 # remove ls highlight color
 _ls_colors=":ow=01;33"
@@ -67,8 +65,4 @@ typeset -g -A key
 
 bindkey -v
 
-# The next line updates PATH for the Google Cloud SDK.
-if [ -f '/home/archie/Downloads/google-cloud-sdk/path.zsh.inc' ]; then . '/home/archie/Downloads/google-cloud-sdk/path.zsh.inc'; fi
-
-# The next line enables shell command completion for gcloud.
-if [ -f '/home/archie/Downloads/google-cloud-sdk/completion.zsh.inc' ]; then . '/home/archie/Downloads/google-cloud-sdk/completion.zsh.inc'; fi
+source /usr/share/zsh/plugins/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh
