@@ -12,8 +12,10 @@
 !.config/gtk-3.0/gtk.css
 !Picturesl/wallpapers/
 !.zshrc
-!.config/Code\ -\ OSS/User/settings.json
-!.config/Code\ -\ OSS/User/keybindings.json
+!.vimrc
+!.config/systemd/user/geoclue-agent.service
+!.config/Code/User/settings.json
+!.config/Code/User/keybindings.json
 !.zprofile
 !.zsh-themes/custom-z89.zsh-theme
 !.gitignore

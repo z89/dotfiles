@@ -5,7 +5,7 @@ state="$(cat /dev/shm/state)"
 
 ip=$(curl -s https://ipinfo.io/ip)
 ethernet=$(ip -4 addr show enp7s0 | grep -oP "(?<=inet ).*(?=/)")
-wireless=$(ip -4 addr show wlan0 | grep -oP "(?<=inet ).*(?=/)")
+wireless=$(ip -4 addr show wlp6s0 | grep -oP "(?<=inet ).*(?=/)")
 
 ## external network address
 if [ -z "$ip" ]; then
