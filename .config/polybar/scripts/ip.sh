@@ -4,8 +4,8 @@ state="$(cat /dev/shm/state)"
 ! [[ -f "/dev/shm/state" ]] && echo "internal" > /dev/shm/state
 
 ip=$(curl -s https://ipinfo.io/ip)
-ethernet=$(ip -4 addr show enp7s0 | grep -oP "(?<=inet ).*(?=/)")
-wireless=$(ip -4 addr show wlp6s0 | grep -oP "(?<=inet ).*(?=/)")
+adapter=$(ip addr | awk '/state UP/ {print $2}')
+address=$(ip -4 addr show $adapter | grep -oP "(?<=inet ).*(?=/)")
 
 ## external network address
 if [ -z "$ip" ]; then
@@ -16,14 +16,10 @@ fi
 
 
 ## local network address
-if [ -z "$ethernet" ]; then
-	if [ -z "$wireless" ]; then
-		internalAddress="󰖪  not available"
-	else 
-		internalAddress="󰖩  $wireless"
-	fi
+if [ -z "$adapter" ]; then
+	internalAddress="󰈀  not connected"
 else 
-	internalAddress="󰈀  $ethernet"
+	internalAddress="󰈀  $address"
 fi
 
 ## program options

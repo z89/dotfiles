@@ -14,10 +14,8 @@
   "editor.inlineSuggest.enabled": true,
 
   "editor.defaultFormatter": "esbenp.prettier-vscode",
-  "prettier.printWidth": 200,
+  "prettier.printWidth": 150,
   "prettier.quoteProps": "preserve",
-
-  "workbench.colorTheme": "Wal",
   "workbench.tree.indent": 10,
 
   "explorer.confirmDelete": false,
@@ -30,14 +28,19 @@
 
   "github.copilot.enable": {
     "*": true,
-    "yaml": true,
     "plaintext": true,
-    "markdown": true
+    "markdown": true,
+    "scminput": false,
+    "yaml": true,
+    "cpp": true
   },
 
   "git.confirmSync": false,
   "git.enableSmartCommit": true,
   "terminal.integrated.defaultProfile.linux": "zsh",
   "git.openRepositoryInParentFolders": "never",
-  "security.workspace.trust.untrustedFiles": "open"
+  "security.workspace.trust.untrustedFiles": "open",
+  "debug.onTaskErrors": "debugAnyway",
+  "cmake.configureOnOpen": false,
+  "workbench.colorTheme": "Wal"
 }
