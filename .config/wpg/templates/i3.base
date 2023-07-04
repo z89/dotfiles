@@ -16,17 +16,18 @@ gaps outer 30
 ######### COLORS ##########
 ###########################
 
-set_from_resource $light i3wm.color15 "{color15}"
+set_from_resource $active i3wm.color15 "{color15}"
+set_from_resource $inactive i3wm.color0 "{color0}"
 set_from_resource $dark i3wm.color0 "{color0}"
 
-# class                 border	background	text	indicator	child_border
-client.focused          $light	$light 		$light 	$light  	$light
-client.focused_inactive $dark 	$dark 		$light	$dark   	$dark
-client.unfocused        $dark 	$dark 		$light 	$dark   	$dark
-client.urgent           $dark 	$dark 		$light 	$dark   	$dark
-client.placeholder      $dark 	$dark 		$light 	$dark   	$dark
+# class                 border		background	text		indicator	child_border
+client.focused          $active		$active 	$active 	$active   	$active
+client.focused_inactive $inactive	$dark 		$active		$dark    	$inactive
+client.unfocused        $inactive	$dark 		$active 	$dark   	$inactive
+client.urgent           $dark		$dark 		$active 	$dark   	$dark
+client.placeholder      $dark		$dark 		$active 	$dark   	$dark
 
-client.background       $light
+client.background       $active
 
 ###### KEYBINDINGS #######
 ##########################
@@ -213,19 +214,13 @@ bindsym XF86AudioMicMute exec --no-startup-id pactl set-source-mute @DEFAULT_SOU
 #####################
 
 # borders
-for_window [class=.*] border pixel 0
-for_window [class="Termite"] border pixel 2
+for_window [class=.*] border pixel 4
 
 # open applications as floating windows
-for_window [class="org.gnome.Nautilus"] floating enable, resize set 50ppt 80ppt, move position center
-for_window [class="Termite"] floating enable, resize set 55ppt 85ppt, move position center
-for_window [class="Chromium"] floating enable, resize set 55ppt 85ppt, move position center
-for_window [class="Wpg"] floating enable, resize set 30ppt 50ppt, move position center
-for_window [class="Lxappearance"] floating enable, resize set 30ppt 50ppt, move position center
-for_window [class="Code"] floating enable, resize set 55ppt 85ppt, move position center
+for_window [all] floating enable
+for_window [class="Termite"] resize set 30ppt 50ppt 
 
 # move windows to designated workspaces on startup
-for_window [class="notion-nativefier-46aee8"] move to workspace $ws7
 for_window [class="Spotify"] floating enable, resize set 55ppt 85ppt, move position center, move to workspace $ws8
 for_window [class="privateinternetaccess"] move to workspace $ws9
 

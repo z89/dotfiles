@@ -106,6 +106,24 @@
           "args": {
             "snippet": "console.log(${TM_SELECTED_TEXT}$1)$2"
           }
-        }
-
+        },
+        {
+          "key": "ctrl+alt+u",
+          "command": "workbench.action.tasks.runTask"
+        },
+        {
+          "key": "ctrl+f5",
+          "command": "-cmake.debugTarget",
+          "when": "cmake:enableFullFeatureSet && inCMakeProject && !cmake:hideDebugCommand && !inDebugMode"
+        },
+        {
+          "key": "ctrl+f5",
+          "command": "workbench.action.debug.run",
+          "when": "debuggersAvailable && debugState != 'initializing'"
+        },
+        {
+          "key": "ctrl+f5",
+          "command": "-workbench.action.debug.run",
+          "when": "debuggersAvailable && debugState != 'initializing'"
+        },
 ]

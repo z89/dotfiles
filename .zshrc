@@ -13,6 +13,8 @@ source $ZSH/oh-my-zsh.sh
 export EDITOR='vim'
 export TERM=termite
 export PATH=$HOME/bin:/usr/local/bin:$PATH
+export PATH=/opt/hipSYCL/ROCm/bin:$PATH
+export PATH="$PATH:/home/archie/.yarn/bin"
 
 # use gpg-agent instead of ssh-agent
 unset SSH_AGENT_PID
