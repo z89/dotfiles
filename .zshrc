@@ -1,5 +1,6 @@
 export GPG_TTY=$(tty)
 export ZSH="$HOME/.oh-my-zsh"
+export TERMINAL=kitty
 ZSH_THEME="custom-z89"
 
 plugins=(
