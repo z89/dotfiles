@@ -17,16 +17,16 @@ gaps outer 30
 ###########################
 
 set_from_resource $active i3wm.color15 "{color15}"
-set_from_resource $inactive i3wm.color0 "{color0}"
+set_from_resource $inactive i3wm.color7 "{color7}"
 set_from_resource $dark i3wm.color0 "{color0}"
+set $transp #00000000
 
 # class                 border		background	text		indicator	child_border
 client.focused          $active		$active 	$active 	$active   	$active
-client.focused_inactive $inactive	$dark 		$active		$dark    	$inactive
-client.unfocused        $inactive	$dark 		$active 	$dark   	$inactive
-client.urgent           $dark		$dark 		$active 	$dark   	$dark
-client.placeholder      $dark		$dark 		$active 	$dark   	$dark
-
+client.focused_inactive $transp		$dark 		$active		$dark    	$transp
+client.unfocused        $transp		$dark 		$active 	$dark   	$transp
+client.urgent           $transp		$dark 		$active 	$dark   	$transp
+client.placeholder      $transp		$dark 		$active 	$dark   	$transp
 client.background       $active
 
 ###### KEYBINDINGS #######
@@ -39,7 +39,7 @@ floating_modifier $mod
 bindsym $mod+Shift+r restart
 
 # start a terminal
-bindsym $mod+Return exec termite
+bindsym $mod+Return exec i3-sensible-terminal
 
 # kill focused window
 bindsym $mod+Shift+q kill
@@ -214,7 +214,8 @@ bindsym XF86AudioMicMute exec --no-startup-id pactl set-source-mute @DEFAULT_SOU
 #####################
 
 # borders
-for_window [class=.*] border pixel 4
+for_window [class="Termite"] border pixel 4
+for_window [class=.*] border pixel 0
 
 # open applications as floating windows
 for_window [all] floating enable
@@ -234,7 +235,7 @@ exec_always --no-startup-id /opt/piavpn/bin/pia-client
 exec_always --no-startup-id nm-applet
 
 # start redshift
-exec_always --no-startup-id $HOME/.config/redshift/launch.sh
+#exec_always --no-startup-id $HOME/.config/redshift/launch.sh
 
 # start blueman (bluetooth manager & applet)
 exec_always --no-startup-id dex ~/.config/autostart/blueman.desktop
