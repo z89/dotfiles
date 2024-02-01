@@ -41,6 +41,20 @@
   "git.openRepositoryInParentFolders": "never",
   "security.workspace.trust.untrustedFiles": "open",
   "debug.onTaskErrors": "debugAnyway",
-  "cmake.configureOnOpen": false,
-  "workbench.colorTheme": "Wal"
+  "workbench.colorTheme": "Wal",
+
+  "editor.linkedEditing": false,
+  "VSCodeCounter.exclude": ["**/.gitignore", "**/.vscode/**", "**/node_modules/**", "package-lock.json"],
+  "files.associations": {
+    "*.css": "tailwindcss"
+  },
+  "window.titleBarStyle": "custom",
+
+  "window.customMenuBarAltFocus": false,
+  "go.toolsManagement.autoUpdate": true,
+  "[go]": {
+    "editor.insertSpaces": true,
+    "editor.formatOnSave": true,
+    "editor.defaultFormatter": "golang.go"
+  }
 }

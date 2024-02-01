@@ -18,8 +18,8 @@ gaps outer 30
 
 set_from_resource $active i3wm.color15 "{color15}"
 set_from_resource $inactive i3wm.color7 "{color7}"
+set_from_resource $transp i3wm.color8 "{color8}"
 set_from_resource $dark i3wm.color0 "{color0}"
-set $transp #00000000
 
 # class                 border		background	text		indicator	child_border
 client.focused          $active		$active 	$active 	$active   	$active
@@ -40,6 +40,9 @@ bindsym $mod+Shift+r restart
 
 # start a terminal
 bindsym $mod+Return exec i3-sensible-terminal
+
+# take a screenshot
+bindsym Print exec flameshot gui
 
 # kill focused window
 bindsym $mod+Shift+q kill
@@ -81,7 +84,7 @@ bindsym $mod+f fullscreen toggle
 bindsym $mod+Shift+space floating toggle
 
 # resize and center a single window for ultrawide monitors
-bindsym $mod+y floating enable; resize set 2800 1200; move position center
+bindsym $mod+y floating enable; resize set 2000 1000; move position center
 
 # center a window
 bindsym $mod+Shift+c floating enable; move position center
@@ -169,10 +172,11 @@ bindsym $mod+ctrl+space exec dunstctl close-all &
 bindsym $mod+Shift+a exec wpg -m && /home/archie/.confg/dunst/dunstwal.sh
 
 # open nautilus file explorer
-bindsym $mod+Shift+e exec nautilus
+bindsym $mod+Shift+e exec nemo
 
 # open calculator
 bindsym $mod+ctrl+c exec deepin-calculator
+
 
 # start rofi (program launcher)
 bindsym $mod+d exec --no-startup-id $HOME/.config/rofi/launcher.sh
@@ -214,15 +218,15 @@ bindsym XF86AudioMicMute exec --no-startup-id pactl set-source-mute @DEFAULT_SOU
 #####################
 
 # borders
-for_window [class="Termite"] border pixel 4
-for_window [class=.*] border pixel 0
+# for_window [class="kitty"] border pixel 2
+for_window [class=.*] border pixel 3 
 
 # open applications as floating windows
 for_window [all] floating enable
-for_window [class="Termite"] resize set 30ppt 50ppt 
+for_window [class="kitty"] resize set 30ppt 50ppt 
 
 # move windows to designated workspaces on startup
-for_window [class="Spotify"] floating enable, resize set 55ppt 85ppt, move position center, move to workspace $ws8
+for_window [class="Spotify"] floating enable, resize set 2000 1000, move position center, move to workspace $ws8
 for_window [class="privateinternetaccess"] move to workspace $ws9
 
 ##### i3 STARTUP #####
