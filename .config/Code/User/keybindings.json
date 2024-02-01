@@ -1,129 +1,143 @@
 [
-        // toggle vim mode
-        {
-          "key": "ctrl+alt+v",
-          "command": "toggleVim"
-        },
-      
-        // pane navigation
-        {
-          "key": "alt+j",
-          "command": "workbench.action.quickOpenSelectNext"
-        },
-        {
-          "key": "alt+k",
-          "command": "workbench.action.quickOpenSelectPrevious"
-        },
-      
-        // focus file explorer
-        {
-          "key": "alt+l alt+f",
-          "command": "workbench.explorer.fileView.focus"
-        },
-      
-        // save file
-        {
-          "key": "ctrl+w",
-          "command": "-extension.vim_ctrl+w",
-          "when": "editorTextFocus && vim.active && vim.use<C-w> && !inDebugRepl"
-        },
-      
-        // next & prev selections in intellisense
-        {
-          "key": "alt+k",
-          "command": "selectPrevSuggestion",
-          "when": "suggestWidgetMultipleSuggestions && suggestWidgetVisible && textInputFocus"
-        },
-      
-        {
-          "key": "alt+j",
-          "command": "selectNextSuggestion",
-          "when": "suggestWidgetMultipleSuggestions && suggestWidgetVisible && textInputFocus"
-        },
-      
-        // next & prev selections in quickfix
-        {
-          "key": "ctrl+alt+k",
-          "command": "selectPrevCodeAction"
-        },
-      
-        {
-          "key": "ctrl+alt+j",
-          "command": "selectNextCodeAction"
-        },
-      
-        // create new file in explorer
-        {
-          "key": "ctrl+n",
-          "command": "-workbench.action.files.newUntitledFile"
-        },
-      
-        {
-          "key": "ctrl+n",
-          "command": "explorer.newFile"
-        },
-      
-        {
-          "key": "ctrl+n",
-          "command": "-extension.vim_ctrl+n",
-          "when": "editorTextFocus && vim.active && vim.use<C-n> && !inDebugRepl || vim.active && vim.use<C-n> && !inDebugRepl && vim.mode == 'CommandlineInProgress' || vim.active && vim.use<C-n> && !inDebugRepl && vim.mode == 'SearchInProgressMode'"
-        },
-      
-        // focus editor
-        {
-          "key": "alt+f",
-          "command": "workbench.action.focusActiveEditorGroup"
-        },
-      
-        // focus terminal
-        {
-          "key": "shift+alt+f",
-          "command": "terminal.focus"
-        },
-        {
-          "key": "shift+alt+f",
-          "command": "-filesExplorer.findInFolder",
-          "when": "explorerResourceIsFolder && explorerViewletVisible && filesExplorerFocus && !inputFocus"
-        },
-      
-        // toggle next open terminal
-        {
-          "key": "alt+t",
-          "command": "workbench.action.terminal.focusNext",
-          "when": "terminalFocus && terminalHasBeenCreated && !terminalEditorFocus || terminalFocus && terminalProcessSupported && !terminalEditorFocus"
-        },
-        {
-          "key": "ctrl+pagedown",
-          "command": "-workbench.action.terminal.focusNext",
-          "when": "terminalFocus && terminalHasBeenCreated && !terminalEditorFocus || terminalFocus && terminalProcessSupported && !terminalEditorFocus"
-        },
-      
-        // console log snippet
-        {
-          "key": "ctrl+shift+l",
-          "command": "editor.action.insertSnippet",
-          "when": "editorTextFocus",
-          "args": {
-            "snippet": "console.log(${TM_SELECTED_TEXT}$1)$2"
-          }
-        },
-        {
-          "key": "ctrl+alt+u",
-          "command": "workbench.action.tasks.runTask"
-        },
-        {
-          "key": "ctrl+f5",
-          "command": "-cmake.debugTarget",
-          "when": "cmake:enableFullFeatureSet && inCMakeProject && !cmake:hideDebugCommand && !inDebugMode"
-        },
-        {
-          "key": "ctrl+f5",
-          "command": "workbench.action.debug.run",
-          "when": "debuggersAvailable && debugState != 'initializing'"
-        },
-        {
-          "key": "ctrl+f5",
-          "command": "-workbench.action.debug.run",
-          "when": "debuggersAvailable && debugState != 'initializing'"
-        },
+  // toggle vim mode
+  {
+    "key": "ctrl+alt+v",
+    "command": "toggleVim"
+  },
+
+  // pane navigation
+  {
+    "key": "alt+j",
+    "command": "workbench.action.quickOpenSelectNext"
+  },
+  {
+    "key": "alt+k",
+    "command": "workbench.action.quickOpenSelectPrevious"
+  },
+
+  // focus file explorer
+  {
+    "key": "alt+l alt+f",
+    "command": "workbench.explorer.fileView.focus"
+  },
+
+  // move working file into next editor group
+  {
+    "key": "alt+shift+l",
+    "command": "workbench.action.moveEditorToNextGroup"
+  },
+
+  // move working file into previous editor group
+  {
+    "key": "alt+shift+h",
+    "command": "workbench.action.moveEditorToPreviousGroup"
+  },
+
+  // save file
+  {
+    "key": "ctrl+w",
+    "command": "-extension.vim_ctrl+w",
+    "when": "editorTextFocus && vim.active && vim.use<C-w> && !inDebugRepl"
+  },
+
+  // next & prev selections in intellisense
+  {
+    "key": "alt+k",
+    "command": "selectPrevSuggestion",
+    "when": "suggestWidgetMultipleSuggestions && suggestWidgetVisible && textInputFocus"
+  },
+
+  {
+    "key": "alt+j",
+    "command": "selectNextSuggestion",
+    "when": "suggestWidgetMultipleSuggestions && suggestWidgetVisible && textInputFocus"
+  },
+
+  // next & prev selections in quickfix
+  {
+    "key": "ctrl+alt+k",
+    "command": "selectPrevCodeAction"
+  },
+
+  {
+    "key": "ctrl+alt+j",
+    "command": "selectNextCodeAction"
+  },
+
+  // create new file in explorer
+  // {
+  //   "key": "ctrl+n",
+  //   "command": "-workbench.action.files.newUntitledFile"
+  // },
+
+  // {
+  //   "key": "ctrl+n",
+  //   "command": "explorer.newFile"
+  // },
+
+  // {
+  //   "key": "ctrl+n",
+  //   "command": "-extension.vim_ctrl+n",
+  //   "when": "editorTextFocus && vim.active && vim.use<C-n> && !inDebugRepl || vim.active && vim.use<C-n> && !inDebugRepl && vim.mode == 'CommandlineInProgress' || vim.active && vim.use<C-n> && !inDebugRepl && vim.mode == 'SearchInProgressMode'"
+  // },
+
+  // focus editor
+  {
+    "key": "alt+f",
+    "command": "workbench.action.focusActiveEditorGroup"
+  },
+
+  // focus terminal
+  {
+    "key": "shift+alt+f",
+    "command": "terminal.focus"
+  },
+
+  // toggle next open terminal
+  // {
+  //   "key": "alt+t",
+  //   "command": "workbench.action.terminal.focusNext",
+  //   "when": "terminalFocus && terminalHasBeenCreated && !terminalEditorFocus || terminalFocus && terminalProcessSupported && !terminalEditorFocus"
+  // },
+  // {
+  //   "key": "ctrl+pagedown",
+  //   "command": "-workbench.action.terminal.focusNext",
+  //   "when": "terminalFocus && terminalHasBeenCreated && !terminalEditorFocus || terminalFocus && terminalProcessSupported && !terminalEditorFocus"
+  // },
+
+  // console log snippet
+  {
+    "key": "ctrl+shift+l",
+    "command": "editor.action.insertSnippet",
+    "when": "editorTextFocus",
+    "args": {
+      "snippet": "console.log(${TM_SELECTED_TEXT}$1)$2"
+    }
+  },
+  {
+    "key": "ctrl+p",
+    "command": "-extension.vim_ctrl+p",
+    "when": "editorTextFocus && vim.active && vim.use<C-p> && !inDebugRepl || vim.active && vim.use<C-p> && !inDebugRepl && vim.mode == 'CommandlineInProgress' || vim.active && vim.use<C-p> && !inDebugRepl && vim.mode == 'SearchInProgressMode'"
+  }
+
+  // c++ development shortcuts
+  // {
+  //   "key": "ctrl+alt+u",
+  //   "command": "workbench.action.tasks.runTask"
+  // },
+  // {
+  //   "key": "ctrl+f5",
+  //   "command": "-cmake.debugTarget",
+  //   "when": "cmake:enableFullFeatureSet && inCMakeProject && !cmake:hideDebugCommand && !inDebugMode"
+  // },
+  // {
+  //   "key": "ctrl+f5",
+  //   "command": "workbench.action.debug.run",
+  //   "when": "debuggersAvailable && debugState != 'initializing'"
+  // },
+  // {
+  //   "key": "ctrl+f5",
+  //   "command": "-workbench.action.debug.run",
+  //   "when": "debuggersAvailable && debugState != 'initializing'"
+  // },
 ]

@@ -1,6 +1,7 @@
 export GPG_TTY=$(tty)
 export ZSH="$HOME/.oh-my-zsh"
 export TERMINAL=kitty
+export BROWSER=chromium.desktop
 ZSH_THEME="custom-z89"
 
 plugins=(
@@ -49,14 +50,14 @@ CASE_SENSITIVE="false"
 DISABLE_MAGIC_FUNCTIONS="true"
 
 # disable autocorrect 
-ENABLE_CORRECTION="false"
+ENABLE_CORRECTION="true"
 
 COMPLETION_WAITING_DOTS="true"
 
 # remove ls highlight color
-_ls_colors=":ow=01;33"
-zstyle ':completion:*:default' list-colors "${(s.:.)_ls_colors}"
-LS_COLORS+=$_ls_colors
+#_ls_colors=":ow=01;33"
+#zstyle ':completion:*:default' list-colors "${(s.:.)_ls_colors}"
+#LS_COLORS+=$_ls_colors
 
 # wpg sequences
 (cat $HOME/.config/wpg/sequences &)
@@ -69,3 +70,10 @@ typeset -g -A key
 bindkey -v
 
 source /usr/share/zsh/plugins/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh
+
+# bun completions
+[ -s "/home/archie/.bun/_bun" ] && source "/home/archie/.bun/_bun"
+
+# bun
+export BUN_INSTALL="$HOME/.bun"
+export PATH="$BUN_INSTALL/bin:$PATH"
