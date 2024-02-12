@@ -41,6 +41,9 @@ bindsym $mod+Shift+r restart
 # start a terminal
 bindsym $mod+Return exec i3-sensible-terminal
 
+# lock xorg session (with i3lock) (mod + alt + l)
+bindsym $mod+Mod1+l exec "i3lock -c 000000"
+
 # take a screenshot
 bindsym Print exec flameshot gui
 
