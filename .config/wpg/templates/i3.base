@@ -100,7 +100,7 @@ bindsym $mod+space focus mode_toggle
 
 # execute workspaces for single monitor
 workspace $ws1 output HDMI-A-1
-workspace $ws2 output HDMI-A-1
+workspace $ws2 output HDMI-A-0
 workspace $ws3 output HDMI-A-1
 workspace $ws4 output HDMI-A-1
 workspace $ws5 output HDMI-A-1
