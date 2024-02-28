@@ -1,0 +1,241 @@
+;------------------------------------------------;
+;                                                ;
+;         Polybar config created by z89          ;
+;                                                ;
+;------------------------------------------------;
+
+
+;###### COLORS ######
+;####################
+
+[colors]
+background-active = {color1}
+background-alert = {color3}
+enable-ipc = true
+foreground-darker =  {color6}
+
+;####### BAR ########
+;####################
+
+[bar/primary]
+monitor = eDP1
+width = 100%
+height = 40
+fixed-center = true
+override-redirect = false
+wm-restack = i3
+
+background = {color0}
+foreground = {color15}
+
+;font-0 = Misc Termsyn:style=Regular:size=9;1
+font-0 = Misc Termsyn:style=Regular:size=9;1
+font-1 = Symbols Nerd Font:style=Regular:size=10;1
+
+modules-left = i3 
+modules-center = 
+;modules-right = spotify spotify-prev spotify-play spotify-play-pause spotify-next wifi-ssid ip calendar volume
+modules-right =  cpu memory ip date calendar volume battery 
+
+tray-padding = 6
+tray-detached = false
+tray-position = right
+
+;###### i3 MODULE ######
+;#######################
+
+[module/i3]
+type = internal/i3
+
+pin-workspaces = true
+index-sort = true
+enable-click = true
+enable-scroll = true
+wrapping-scroll = true
+
+ws-icon-0 = 1;
+ws-icon-1 = 2;
+ws-icon-2 = 3;
+ws-icon-3 = 4;
+ws-icon-4 = 5;
+ws-icon-5 = 6;
+ws-icon-6 = 7;
+ws-icon-7 = 8;
+ws-icon-8 = 9;󰒒
+ws-icon-9 = 10;
+
+label-focused =  "%icon%"
+label-focused-foreground = {color0}
+label-focused-background = {color1}
+label-focused-padding = 5
+ 
+label-unfocused =  %icon%
+label-unfocused-padding = 5
+
+label-visible =  %icon%
+label-visible-padding = 5
+
+label-urgent =  %icon%
+label-urgent-foreground = {color0}
+label-urgent-background = {color3}
+label-urgent-padding = 5
+
+
+;####### CPU MODULE #######
+;#########################
+
+[module/cpu]
+type = internal/cpu
+
+; Seconds to sleep between updates
+; Default: 1
+interval = 0.5
+
+; Default: 80
+; New in version 3.6.0
+warn-percentage = 95
+format = <label>
+label = "  %percentage%% "
+label-warn =   %percentage%%
+label-padding = 4
+
+;###### MEMORY MODULE #######
+;###########################
+
+[module/memory]
+type = internal/memory
+
+; Seconds to sleep between updates
+; Default: 1
+interval = 3
+
+warn-percentage = 95
+label =   %gb_used%
+format = <label> 
+
+;###### DATE MODULE ######
+;############################
+
+[module/date]
+type = internal/date
+
+interval = 1.0
+
+date =   %d/%m/%Y  
+date-alt =   %A, %d %B %Y
+
+format = <label>
+
+label = %date%
+
+ 
+;###### NETWORK MODULE ######
+;############################
+
+;[module/wifi-ssid]
+;type = custom/script
+;exec =  ~/.config/polybar/scripts/ip/ip.sh -s
+;interval = 1
+label-padding = 4
+
+[module/ip]
+type = custom/script
+exec =  echo " |   $(~/.config/polybar/scripts/ip.sh -f)   | "
+label-padding = 2
+click-left =  ~/.config/polybar/scripts/ip.sh -s
+
+;###### CALENDAR MODULE ######
+;############################
+
+[module/calendar] 
+type = custom/script
+exec =  ~/.config/polybar/scripts/calendar.sh
+click-left = ~/.config/polybar/scripts/calendar.sh --popup &
+label-padding = 1
+
+;###### VOLUME MODULE ######
+;###########################
+
+[module/volume]
+type = internal/pulseaudio
+
+format-volume = <ramp-volume>  <label-volume>
+label-muted = " "
+label-volume = "%percentage%%"
+ramp-volume-0 = " "
+ramp-volume-1 = " "
+ramp-volume-2 = " 󰕾"
+ramp-volume-3 = " "
+
+format-volume-padding = 1
+format-muted-padding = 1
+
+;###### SPOTIFY MODULE ######
+;############################
+
+[module/spotify]
+type = custom/script
+tail = true
+format-prefix = "   "
+format = <label>
+exec = ~/.config/polybar/scripts/spotify_player/scrolling_label.sh
+click-left = i3-msg 'workspace "8"'
+label-padding = 1
+
+
+[module/spotify-prev]
+type = custom/script
+exec = echo "玲" 
+format = <label>
+click-left = playerctl previous spotify
+label-padding = 1
+
+[module/spotify-next]
+type = custom/script
+exec = echo "怜   -"
+format = <label>
+click-left = playerctl next spotify
+label-padding = 1
+
+[module/spotify-play-pause]
+type = custom/script
+click-left = playerctl play-pause -p spotify
+exec = ~/.config/polybar/scripts/spotify_player/spotify_status.sh --play-pause
+interval = 0.1
+
+;###### BATTERY MODULE ######
+;############################
+[module/battery]
+type = internal/battery
+full-at = 99
+battery = BAT0
+poll-interval = 2
+time-format = %H:%M
+
+format-charging = <animation-charging><label-charging>
+format-charging-padding = 2
+label-charging = " %percentage%%"
+
+label-full-margin = "10pt"
+label-full = ""
+
+format-discharging = <ramp-capacity><label-discharging>
+format-discharging-padding = 2
+label-discharging = " %percentage%%"
+
+ramp-capacity-0 = ""
+ramp-capacity-1 = ""
+ramp-capacity-2 = ""
+ramp-capacity-3 = ""
+ramp-capacity-4 = ""
+ramp-capacity-padding = 2
+ramp-capacity-font = 2
+
+animation-charging-0 = ""
+animation-charging-1 = ""
+animation-charging-2 = ""
+animation-charging-3 = ""
+animation-charging-4 = ""
+animation-charging-padding = 2
+animation-charging-font = 2
+animation-charging-framerate = 700
