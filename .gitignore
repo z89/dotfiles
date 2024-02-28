@@ -2,13 +2,11 @@
 /*
 # Un-ignore all of subtree
 !.config/redshift/launch.sh
-!.config/wpg/schemes
 !.config/wpg/templates/
 !.config/picom/
 !tuning.sh
 !.config/polybar/
 !.config/rofi/
-!.config/termite/
 !.config/gtk-3.0/gtk.css
 !Picturesl/wallpapers/
 !.zshrc
@@ -20,8 +18,3 @@
 !.zsh-themes/custom-z89.zsh-theme
 !.gitignore
 !README.md
-!install_package_list.sh
-!package.list
-!update_package_list.sh
-
-
