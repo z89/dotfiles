@@ -7,7 +7,7 @@ set $mod Mod4
 ##############################
 
 # activate smart borders
-smart_borders on
+#smart_borders on
 
 # defaut i3-gaps margins
 gaps inner 30
@@ -94,6 +94,9 @@ bindsym $mod+Shift+c floating enable; move position center
 
 # make floating window sticky
 bindsym $mod+o sticky toggle
+
+# disable focus follows mouse
+focus_follows_mouse no
 
 # change focus between tiling / floating windows
 bindsym $mod+space focus mode_toggle
@@ -203,9 +206,6 @@ bindsym $mod+Shift+s exec playerctl --player=spotify play-pause
 bindsym $mod+Ctrl+Shift+Right exec playerctl --player=spotify next
 bindsym $mod+Ctrl+Shift+Left exec playerctl --player=spotify previous
 
-# lock session using xscreensaver
-# bindsym $mod+Ctrl+l exec xscreensaver-command --lock
-
 # brightness controls (for laptop only)
 bindsym XF86MonBrightnessUp exec --no-startup-id "light -A 5"
 bindsym XF86MonBrightnessDown exec --no-startup-id "light -U 5"
@@ -220,9 +220,12 @@ bindsym XF86AudioMicMute exec --no-startup-id pactl set-source-mute @DEFAULT_SOU
 ###### WINDOWS ######
 #####################
 
-# borders
-# for_window [class="kitty"] border pixel 2
+# border
 for_window [class=.*] border pixel 3 
+
+# intellij child windows
+for_window [class="jetbrains.+"] focus
+for_window [window_type=dialog] focus
 
 # open applications as floating windows
 for_window [all] floating enable
