@@ -21,9 +21,9 @@ while read -r line ; do
 done  <  <(xrandr | grep -w connected)
 
 if [[ $(xdotool getmouselocation | awk -F[' +'] '{print $1}' | cut -c 3-) -ge $primaryX ]]; then
-    xPos=$(echo "scale=3;($secondaryX + $primaryX) - 300" | bc)
+    xPos=$(echo "scale=3;($secondaryX + $primaryX) - 420" | bc)
 else
-    xPos=$(echo "scale=3;($primaryX) - 300" | bc)
+    xPos=$(echo "scale=3;($primaryX) - 420" | bc)
 fi
 
 TIME="$(date +"   %I:%M %p   |")"
@@ -33,7 +33,7 @@ case "$1" in
 --popup)
 \
     yad --calendar  --decorated --fixed  --no-buttons \
-        --width="400" --height="30" --close-on-unfocus --border=0 --posx="$xPos" --posy="37" \
+        --width="400" --height="30" --close-on-unfocus --border=0 --posx="$xPos" --posy="40" \
         --borders=0 >/dev/null &
     ;;
 *)
