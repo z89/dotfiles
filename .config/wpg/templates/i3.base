@@ -96,7 +96,7 @@ bindsym $mod+Shift+c floating enable; move position center
 bindsym $mod+o sticky toggle
 
 # disable focus follows mouse
-focus_follows_mouse no
+focus_follows_mouse yes
 
 # change focus between tiling / floating windows
 bindsym $mod+space focus mode_toggle
@@ -230,9 +230,11 @@ for_window [window_type=dialog] focus
 # open applications as floating windows
 for_window [all] floating enable
 for_window [class="kitty"] resize set 30ppt 50ppt 
+for_window [class="Spotify"] floating enable, resize set 2000 1000, move position center, move to workspace $ws8
 
 # move windows to designated workspaces on startup
 for_window [class="Spotify"] floating enable, resize set 2000 1000, move position center, move to workspace $ws8
+for_window [class="Notion"] floating enable, resize set 2000 1000, move position center, move to workspace $ws7
 for_window [class="privateinternetaccess"] move to workspace $ws9
 
 ##### i3 STARTUP #####
@@ -257,7 +259,7 @@ exec_always --no-startup-id $HOME/.config/dunst/dunstwal.sh
 exec --no-startup-id spotify
 
 # start notion 
-# exec /bin/notion-app-nativefier
+exec --no-startup-id /bin/notion-app
 
 # start polybar
 exec_always --no-startup-id $HOME/.config/polybar/launch.sh

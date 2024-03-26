@@ -2,6 +2,7 @@ export GPG_TTY=$(tty)
 export ZSH="$HOME/.oh-my-zsh"
 export TERMINAL=kitty
 export BROWSER=chromium.desktop
+export PINENTRY=/usr/bin/pinetry-gtk-2
 ZSH_THEME="custom-z89"
 
 plugins=(
@@ -77,3 +78,22 @@ source /usr/share/zsh/plugins/zsh-syntax-highlighting/zsh-syntax-highlighting.zs
 # bun
 export BUN_INSTALL="$HOME/.bun"
 export PATH="$BUN_INSTALL/bin:$PATH"
+
+# Created by `pipx` on 2024-03-05 09:59:15
+export PATH="$PATH:/home/archie/.local/bin"
+
+# >>> conda initialize >>>
+# !! Contents within this block are managed by 'conda init' !!
+__conda_setup="$('/usr/bin/conda' 'shell.zsh' 'hook' 2> /dev/null)"
+if [ $? -eq 0 ]; then
+    eval "$__conda_setup"
+else
+    if [ -f "/usr/etc/profile.d/conda.sh" ]; then
+        . "/usr/etc/profile.d/conda.sh"
+    else
+        export PATH="/usr/bin:$PATH"
+    fi
+fi
+unset __conda_setup
+# <<< conda initialize <<<
+
