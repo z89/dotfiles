@@ -58,5 +58,10 @@
     "editor.defaultFormatter": "golang.go"
   },
   "editor.defaultColorDecorators": true,
-  "vscode-color-picker.languages": ["html", "css", "javascript", "javascriptreact", "typescript", "typescriptreact"]
+  "vscode-color-picker.languages": ["html", "css", "javascript", "javascriptreact", "typescript", "typescriptreact"],
+  "sonarlint.rules": {
+    "typescript:S6848": {
+      "level": "off"
+    }
+  }
 }

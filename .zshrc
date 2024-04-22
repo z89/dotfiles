@@ -1,8 +1,15 @@
 export GPG_TTY=$(tty)
 export ZSH="$HOME/.oh-my-zsh"
 export TERMINAL=kitty
+export VISUAL='nvim'
+export EDITOR='nvim'
 export BROWSER=chromium.desktop
 export PINENTRY=/usr/bin/pinetry-gtk-2
+#export PATH=$HOME/bin:/usr/local/bin:$PATH
+#export PATH=/opt/hipSYCL/ROCm/bin:$PATH
+#export PATH="$PATH:/home/archie/.yarn/bin"
+alias vim=\"nvim\"
+
 ZSH_THEME="custom-z89"
 
 plugins=(
@@ -13,11 +20,6 @@ plugins=(
 
 source $ZSH/oh-my-zsh.sh
 
-export EDITOR='vim'
-export TERM=termite
-export PATH=$HOME/bin:/usr/local/bin:$PATH
-export PATH=/opt/hipSYCL/ROCm/bin:$PATH
-export PATH="$PATH:/home/archie/.yarn/bin"
 
 # use gpg-agent instead of ssh-agent
 unset SSH_AGENT_PID
@@ -55,11 +57,6 @@ ENABLE_CORRECTION="true"
 
 COMPLETION_WAITING_DOTS="true"
 
-# remove ls highlight color
-#_ls_colors=":ow=01;33"
-#zstyle ':completion:*:default' list-colors "${(s.:.)_ls_colors}"
-#LS_COLORS+=$_ls_colors
-
 # wpg sequences
 (cat $HOME/.config/wpg/sequences &)
 
@@ -71,6 +68,7 @@ typeset -g -A key
 bindkey -v
 
 source /usr/share/zsh/plugins/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh
+setopt no_auto_remove_slash
 
 # bun completions
 [ -s "/home/archie/.bun/_bun" ] && source "/home/archie/.bun/_bun"
@@ -97,3 +95,4 @@ fi
 unset __conda_setup
 # <<< conda initialize <<<
 
+[ -f ~/.fzf.zsh ] && source ~/.fzf.zsh
