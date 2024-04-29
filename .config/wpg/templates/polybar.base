@@ -28,8 +28,8 @@ wm-restack = i3
 background = {color0}
 foreground = {color15}
 
-font-0 = Misc Termsyn:style=Regular:size=8;1
-font-1 = Symbols Nerd Font:style=Regular:size=9;1
+font-0 = Misc Termsyn:style=Regular:size=7;1
+font-1 = Symbols Nerd Font:style=Regular:size=7;1
 
 modules-left = i3 
 modules-center = 

@@ -96,7 +96,7 @@ bindsym $mod+Shift+c floating enable; move position center
 bindsym $mod+o sticky toggle
 
 # disable focus follows mouse
-focus_follows_mouse yes
+focus_follows_mouse no
 
 # change focus between tiling / floating windows
 bindsym $mod+space focus mode_toggle
