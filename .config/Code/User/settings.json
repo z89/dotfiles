@@ -63,5 +63,6 @@
     "typescript:S6848": {
       "level": "off"
     }
-  }
+  },
+  "extensions.ignoreRecommendations": true
 }

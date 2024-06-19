@@ -8,6 +8,17 @@ export PINENTRY=/usr/bin/pinetry-gtk-2
 #export PATH=$HOME/bin:/usr/local/bin:$PATH
 #export PATH=/opt/hipSYCL/ROCm/bin:$PATH
 #export PATH="$PATH:/home/archie/.yarn/bin"
+export ROCM_PATH=/opt/rocm
+export CPATH=$ROCM_PATH/include:$CPATH
+export LIBRARY_PATH=$ROCM_PATH/lib:$LIBRARY_PATH
+export LD_LIBRARY_PATH=$ROCM_PATH/lib:$LD_LIBRARY_PATH
+
+show_hostname() {
+    if [[ "$HOST" != "archbox" ]]; then
+        echo "%m "
+    fi
+}
+
 alias vim=\"nvim\"
 
 ZSH_THEME="custom-z89"
@@ -67,7 +78,7 @@ typeset -g -A key
 
 bindkey -v
 
-source /usr/share/zsh/plugins/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh
+source /home/archie/.oh-my-zsh/custom/plugins/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh
 setopt no_auto_remove_slash
 
 # bun completions
