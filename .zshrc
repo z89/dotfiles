@@ -8,6 +8,9 @@ export PINENTRY=/usr/bin/pinetry-gtk-2
 #export PATH=$HOME/bin:/usr/local/bin:$PATH
 #export PATH=/opt/hipSYCL/ROCm/bin:$PATH
 #export PATH="$PATH:/home/archie/.yarn/bin"
+source /usr/share/fzf/key-bindings.zsh
+source /usr/share/fzf/completion.zsh
+
 export ROCM_PATH=/opt/rocm
 export CPATH=$ROCM_PATH/include:$CPATH
 export LIBRARY_PATH=$ROCM_PATH/lib:$LIBRARY_PATH
