@@ -256,7 +256,7 @@ exec_always --no-startup-id dex ~/.config/autostart/blueman.desktop
 exec_always --no-startup-id $HOME/.config/dunst/dunstwal.sh
 
 # start spotify
-exec --no-startup-id spotify
+exec --no-startup-id spotify-launcher
 
 # start notion 
 exec --no-startup-id /bin/notion-app
