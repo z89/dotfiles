@@ -235,7 +235,7 @@ for_window [class="Spotify"] floating enable, resize set 2000 1000, move positio
 # move windows to designated workspaces on startup
 for_window [class="Spotify"] floating enable, resize set 2000 1000, move position center, move to workspace $ws8
 for_window [class="Notion"] floating enable, resize set 2000 1000, move position center, move to workspace $ws7
-for_window [class="privateinternetaccess"] move to workspace $ws9
+for_window [class="mullvad vpn"] move to workspace $ws9
 
 ##### i3 STARTUP #####
 ######################
