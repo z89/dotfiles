@@ -64,5 +64,6 @@
       "level": "off"
     }
   },
-  "extensions.ignoreRecommendations": true
+  "extensions.ignoreRecommendations": true,
+  "terraform.languageServer.enable": true
 }
