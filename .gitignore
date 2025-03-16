@@ -8,7 +8,6 @@
 !.config/polybar/
 !.config/rofi/
 !.config/gtk-3.0/gtk.css
-!Picturesl/wallpapers/
 !.zshrc
 !.vimrc
 !.config/systemd/user/geoclue-agent.service

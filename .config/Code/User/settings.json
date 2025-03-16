@@ -1,9 +1,9 @@
 {
-  "terminal.integrated.fontFamily": "'Fira Code', 'Symbols Nerd Font'",
+  "terminal.integrated.fontFamily": "FiraCode Nerd Font",
   "terminal.integrated.fontSize": 12,
   "terminal.integrated.gpuAcceleration": "off",
 
-  "editor.fontFamily": "Fira Code",
+  "editor.fontFamily": "'FiraCode Nerd Font', 'monospace'",
   "editor.fontLigatures": true,
   "editor.fontSize": 12,
   "editor.formatOnSave": true,
@@ -57,7 +57,7 @@
     "editor.formatOnSave": true,
     "editor.defaultFormatter": "golang.go"
   },
-  "editor.defaultColorDecorators": true,
+  "editor.defaultColorDecorators": "auto",
   "vscode-color-picker.languages": ["html", "css", "javascript", "javascriptreact", "typescript", "typescriptreact"],
   "sonarlint.rules": {
     "typescript:S6848": {
@@ -65,5 +65,8 @@
     }
   },
   "extensions.ignoreRecommendations": true,
-  "terraform.languageServer.enable": true
+  "terraform.languageServer.enable": true,
+  "[terraform]": {
+    "editor.defaultFormatter": "hashicorp.terraform"
+  }
 }
