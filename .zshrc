@@ -37,11 +37,13 @@ source $ZSH/oh-my-zsh.sh
 
 
 # use gpg-agent instead of ssh-agent
-unset SSH_AGENT_PID
+#unset SSH_AGENT_PID
 
-if [ "${gnupg_SSH_AUTH_SOCK_by:-0}" -ne $$ ]; then
-  export SSH_AUTH_SOCK="$(gpgconf --list-dirs agent-ssh-socket)"
-fi
+#if [ "${gnupg_SSH_AUTH_SOCK_by:-0}" -ne $$ ]; then
+#  export SSH_AUTH_SOCK="$(gpgconf --list-dirs agent-ssh-socket)"
+#fi
+# Start ssh-agent silently for GitHub
+eval "$(ssh-agent -s | sed '/^echo Agent pid/d')"
 
 # exit ranger on S command
 ranger() {
@@ -52,7 +54,7 @@ ranger() {
     fi
 }
 
-gpg-connect-agent updatestartuptty /bye >/dev/null
+# gpg-connect-agent updatestartuptty /bye >/dev/null
 
 autoload -Uz compinit
 compinit

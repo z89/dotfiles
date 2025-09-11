@@ -68,5 +68,6 @@
   "terraform.languageServer.enable": true,
   "[terraform]": {
     "editor.defaultFormatter": "hashicorp.terraform"
-  }
+  },
+  "github.copilot.nextEditSuggestions.enabled": true
 }
