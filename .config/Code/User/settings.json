@@ -73,5 +73,10 @@
   "[cpp]": {
     "editor.defaultFormatter": "ms-vscode.cpptools"
   },
-  "explorer.confirmPasteNative": false
+  "explorer.confirmPasteNative": false,
+  "python.createEnvironment.trigger": "off",
+  "codemap.useNoDependencyCSharpMapper": true,
+  "yaml.schemas": {
+    "file:///home/archie/.vscode/extensions/continue.continue-1.2.10-linux-x64/config-yaml-schema.json": [".continue/**/*.yaml"]
+  }
 }
