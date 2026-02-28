@@ -32,7 +32,7 @@
     "markdown": true,
     "scminput": false,
     "yaml": true,
-    "cpp": true
+    "cpp": true,
   },
 
   "git.confirmSync": false,
@@ -44,9 +44,9 @@
   "workbench.colorTheme": "Wal",
 
   "editor.linkedEditing": false,
-  "VSCodeCounter.exclude": ["**/.gitignore", "**/.vscode/**", "**/node_modules/**", "package-lock.json"],
+  "VSCodeCounter.exclude": ["**/.gitignore", "**/.vscode/**", "**/node_modules/**", "package-lock.json", "**/old/**"],
   "files.associations": {
-    "*.css": "tailwindcss"
+    "*.css": "tailwindcss",
   },
   "window.titleBarStyle": "custom",
 
@@ -55,28 +55,47 @@
   "[go]": {
     "editor.insertSpaces": true,
     "editor.formatOnSave": true,
-    "editor.defaultFormatter": "golang.go"
+    "editor.defaultFormatter": "golang.go",
   },
   "editor.defaultColorDecorators": "auto",
   "vscode-color-picker.languages": ["html", "css", "javascript", "javascriptreact", "typescript", "typescriptreact"],
   "sonarlint.rules": {
     "typescript:S6848": {
-      "level": "off"
-    }
+      "level": "off",
+    },
   },
   "extensions.ignoreRecommendations": true,
   "terraform.languageServer.enable": true,
   "[terraform]": {
-    "editor.defaultFormatter": "hashicorp.terraform"
+    "editor.defaultFormatter": "hashicorp.terraform",
   },
   "github.copilot.nextEditSuggestions.enabled": true,
   "[cpp]": {
-    "editor.defaultFormatter": "ms-vscode.cpptools"
+    "editor.defaultFormatter": "ms-vscode.cpptools",
   },
+  "java.format.settings.url": "https://raw.githubusercontent.com/google/styleguide/gh-pages/eclipse-java-google-style.xml",
+  "java.format.settings.profile": "GoogleStyle",
   "explorer.confirmPasteNative": false,
   "python.createEnvironment.trigger": "off",
   "codemap.useNoDependencyCSharpMapper": true,
   "yaml.schemas": {
-    "file:///home/archie/.vscode/extensions/continue.continue-1.2.10-linux-x64/config-yaml-schema.json": [".continue/**/*.yaml"]
-  }
+    "file:///home/archie/.vscode/extensions/continue.continue-1.2.10-linux-x64/config-yaml-schema.json": [".continue/**/*.yaml"],
+  },
+  "[java]": {
+    "editor.defaultFormatter": "redhat.java",
+  },
+  "jdk.telemetry.enabled": false,
+  "terminal.integrated.suggest.enabled": false,
+  "claudeCode.preferredLocation": "panel",
+  "terminal.integrated.initialHint": false,
+  "comments.openView": "never",
+  "claudeCode.selectedModel": "sonnet",
+  "[dart]": {
+    "editor.formatOnSave": true,
+    "editor.formatOnType": true,
+    "editor.rulers": [80],
+    "editor.selectionHighlight": false,
+    "editor.tabCompletion": "onlySnippets",
+    "editor.wordBasedSuggestions": "off",
+  },
 }

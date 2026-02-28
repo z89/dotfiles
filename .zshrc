@@ -12,9 +12,14 @@ source /usr/share/fzf/key-bindings.zsh
 source /usr/share/fzf/completion.zsh
 
 export ROCM_PATH=/opt/rocm
-export CPATH=$ROCM_PATH/include:$CPATH
-export LIBRARY_PATH=$ROCM_PATH/lib:$LIBRARY_PATH
-export LD_LIBRARY_PATH=$ROCM_PATH/lib:$LD_LIBRARY_PATH
+export CHROME_EXECUTABLE=/usr/bin/chromium
+
+eval "$(starship init zsh)"
+
+
+#export CPATH=$ROCM_PATH/include:$CPATH
+#export LIBRARY_PATH=$ROCM_PATH/lib:$LIBRARY_PATH
+#export LD_LIBRARY_PATH=$ROCM_PATH/lib:$LD_LIBRARY_PATH
 
 show_hostname() {
     if [[ "$HOST" != "archbox" ]]; then
@@ -88,3 +93,11 @@ source /home/archie/.oh-my-zsh/custom/plugins/zsh-syntax-highlighting/zsh-syntax
 setopt no_auto_remove_slash
 
 [ -f ~/.fzf.zsh ] && source ~/.fzf.zsh
+
+# pnpm
+export PNPM_HOME="/home/archie/.local/share/pnpm"
+case ":$PATH:" in
+  *":$PNPM_HOME:"*) ;;
+  *) export PATH="$PNPM_HOME:$PATH" ;;
+esac
+# pnpm end
