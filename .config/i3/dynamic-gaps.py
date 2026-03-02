@@ -14,10 +14,13 @@ GAP_SCHEDULE = [
     (5, 154),  # 5+ windows:  ~3% margin
 ]
 
-# Initial resize for specific window instances.
-WINDOW_SIZES = {
+# Initial resize for specific window classes/instances.
+WINDOW_SIZES_BY_INSTANCE = {
     "arch-assist": "30ppt 50ppt",
     "arch-assist-popup": "50ppt 40ppt",
+}
+WINDOW_SIZES_BY_CLASS = {
+    "kitty": "1850 980",
 }
 
 # Guard to suppress cascading window::floating events from our own float commands.
@@ -60,8 +63,11 @@ def on_new_window(i3, event):
     _suppress = True
     i3.command(f"[con_id={con.id}] floating enable")
     instance = con.window_instance or ""
-    if instance in WINDOW_SIZES:
-        i3.command(f"[con_id={con.id}] resize set {WINDOW_SIZES[instance]}")
+    wm_class = con.window_class or ""
+    if instance in WINDOW_SIZES_BY_INSTANCE:
+        i3.command(f"[con_id={con.id}] resize set {WINDOW_SIZES_BY_INSTANCE[instance]}")
+    elif wm_class in WINDOW_SIZES_BY_CLASS:
+        i3.command(f"[con_id={con.id}] resize set {WINDOW_SIZES_BY_CLASS[wm_class]}")
     _suppress = False
 
     update_gaps(i3)
