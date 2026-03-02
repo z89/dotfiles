@@ -233,8 +233,7 @@ for_window [window_type=dialog] focus
 
 # floating windows
 for_window [class="Nemo"] floating enable
-# open applications as floating windows
-for_window [all] floating enable
+# floating by default is handled in dynamic-gaps.py (window::new only, survives i3 reload)
 
 # move windows to designated workspaces on startup
 for_window [class="Spotify"] floating enable, resize set 2600 1200, move position center, move to workspace $ws8
@@ -287,7 +286,7 @@ exec_always --no-startup-id wal -R -e
 exec_always --no-startup-id ~/tuning.sh
 
 # dynamic horizontal gaps based on window count
-exec_always --no-startup-id pkill -f dynamic-gaps.py; sleep 0.5 && python3 ~/.config/i3/dynamic-gaps.py
+exec_always --no-startup-id bash -c 'pkill -f "python3.*dynamic-gaps" || true; sleep 0.5; exec python3 ~/.config/i3/dynamic-gaps.py'
 
 # arch-assist
 include ~/.config/i3/arch-assist.conf
