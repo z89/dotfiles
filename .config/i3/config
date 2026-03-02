@@ -220,7 +220,8 @@ bindsym XF86AudioMicMute exec --no-startup-id pactl set-source-mute @DEFAULT_SOU
 focus_on_window_activation none
 
 # border
-for_window [class=.*] border pixel 3 
+for_window [class=.*] border pixel 3
+for_window [class="Chromium"] border none
 
 # sitcky notes
 #for_window [class="xpad"] focus on activate disable

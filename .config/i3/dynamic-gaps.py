@@ -22,7 +22,6 @@ GAP_SCHEDULE = [
 
 # Initial resize for specific window classes/instances.
 WINDOW_SIZES_BY_INSTANCE = {
-    "arch-assist": "30ppt 50ppt",
     "arch-assist-popup": "50ppt 40ppt",
 }
 WINDOW_SIZES_BY_CLASS = {
