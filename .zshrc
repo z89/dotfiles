@@ -101,3 +101,6 @@ case ":$PATH:" in
   *) export PATH="$PNPM_HOME:$PATH" ;;
 esac
 # pnpm end
+
+# arch-assist: error capture for Claude Code context
+[ -f ~/Documents/Github-Projects/arch-assist/zsh/arch-assist.zsh ] && source ~/Documents/Github-Projects/arch-assist/zsh/arch-assist.zsh
