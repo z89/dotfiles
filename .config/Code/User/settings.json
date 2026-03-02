@@ -89,7 +89,7 @@
   "claudeCode.preferredLocation": "panel",
   "terminal.integrated.initialHint": false,
   "comments.openView": "never",
-  "claudeCode.selectedModel": "sonnet",
+  "claudeCode.selectedModel": "default",
   "[dart]": {
     "editor.formatOnSave": true,
     "editor.formatOnType": true,

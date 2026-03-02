@@ -22,6 +22,22 @@ def get_gap(count):
     return gap
 
 
+# Initial resize for specific window instances (only on creation, not reload).
+WINDOW_SIZES = {
+    "arch-assist": "30ppt 50ppt",
+    "arch-assist-popup": "50ppt 40ppt",
+}
+
+
+def resize_window(i3, event):
+    """Resize specific windows on creation."""
+    con = event.container
+    if con is not None:
+        instance = con.window_instance or ""
+        if instance in WINDOW_SIZES:
+            i3.command(f"[con_id={con.id}] resize set {WINDOW_SIZES[instance]}")
+
+
 def update_gaps(i3, event=None):
     tree = i3.get_tree()
     focused = tree.find_focused()
@@ -44,6 +60,7 @@ def update_gaps(i3, event=None):
 
 i3 = i3ipc.Connection()
 
+i3.on("window::new", resize_window)
 i3.on("window::new", update_gaps)
 i3.on("window::close", update_gaps)
 i3.on("window::move", update_gaps)

@@ -231,9 +231,10 @@ for_window [class="xpad"] floating enable, sticky enable, border none, no_focus
 for_window [class="jetbrains.+"] focus
 for_window [window_type=dialog] focus
 
+# floating windows
+for_window [class="Nemo"] floating enable
 # open applications as floating windows
-#for_window [all] floating enable
-#for_window [class="kitty"] resize set 30ppt 50ppt
+for_window [all] floating enable
 
 # move windows to designated workspaces on startup
 for_window [class="Spotify"] floating enable, resize set 2600 1200, move position center, move to workspace $ws8
