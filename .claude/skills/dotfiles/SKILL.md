@@ -24,30 +24,6 @@ The root `.gitignore` uses a **whitelist pattern**:
 
 This means **nothing is tracked unless deliberately added**. Never use `git add -A` or `git add .` — it will silently do nothing thanks to the gitignore, but it's still bad practice.
 
-## Currently Tracked Files
-
-```
-.claude/          (selectively — see .claude/.gitignore)
-.config/Code/User/keybindings.json
-.config/Code/User/settings.json
-.config/gtk-3.0/gtk.css
-.config/picom/
-.config/polybar/
-.config/redshift/launch.sh
-.config/rofi/
-.config/systemd/user/geoclue-agent.service
-.config/wpg/templates/
-.git-commit-template
-.gitignore
-README.md
-tuning.sh
-.vimrc
-.zprofile
-.zprofile
-.zsh-themes/custom-z89.zsh-theme
-.zshrc
-```
-
 ### Inside `.claude/` (selective via `.claude/.gitignore`)
 
 The `.claude/` directory has its own `.gitignore` that whitelists only:
@@ -79,7 +55,38 @@ git add .claude/skills/<name>/SKILL.md
 ## Rules
 
 - NEVER use `git add -A` or `git add .` — always add paths explicitly
-- NEVER add files containing secrets (API keys, tokens, `.env` files, `settings.local.json`)
-- Before adding a new config dir, check for sensitive files inside it first
-- Always verify staged files with `git diff --cached --name-only` before committing
 - Follow `~/.claude/skills/commit/SKILL.md` for all commits and push approval
+
+### Public Repo — Zero Secrets Policy
+
+This is a **public repository**. Every line committed is visible to anyone on the internet. Treat every staged change as if it will be read by strangers.
+
+**Before every commit, scan all staged content for leaks:**
+
+1. Run `git diff --cached` (full diff, not just filenames) and read every added/modified line
+2. Reject the commit if ANY of the following appear in staged content:
+   - API keys, tokens, secrets, passwords, passphrases, or credentials of any kind
+   - Private SSH keys, GPG private keys, or signing keys
+   - `.env` files, `settings.local.json`, or any secret-bearing config
+   - Session cookies, JWTs, bearer tokens, OAuth tokens
+   - IP addresses, hostnames, or URLs pointing to private/internal infrastructure
+   - Email addresses, phone numbers, physical addresses, or other PII
+   - Usernames or account identifiers not already public (GitHub username `z89` is fine)
+   - Database connection strings or DSNs
+   - Encrypted secrets (they can still be brute-forced or leak metadata)
+   - Hardcoded paths containing usernames other than `archie` (the home dir is inherent to the repo)
+
+**Files to never track or commit:**
+- `.env`, `.env.*`, `*.secret`, `*.key`, `*.pem` (private), `*.p12`, `*.pfx`
+- `credentials.json`, `token.json`, `auth.json`, `settings.local.json`
+- Browser profiles, cookie stores, session storage
+- Shell history files (`.bash_history`, `.zsh_history`, etc.)
+- Password manager databases or exports
+
+**When adding a new config directory:**
+- `grep -rn` the directory for patterns like `key=`, `token=`, `password=`, `secret=`, `auth`, `bearer`, `api_key` before staging
+- If any match is found, inspect each one manually and exclude sensitive files via `.gitignore` before proceeding
+
+**If a secret is accidentally committed:**
+- Do NOT just delete it in a follow-up commit (git history retains it)
+- Alert the user immediately — the secret must be rotated and history rewritten or the repo re-created

@@ -2,7 +2,6 @@
 # i3wm complete reference: https://i3wm.org/docs/userguide.html
 
 set $mod Mod4
-font pango:monospace 8
 
 ######### i3 WINDOW ##########
 ##############################
@@ -10,8 +9,9 @@ font pango:monospace 8
 # activate smart borders
 #smart_borders on
 
-# gap defaults are managed by dynamic-gaps.py for persistence across reloads
-gaps outer 0
+# defaut i3-gaps margins
+gaps inner 30
+gaps outer 30
 
 ######### COLORS ##########
 ###########################
@@ -50,11 +50,11 @@ bindsym Print exec flameshot gui
 # kill focused window
 bindsym $mod+Shift+q kill
 
-# dynamic gaps via keybinds (routed through dynamic-gaps.py for persistence)
-bindsym $mod+m          nop gap topbottom + 5
-bindsym $mod+Shift+m    nop gap topbottom - 5
-bindsym $mod+n          nop gap inner + 5
-bindsym $mod+Shift+n    nop gap inner - 5
+# dynamic gaps via keybinds
+bindsym $mod+m          gaps outer all plus  5
+bindsym $mod+Shift+m    gaps outer all minus 5
+bindsym $mod+n          gaps inner all plus  5
+bindsym $mod+Shift+n    gaps inner all minus 5
 
 # change focus
 bindsym $mod+h focus left
@@ -175,10 +175,10 @@ set $ws10 "10"
 bindsym $mod+ctrl+space exec dunstctl close-all &
 
 # choose randomized wallpaper to switch pywal colors
-bindsym $mod+Shift+w exec wpg -m && /home/archie/.confg/dunst/dunstwal.sh
+bindsym $mod+Shift+w exec wpg -m && nautilus -q; /home/archie/.confg/dunst/dunstwal.sh
 
 # open nautilus file explorer
-bindsym $mod+Shift+e exec nemo
+bindsym $mod+Shift+e exec nautilus
 
 # open calculator
 bindsym $mod+ctrl+c exec deepin-calculator
@@ -219,23 +219,17 @@ bindsym XF86AudioMicMute exec --no-startup-id pactl set-source-mute @DEFAULT_SOU
 
 ###### WINDOWS ######
 #####################
-focus_on_window_activation none
 
 # border
-for_window [class=.*] border pixel 3
-for_window [class="Chromium"] border none
-
-# sticky notes
-for_window [class="xpad"] floating enable, sticky enable, border none, no_focus
+for_window [class=.*] border pixel 3 
 
 # intellij child windows
 for_window [class="jetbrains.+"] focus
 for_window [window_type=dialog] focus
 
-# floating windows
-for_window [class="Nemo"] floating enable
-# floating by default is handled in dynamic-gaps.py (window::new only, survives i3 reload)
-
+# open applications as floating windows
+for_window [all] floating enable
+for_window [class="kitty"] resize set 30ppt 50ppt 
 for_window [class="Spotify"] floating enable, resize set 2000 1000, move position center, move to workspace $ws8
 
 # move windows to designated workspaces on startup
@@ -282,8 +276,13 @@ exec_always --no-startup-id wal -R -e
 # set typematic rate & mouse sensitivty
 exec_always --no-startup-id ~/tuning.sh
 
-# dynamic gaps + floating (managed by dynamic-gaps.py, persistent across reloads)
-exec_always --no-startup-id $HOME/.config/i3/start-dynamic-gaps.sh
+# SIGNAL — AI & Dev HN feed
+for_window [class="eww-signal"] border none, floating enable, move absolute position 15 46
+no_focus [class="eww-signal"]
+exec_always --no-startup-id pkill -f signal-daemon.sh 2>/dev/null; /home/archie/.config/signal/signal-daemon.sh &
+exec_always --no-startup-id eww --config /home/archie/.config/signal/eww kill 2>/dev/null || true; sleep 1 && eww --config /home/archie/.config/signal/eww open signal
+bindsym $mod+F5 exec --no-startup-id /home/archie/.config/signal/signal-refresh.sh
+bindsym $mod+Shift+F5 exec --no-startup-id /home/archie/.config/signal/signal-toggle.sh
 
 # arch-assist
 include ~/.config/i3/arch-assist.conf

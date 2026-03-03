@@ -34,7 +34,9 @@ changelog:
 ```
 
 - The title line is always exactly `changelog:` — no summary, no parentheses.
-- Each bullet is one atomic change, written concisely in plain English.
+- Each bullet is a high-level summary of a meaningful change, not a detailed description. Think of it as a signpost for someone scanning commit history — they should understand what area changed, not every implementation detail.
+- Aim for 1-4 bullets total. Group related small changes under one bullet rather than listing each individually.
+- Write in plain, everyday language. Avoid technical jargon, internal identifiers, and implementation specifics unless essential to understanding what changed.
 - No period at the end of bullet points.
 - Do not include boilerplate, metadata, or attribution lines of any kind.
 
@@ -52,6 +54,5 @@ changelog:
 
 ```
 changelog:
-- resized all arch-assist windows to match floating terminal size and position
-- removed borders for chromium in i3 config
+- tweaked arch-assist and chromium window appearance in i3
 ```

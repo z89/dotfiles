@@ -175,10 +175,10 @@ set $ws10 "10"
 bindsym $mod+ctrl+space exec dunstctl close-all &
 
 # choose randomized wallpaper to switch pywal colors
-bindsym $mod+Shift+a exec wpg -m && /home/archie/.confg/dunst/dunstwal.sh
+bindsym $mod+Shift+w exec wpg -m && nautilus -q; /home/archie/.confg/dunst/dunstwal.sh
 
 # open nautilus file explorer
-bindsym $mod+Shift+e exec nemo
+bindsym $mod+Shift+e exec nautilus
 
 # open calculator
 bindsym $mod+ctrl+c exec deepin-calculator
@@ -275,3 +275,6 @@ exec_always --no-startup-id wal -R -e
 
 # set typematic rate & mouse sensitivty
 exec_always --no-startup-id ~/tuning.sh
+
+# arch-assist
+include ~/.config/i3/arch-assist.conf
