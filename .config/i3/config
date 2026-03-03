@@ -2,6 +2,7 @@
 # i3wm complete reference: https://i3wm.org/docs/userguide.html
 
 set $mod Mod4
+font pango:monospace 8
 
 ######### i3 WINDOW ##########
 ##############################
@@ -174,6 +175,7 @@ set $ws10 "10"
 bindsym $mod+ctrl+space exec dunstctl close-all &
 
 # choose randomized wallpaper to switch pywal colors
+bindsym $mod+Shift+w exec wpg -m && /home/archie/.confg/dunst/dunstwal.sh
 
 # open nautilus file explorer
 bindsym $mod+Shift+e exec nemo
@@ -191,7 +193,7 @@ bindsym $mod+c exec i3-msg 'workspace "2"'
 # switch to spotify workspace (ws8)
 bindsym $mod+s exec i3-msg 'workspace "8"'
 
-# switch to discord workspace (ws9)
+# switch to vpn workspace (ws9)
 bindsym $mod+p exec i3-msg 'workspace "9"'
 
 # switch to notion workspace (ws7)
@@ -223,8 +225,7 @@ focus_on_window_activation none
 for_window [class=.*] border pixel 3
 for_window [class="Chromium"] border none
 
-# sitcky notes
-#for_window [class="xpad"] focus on activate disable
+# sticky notes
 for_window [class="xpad"] floating enable, sticky enable, border none, no_focus
 
 # intellij child windows
@@ -235,10 +236,12 @@ for_window [window_type=dialog] focus
 for_window [class="Nemo"] floating enable
 # floating by default is handled in dynamic-gaps.py (window::new only, survives i3 reload)
 
+for_window [class="Spotify"] floating enable, resize set 2000 1000, move position center, move to workspace $ws8
+
 # move windows to designated workspaces on startup
-for_window [class="Spotify"] floating enable, resize set 2600 1200, move position center, move to workspace $ws8
-for_window [class="Notion"] floating enable, resize set 2600 1200, move position center, move to workspace $ws9
-for_window [class="discord"] floating enable, resize set 2600 1200, move position center, move to workspace $ws9
+for_window [class="Spotify"] floating enable, resize set 2000 1000, move position center, move to workspace $ws8
+for_window [class="Notion"] floating enable, resize set 2000 1000, move position center, move to workspace $ws7
+for_window [class="mullvad vpn"] move to workspace $ws9
 
 ##### i3 STARTUP #####
 ######################
@@ -250,7 +253,7 @@ exec_always --no-startup-id /opt/piavpn/bin/pia-client
 exec_always --no-startup-id nm-applet
 
 # start redshift
-exec_always --no-startup-id $HOME/.config/redshift/launch.sh
+#exec_always --no-startup-id $HOME/.config/redshift/launch.sh
 
 # start blueman (bluetooth manager & applet)
 exec_always --no-startup-id dex ~/.config/autostart/blueman.desktop
@@ -261,14 +264,8 @@ exec_always --no-startup-id $HOME/.config/dunst/dunstwal.sh
 # start spotify
 exec --no-startup-id spotify
 
-# start notion
+# start notion 
 exec --no-startup-id /bin/notion-app
-
-# start discord-canary
-exec --no-startup-id discord-canary
-
-# force-create dedicated workspaces so they always show in polybar
-exec --no-startup-id i3-msg 'workspace 9'
 
 # start polybar
 exec_always --no-startup-id $HOME/.config/polybar/launch.sh

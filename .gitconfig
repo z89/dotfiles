@@ -1,0 +1,20 @@
+[init]
+	defaultBranch = main
+[user]
+	email = z89@matix.com.au
+	name = z89
+	signingkey = ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAILRTVDDE+UwRXLllpQF7Covc+aDlAusJ3y7uoVX7i/EA z89@matix.com.au
+[filter "lfs"]
+	required = true
+	clean = git-lfs clean -- %f
+	smudge = git-lfs smudge -- %f
+	process = git-lfs filter-process
+[core]
+	editor = nvim
+[commit]
+	template = /home/archie/.git-commit-template
+	gpgsign = true
+[gpg]
+	format = ssh
+[gpg "ssh"]
+	allowedSignersFile = /home/archie/.ssh/allowed_signers

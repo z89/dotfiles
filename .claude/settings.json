@@ -1,0 +1,17 @@
+{
+  "model": "sonnet",
+  "hooks": {
+    "Notification": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "/home/archie/.local/bin/claude-notify.sh"
+          }
+        ]
+      }
+    ]
+  },
+  "effortLevel": "medium"
+}

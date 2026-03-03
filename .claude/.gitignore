@@ -1,0 +1,9 @@
+# Ignore everything inside .claude/
+*
+
+# Un-ignore only safe, user-owned config
+!.gitignore
+!CLAUDE.md
+!settings.json
+!skills/
+!skills/**

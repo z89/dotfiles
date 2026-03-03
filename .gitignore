@@ -17,3 +17,9 @@
 !.zsh-themes/custom-z89.zsh-theme
 !.gitignore
 !README.md
+!.claude/
+!.git-commit-template
+!.gitconfig
+!.ssh/
+.ssh/*
+!.ssh/allowed_signers
