@@ -67,5 +67,5 @@ source /usr/share/fzf/completion.zsh
 # wpg colour sequences
 (cat $HOME/.config/wpg/sequences &)
 
-# arch-assist: error capture for Claude Code context
-[ -f ~/Documents/Github-Projects/arch-assist/zsh/arch-assist.zsh ] && source ~/Documents/Github-Projects/arch-assist/zsh/arch-assist.zsh
+# i3kit: error capture for Claude Code context
+[ -f ~/Documents/Github-Projects/i3kit/zsh/i3kit.zsh ] && source ~/Documents/Github-Projects/i3kit/zsh/i3kit.zsh

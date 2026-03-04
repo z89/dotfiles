@@ -228,7 +228,8 @@ bindsym XF86AudioMicMute exec --no-startup-id pactl set-source-mute @DEFAULT_SOU
 #####################
 
 # border
-for_window [class=.*] border pixel 3 
+for_window [class=.*] border pixel 3
+for_window [class="org.gnome.Nautilus"] border none
 
 # intellij child windows
 for_window [class="jetbrains.+"] focus
@@ -236,13 +237,14 @@ for_window [window_type=dialog] focus
 
 # open applications as floating windows
 for_window [all] floating enable
-for_window [class="kitty"] resize set 30ppt 50ppt 
-for_window [class="Spotify"] floating enable, resize set 2000 1000, move position center, move to workspace $ws8
+for_window [class="kitty"] resize set 30ppt 50ppt, move position center
+for_window [class="Spotify"] floating enable, resize set 2600 1300, move position center, move to workspace $ws8
 
 # move windows to designated workspaces on startup
-for_window [class="Spotify"] floating enable, resize set 2000 1000, move position center, move to workspace $ws8
-for_window [class="Notion"] floating enable, resize set 2000 1000, move position center, move to workspace $ws7
+for_window [class="Spotify"] floating enable, resize set 2600 1300, move position center, move to workspace $ws8
+for_window [class="Notion"] floating enable, resize set 2600 1300, move position center, move to workspace $ws7
 for_window [class="mullvad vpn"] move to workspace $ws9
+for_window [class="discord-canary"] floating enable, resize set 2600 1300, move position center, move to workspace $ws9
 
 ##### i3 STARTUP #####
 ######################
@@ -265,8 +267,11 @@ exec_always --no-startup-id $HOME/.config/dunst/dunstwal.sh
 # start spotify
 exec --no-startup-id spotify
 
-# start notion 
+# start notion
 exec --no-startup-id /bin/notion-app
+
+# start discord
+exec --no-startup-id discord-canary
 
 # start polybar
 exec_always --no-startup-id $HOME/.config/polybar/launch.sh
@@ -283,16 +288,12 @@ exec_always --no-startup-id wal -R -e
 # set typematic rate & mouse sensitivty
 exec_always --no-startup-id ~/tuning.sh
 
-# start dynamic gaps for ultrawide
-exec_always --no-startup-id ~/.config/i3/start-dynamic-gaps.sh
+# YCOMBO — AI & Dev HN feed
+for_window [class="eww-ycombo"] border none
+no_focus [class="eww-ycombo"]
+exec_always --no-startup-id /home/archie/Documents/Github-Projects/ycombo/ycombo-start.sh &
+bindsym $mod+F5 exec --no-startup-id /home/archie/Documents/Github-Projects/ycombo/ycombo-refresh.sh
+bindsym $mod+Shift+F5 exec --no-startup-id /home/archie/Documents/Github-Projects/ycombo/ycombo-toggle.sh
 
-# SIGNAL — AI & Dev HN feed
-for_window [class="eww-signal"] border none, floating enable, move absolute position 15 46
-no_focus [class="eww-signal"]
-exec_always --no-startup-id pkill -f signal-daemon.sh 2>/dev/null; /home/archie/.config/signal/signal-daemon.sh &
-exec_always --no-startup-id eww --config /home/archie/.config/signal/eww kill 2>/dev/null || true; sleep 1 && eww --config /home/archie/.config/signal/eww open signal
-bindsym $mod+F5 exec --no-startup-id /home/archie/.config/signal/signal-refresh.sh
-bindsym $mod+Shift+F5 exec --no-startup-id /home/archie/.config/signal/signal-toggle.sh
-
-# arch-assist
-include ~/.config/i3/arch-assist.conf
+# i3kit
+include ~/.config/i3/i3kit.conf
