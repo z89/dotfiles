@@ -10,6 +10,7 @@ export ROCM_PATH=/opt/rocm
 
 # SSH agent (systemd-managed)
 export SSH_AUTH_SOCK="/run/user/1000/ssh-agent.socket"
+ssh-add -l &>/dev/null || ssh-add ~/.ssh/id_ed25519 &>/dev/null
 
 # pnpm
 export PNPM_HOME="/home/archie/.local/share/pnpm"

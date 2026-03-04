@@ -10,6 +10,26 @@
           }
         ]
       }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": "Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "/home/archie/.claude/hooks/guard-generated-configs.sh"
+          }
+        ]
+      },
+      {
+        "matcher": "Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "/home/archie/.claude/hooks/guard-generated-configs.sh"
+          }
+        ]
+      }
     ]
   },
   "effortLevel": "medium"
