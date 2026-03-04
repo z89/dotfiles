@@ -1,16 +1,5 @@
 {
   "hooks": {
-    "Notification": [
-      {
-        "matcher": "",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "/home/archie/.local/bin/claude-notify.sh"
-          }
-        ]
-      }
-    ],
     "PreToolUse": [
       {
         "matcher": "Edit",
@@ -27,6 +16,26 @@
           {
             "type": "command",
             "command": "/home/archie/.claude/hooks/guard-generated-configs.sh"
+          }
+        ]
+      },
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "/home/archie/.claude/hooks/require-commit-skill.sh"
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Skill",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "/home/archie/.claude/hooks/mark-commit-skill.sh"
           }
         ]
       }
