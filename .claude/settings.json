@@ -40,7 +40,5 @@
         ]
       }
     ]
-  },
-  "effortLevel": "medium",
-  "model": "sonnet"
+  }
 }
