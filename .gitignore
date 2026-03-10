@@ -23,3 +23,6 @@
 !.ssh/
 .ssh/*
 !.ssh/allowed_signers
+!.config/hypr/
+!.config/hyprpanel/
+!.config/systemd/

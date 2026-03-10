@@ -1,0 +1,53 @@
+{
+  "bar.customModules.storage.paths": [
+    "/"
+  ],
+  "theme.font.size": "0.9rem",
+  "theme.font.weight": 500,
+  "menus.transition": "crossfade",
+  "theme.bar.floating": true,
+  "theme.bar.location": "top",
+  "theme.bar.buttons.enableBorders": false,
+  "theme.bar.border.location": "none",
+  "theme.bar.enableShadow": false,
+  "menus.clock.time.hideSeconds": false,
+  "theme.bar.menus.menu.dashboard.profile.radius": "0.2em",
+  "theme.bar.menus.menu.dashboard.profile.size": "8.5em",
+  "menus.power.showLabel": false,
+  "wallpaper.pywal": false,
+  "theme.bar.menus.monochrome": false,
+  "theme.bar.menus.opacity": 100,
+  "theme.matugen": false,
+  "theme.bar.transparent": false,
+  "theme.bar.margin_sides": "1600px",
+  "theme.bar.outer_spacing": "6px",
+  "theme.bar.dropdownGap": "20px",
+  "theme.bar.margin_top": "6px",
+  "theme.bar.border_radius": "10px",
+  "menus.media.hideAuthor": false,
+  "menus.volume.raiseMaximumVolume": true,
+  "theme.bar.layer": "overlay",
+  "bar.layouts": {
+    "*": {
+      "left": [
+        "dashboard",
+        "workspaces",
+        "windowtitle"
+      ],
+      "middle": [],
+      "right": [
+        "media",
+        "cpu",
+        "ram",
+        "cputemp",
+        "storage",
+        "network",
+        "bluetooth",
+        "clock",
+        "volume",
+        "systray",
+        "notifications"
+      ]
+    }
+  }
+}

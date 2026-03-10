@@ -1,0 +1,51 @@
+#!/bin/bash
+# Patched HyprPanel launcher.
+# Decodes the JS bundle, then patches valign: CENTER on the bar's
+# box-left/center/right containers so buttons don't stretch vertically
+# when the bar has a custom min-height set in modules.scss.
+# Also patches toggleWindow CLI command to position dropdown menus correctly.
+
+JS="${XDG_RUNTIME_DIR:-/tmp}/dmFyIF-ags.js"
+eval "$(sed '/^gjs /d' /usr/share/hyprpanel/hyprpanel-app)"
+
+# Apply valign patches
+sed -i 's/className: "box-left", hexpand: true/className: "box-left", hexpand: true, valign: Gtk4.Align.CENTER/' "$JS"
+sed -i 's/className: "box-center", halign: Gtk4.Align.CENTER/className: "box-center", halign: Gtk4.Align.CENTER, valign: Gtk4.Align.CENTER/' "$JS"
+sed -i 's/className: "box-right", halign: Gtk4.Align.END/className: "box-right", halign: Gtk4.Align.END, valign: Gtk4.Align.CENTER/' "$JS"
+
+# Patch toggleWindow handler to position dropdown menus before toggling.
+# Uses a unique context match so we only patch the CLI toggleWindow handler.
+python3 -c "
+import re
+with open('$JS', 'r') as f:
+    content = f.read()
+
+old = '''const windowStatus = foundWindow.visible ? \"hidden\" : \"visible\";
+        app_default.toggle_window(windowName);'''
+
+new = '''const windowStatus = foundWindow.visible ? \"hidden\" : \"visible\";
+        if (isDropdownMenu(windowName) && windowStatus === \"visible\") {
+          const deb = getDropdownEventBox(windowName);
+          if (deb) {
+            const mon = getFocusedHyprlandMonitor();
+            if (mon) {
+              const scale = mon.scale || 1;
+              const mw = Math.floor(mon.width / scale);
+              const barMarginSides = parseInt(String(configuration_default.theme.bar.margin_sides.get())) || 0;
+              const outerSpacing = parseInt(String(configuration_default.theme.bar.outer_spacing.get())) || 0;
+              const anchorX = barMarginSides + outerSpacing + 20;
+              const dw = deb.get_child()?.get_allocation().width || 0;
+              const { leftMargin, rightMargin } = calculateHorizontalMargins(mw, dw, anchorX);
+              deb.set_margin_left(leftMargin);
+              deb.set_margin_right(rightMargin);
+            }
+          }
+        }
+        app_default.toggle_window(windowName);'''
+
+content = content.replace(old, new, 1)
+with open('$JS', 'w') as f:
+    f.write(content)
+"
+
+exec gjs -m "$JS"

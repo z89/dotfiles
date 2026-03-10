@@ -1,0 +1,7 @@
+#!/bin/bash
+# Reload-safe HyprPanel launcher.
+# Kills any running instance before starting a fresh patched one.
+# Called by hyprland.conf via 'exec =' so it runs on every reload.
+pkill -f "gjs.*dmFyIF-ags.js" 2>/dev/null
+sleep 0.3
+~/.config/hyprpanel/bin/hyprpanel-patched &

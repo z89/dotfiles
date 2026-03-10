@@ -7,7 +7,7 @@ Whenever you are about to perform any git or GitHub operation (commit, push, bra
 
 ## OS / System / Package / Config Tasks
 
-Whenever the task involves packages, system services, hardware, desktop config (i3, polybar, picom, dunst, rofi), shell config, or anything Arch/Linux-specific, first read:
+Whenever the task involves packages, system services, hardware, desktop config (hyprland, hyprpanel etc.), shell config, or anything Arch/Linux-specific, first read:
 ~/.claude/skills/arch/SKILL.md
 
 ## Dotfiles Repo

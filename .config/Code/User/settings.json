@@ -1,6 +1,6 @@
 {
   "terminal.integrated.fontFamily": "FiraCode Nerd Font",
-  "terminal.integrated.fontSize": 12,
+  "terminal.integrated.fontSize": 14,
   "terminal.integrated.gpuAcceleration": "off",
 
   "editor.fontFamily": "'FiraCode Nerd Font', 'monospace'",
@@ -24,7 +24,6 @@
   "json.maxItemsComputed": 10000,
 
   "typescript.updateImportsOnFileMove.enabled": "always",
-  "javascript.updateImportsOnFileMove.enabled": "always",
 
   "github.copilot.enable": {
     "*": true,

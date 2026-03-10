@@ -1,0 +1,11 @@
+[Unit]
+Description=SSH Agent
+Documentation=man:ssh-agent(1)
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/ssh-agent -D -a /run/user/1000/ssh-agent.socket
+Restart=on-failure
+
+[Install]
+WantedBy=default.target

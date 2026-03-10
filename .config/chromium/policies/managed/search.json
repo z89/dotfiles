@@ -1,7 +1,0 @@
-{
-    "DefaultSearchProviderEnabled": true,
-    "DefaultSearchProviderName": "Google AU",
-    "DefaultSearchProviderKeyword": "google.com.au",
-    "DefaultSearchProviderSearchURL": "https://www.google.com.au/search?q={searchTerms}",
-    "DefaultSearchProviderSuggestURL": "https://www.google.com.au/complete/search?output=chrome&q={searchTerms}"
-}

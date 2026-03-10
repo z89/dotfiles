@@ -54,5 +54,5 @@ changelog:
 
 ```
 changelog:
-- tweaked arch-assist and chromium window appearance in i3
+- tweaked arch-assist and chromium window rules in hyprland
 ```
