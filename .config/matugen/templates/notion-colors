@@ -1,0 +1,141 @@
+/* Matugen Material You theme for Notion */
+
+.notion-dark-theme,
+.notion-body.dark {
+    /* Backgrounds */
+    --c-bacPri: {{colors.surface.default.hex}} !important;
+    --c-bacSec: {{colors.surface_container.default.hex}} !important;
+    --c-bacTer: {{colors.surface_container_high.default.hex}} !important;
+    --c-bacEle: {{colors.surface_container.default.hex}} !important;
+    --c-bacAccPri: {{colors.primary.default.hex}} !important;
+    --c-bacAccSec: {{colors.secondary.default.hex}} !important;
+
+    /* Text */
+    --c-texPri: {{colors.on_surface.default.hex}} !important;
+    --c-texSec: {{colors.on_surface_variant.default.hex}} !important;
+    --c-texTer: {{colors.outline.default.hex}} !important;
+    --c-texDis: {{colors.surface_container_high.default.hex}} !important;
+    --c-texAccPri: {{colors.on_surface.default.hex}} !important;
+    --c-texInvPri: {{colors.surface.default.hex}} !important;
+    --c-texInvSec: {{colors.surface_container_high.default.hex}} !important;
+
+    /* Icons */
+    --c-icoPri: {{colors.on_surface.default.hex}} !important;
+    --c-icoSec: {{colors.on_surface_variant.default.hex}} !important;
+    --c-icoTer: {{colors.outline.default.hex}} !important;
+    --c-icoDis: {{colors.surface_container_highest.default.hex}} !important;
+    --c-icoAccPri: {{colors.on_surface.default.hex}} !important;
+    --c-icoInvPri: {{colors.surface.default.hex}} !important;
+    --c-icoInvSec: {{colors.surface_container_high.default.hex}} !important;
+
+    /* Borders */
+    --c-borPri: {{colors.surface_container_high.default.hex}} !important;
+    --c-borSec: {{colors.surface_container.default.hex}} !important;
+    --c-borStr: {{colors.outline_variant.default.hex}} !important;
+    --c-borAccPri: {{colors.outline.default.hex}} !important;
+    --c-borInvPri: {{colors.outline_variant.default.hex}} !important;
+
+    /* Transparent backgrounds */
+    --ca-bacPriTra: {{colors.surface.default.hex}}00 !important;
+    --ca-bacSecTra: {{colors.on_surface.default.hex}}08 !important;
+    --ca-bacTerTra: {{colors.on_surface.default.hex}}14 !important;
+    --ca-borPriTra: {{colors.on_surface.default.hex}}1a !important;
+    --ca-borSecTra: {{colors.on_surface.default.hex}}14 !important;
+    --ca-borStrTra: {{colors.on_surface.default.hex}}4d !important;
+    --ca-texDisTra: {{colors.on_surface.default.hex}}1a !important;
+
+    /* Popup / overlay / modal */
+    --c-popBac: {{colors.surface_container_high.default.hex}} !important;
+    --ca-popOveBac: {{colors.surface.default.hex}}99 !important;
+    --ca-modUndBac: {{colors.surface.default.hex}}cc !important;
+    --ca-oveSmo: {{colors.surface.default.hex}}cc !important;
+    --ca-glaPag: {{colors.surface.default.hex}}cc !important;
+    --ca-glaWas: {{colors.surface_container.default.hex}}cc !important;
+
+    /* Hover / press states */
+    --ca-butHovBac: {{colors.on_surface.default.hex}}0e !important;
+    --ca-butPreBac: {{colors.on_surface.default.hex}}08 !important;
+    --ca-staHov: {{colors.on_surface.default.hex}}0e !important;
+    --ca-staPre: {{colors.on_surface.default.hex}}21 !important;
+    --ca-sidIteSelBac: {{colors.on_surface.default.hex}}0e !important;
+    --ca-tabRowHovBac: {{colors.on_surface.default.hex}}0e !important;
+
+    /* Buttons */
+    --c-whiButBac: {{colors.surface_container_high.default.hex}} !important;
+    --c-whiButHovBac: {{colors.surface_container_highest.default.hex}} !important;
+    --c-whiButPreBac: {{colors.surface_container_high.default.hex}} !important;
+    --c-butGroBac: {{colors.surface_container_highest.default.hex}} !important;
+
+    /* Code blocks */
+    --cd-codBloBac: {{colors.on_surface.default.hex}}08 !important;
+    --c-codStiBloBac: {{colors.surface_container.default.hex}} !important;
+
+    /* Blue accent (used for links, selections, focus) */
+    --c-palUiBlu600: {{colors.primary.default.hex}} !important;
+    --c-palUiBlu700: {{colors.primary.default.hex}} !important;
+    --c-bluTexAccPri: {{colors.primary.default.hex}} !important;
+    --c-bluBacAccPri: {{colors.primary.default.hex}} !important;
+    --c-bluButHovBac: {{colors.primary.default.hex}} !important;
+    --c-bluButPreBac: {{colors.primary.default.hex}} !important;
+    --c-focSha: {{colors.primary.default.hex}}91 0px 0px 0px 1px inset, {{colors.primary.default.hex}}59 0px 0px 0px 2px !important;
+
+    /* Gray palette (surfaces and neutrals) */
+    --c-palGra0: {{colors.surface_dim.default.hex}} !important;
+    --c-palGra50: {{colors.surface.default.hex}} !important;
+    --c-palGra500: {{colors.outline.default.hex}} !important;
+    --c-palGra600: {{colors.on_surface_variant.default.hex}} !important;
+    --c-palGra700: {{colors.on_surface_variant.default.hex}} !important;
+    --c-palGra800: {{colors.on_surface.default.hex}} !important;
+    --c-palGra900: {{colors.on_surface.default.hex}} !important;
+    --cl-palGra30: {{colors.surface_dim.default.hex}} !important;
+    --cl-palGra75: {{colors.surface_dim.default.hex}} !important;
+    --cl-palGra90: {{colors.surface.default.hex}} !important;
+    --cl-palGra100: {{colors.surface_container.default.hex}} !important;
+    --cl-palGra200: {{colors.surface_container_high.default.hex}} !important;
+    --cl-palGra300: {{colors.surface_container_highest.default.hex}} !important;
+    --cl-palGra400: {{colors.outline_variant.default.hex}} !important;
+
+    /* Transparent gray palette */
+    --ca-palTraGra75: {{colors.on_surface.default.hex}}04 !important;
+    --ca-palTraGra100: {{colors.on_surface.default.hex}}08 !important;
+    --ca-palTraGra200: {{colors.on_surface.default.hex}}0e !important;
+    --ca-palTraGra300: {{colors.on_surface.default.hex}}18 !important;
+    --ca-palTraGra400: {{colors.on_surface.default.hex}}21 !important;
+    --ca-palTraGra500: {{colors.on_surface.default.hex}}48 !important;
+    --ca-palTraGra600: {{colors.on_surface.default.hex}}75 !important;
+    --ca-palTraGra700: {{colors.on_surface.default.hex}}90 !important;
+    --ca-palTraGra800: {{colors.on_surface.default.hex}}cf !important;
+    --ca-palTraGra850: {{colors.on_surface.default.hex}}de !important;
+    --ca-palTraGra900: {{colors.on_surface.default.hex}}f5 !important;
+
+    /* Gray semantic (used for default/gray blocks) */
+    --c-graBacPri: {{colors.surface_container.default.hex}} !important;
+    --c-graBacSec: {{colors.surface_container_high.default.hex}} !important;
+    --c-graBacTer: {{colors.outline_variant.default.hex}} !important;
+    --c-graBacEle: {{colors.surface_container.default.hex}} !important;
+    --c-graTexPri: {{colors.on_surface.default.hex}} !important;
+    --c-graTexSec: {{colors.on_surface_variant.default.hex}} !important;
+    --c-graTexTer: {{colors.outline_variant.default.hex}} !important;
+    --c-graIcoPri: {{colors.on_surface.default.hex}} !important;
+    --c-graIcoSec: {{colors.on_surface_variant.default.hex}} !important;
+
+    /* Shadows */
+    --c-shaCol: {{colors.surface_dim.default.hex}} !important;
+    --c-shaBasSm: 0px 2px 4px 0px {{colors.surface.default.hex}}14 !important;
+    --c-shaBasMd: 0px 4px 12px -2px {{colors.surface.default.hex}}14 !important;
+
+    /* Sidebar secondary */
+    --c-sidSecCol: {{colors.on_surface.default.hex}} !important;
+
+    /* Tab bar */
+    --c-sitPagPreWinChrBar: {{colors.surface_dim.default.hex}} !important;
+    --c-sitBuiBac: {{colors.surface.default.hex}} !important;
+
+    /* Home screen */
+    --c-homScrButBacBas: {{colors.surface_container_high.default.hex}} !important;
+
+    /* Timeline / calendar */
+    --c-timBac: {{colors.surface.default.hex}} !important;
+    --c-peeTimBac: {{colors.surface_container.default.hex}} !important;
+    --c-calIteBac: {{colors.surface_container_highest.default.hex}} !important;
+}

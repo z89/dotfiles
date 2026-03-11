@@ -34,3 +34,4 @@
 .local/bin/*
 !.local/bin/setup-spicetify
 !.local/bin/setup-betterdiscord
+!.config/notion-flags.conf
