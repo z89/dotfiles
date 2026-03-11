@@ -26,3 +26,11 @@
 !.config/hypr/
 !.config/hyprpanel/
 !.config/systemd/
+!.config/kitty/
+!.config/matugen/
+!.local/
+.local/*
+!.local/bin/
+.local/bin/*
+!.local/bin/setup-spicetify
+!.local/bin/setup-betterdiscord

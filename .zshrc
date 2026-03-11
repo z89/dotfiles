@@ -35,10 +35,21 @@ unsetopt HIST_VERIFY
 setopt no_auto_remove_slash
 
 bindkey -v
+export KEYTIMEOUT=1
+
+# Fix backspace/delete in vi mode
+bindkey '^?' backward-delete-char
+bindkey '^H' backward-delete-char
+bindkey '^W' backward-kill-word
+bindkey '^U' backward-kill-line
+
 typeset -g -A key
 
 # ── Aliases ──────────────────────────────────────────────────────────────────
 alias vim="nvim"
+
+# ── Functions ────────────────────────────────────────────────────────────────
+asp() { export AWS_PROFILE=$(aws configure list-profiles | fzf) }
 
 # ── Plugins ──────────────────────────────────────────────────────────────────
 source /usr/share/zsh/plugins/zsh-autosuggestions/zsh-autosuggestions.zsh

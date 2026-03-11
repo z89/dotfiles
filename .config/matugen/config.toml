@@ -1,0 +1,34 @@
+[config]
+color_scheme = "dark"
+
+[templates.hyprland-colors]
+input_path = "~/.config/matugen/templates/hyprland-colors"
+output_path = "~/.cache/matugen/hyprland-colors.conf"
+
+[templates.kitty-colors]
+input_path = "~/.config/matugen/templates/kitty-colors"
+output_path = "~/.config/kitty/colors.conf"
+
+[templates.gtk3-colors]
+input_path = "~/.config/matugen/templates/gtk3-colors"
+output_path = "~/.config/gtk-3.0/gtk.css"
+
+[templates.gtk4-colors]
+input_path = "~/.config/matugen/templates/gtk4-colors"
+output_path = "~/.config/gtk-4.0/gtk.css"
+
+[templates.ycombo-colors]
+input_path = "~/.config/matugen/templates/ycombo-colors"
+output_path = "~/Documents/Github-Projects/ycombo/eww/colors.scss"
+
+[templates.spicetify-colors]
+input_path = "~/.config/matugen/templates/spicetify-colors"
+output_path = "~/.config/spicetify/Themes/matugen/color.ini"
+
+[templates.vscode-colors]
+input_path = "~/.config/matugen/templates/vscode-colors"
+output_path = "~/.vscode/extensions/matugen-theme/themes/matugen.json"
+
+[templates.discord-colors]
+input_path = "~/.config/matugen/templates/discord-colors"
+output_path = "~/.config/BetterDiscord/themes/matugen.theme.css"

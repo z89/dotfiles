@@ -42,6 +42,19 @@ This file defines the user's system. Load it before any task involving packages,
 - **Display:** Wayland-native (Hyprland)
 - **Colour scheme:** matugen
 
+## Fonts
+
+| Role | Font | Package |
+|------|------|---------|
+| UI / sans-serif | Inter | `inter-font` (extra) |
+| Monospace + icons | JetBrainsMono Nerd Font | `ttf-jetbrains-mono-nerd` (extra) |
+
+Font config locations:
+- **GTK/GNOME:** gsettings (`org.gnome.desktop.interface` font-name / monospace-font-name)
+- **Kitty:** `~/.config/kitty/kitty.conf` (`font_family`)
+- **HyprPanel:** `~/.config/hyprpanel/config.json` (`theme.font.name`)
+- **System fallback:** `~/.config/fontconfig/fonts.conf`
+
 ## Key Paths
 
 | Purpose | Path |

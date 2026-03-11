@@ -1,0 +1,104 @@
+/**
+ * @name Matugen
+ * @description Auto-generated Material You theme from matugen
+ * @author matugen
+ * @version 1.0.0
+ */
+
+.visual-refresh.theme-dark,
+.visual-refresh .theme-dark,
+.visual-refresh.theme-light,
+.visual-refresh .theme-light,
+.theme-dark,
+.theme-light,
+:root {
+    /* Visual refresh backgrounds */
+    --background-base-lowest: {{colors.surface_container_lowest.default.hex}} !important;
+    --background-base-lower: {{colors.surface_container_low.default.hex}} !important;
+    --background-base-low: {{colors.surface.default.hex}} !important;
+    --background-surface-high: {{colors.surface_container.default.hex}} !important;
+    --background-surface-higher: {{colors.surface_container_high.default.hex}} !important;
+    --background-surface-highest: {{colors.surface_container_highest.default.hex}} !important;
+    --background-gradient-highest: {{colors.surface_container_low.default.hex}} !important;
+    --background-code: {{colors.surface_container.default.hex}} !important;
+    --background-mod-muted: {{colors.surface_container_highest.default.hex}}0d !important;
+    --background-mod-normal: {{colors.surface_container_highest.default.hex}}26 !important;
+    --background-mod-subtle: {{colors.surface_container_highest.default.hex}}40 !important;
+    --background-mod-strong: {{colors.surface_container_highest.default.hex}}73 !important;
+    --background-feedback-notification: {{colors.error.default.hex}} !important;
+
+    /* New bg system */
+    --bg-base-primary: {{colors.surface.default.hex}} !important;
+    --bg-base-secondary: {{colors.surface_container.default.hex}} !important;
+    --bg-base-tertiary: {{colors.surface_container_lowest.default.hex}} !important;
+    --bg-surface-raised: {{colors.surface_container_low.default.hex}} !important;
+    --bg-surface-overlay: {{colors.surface_container_high.default.hex}} !important;
+    --bg-surface-overlay-tmp: {{colors.surface_container_high.default.hex}} !important;
+    --bg-mod-faint: {{colors.surface_container_highest.default.hex}}0d !important;
+    --bg-mod-subtle: {{colors.surface_container_highest.default.hex}}1a !important;
+    --bg-mod-strong: {{colors.surface_container_highest.default.hex}}33 !important;
+
+    /* Legacy backgrounds */
+    --background-primary: {{colors.surface.default.hex}} !important;
+    --background-secondary: {{colors.surface_container.default.hex}} !important;
+    --background-secondary-alt: {{colors.surface_container_low.default.hex}} !important;
+    --background-tertiary: {{colors.surface_container_lowest.default.hex}} !important;
+    --background-floating: {{colors.surface_container_high.default.hex}} !important;
+    --background-nested-floating: {{colors.surface_container_high.default.hex}} !important;
+    --background-accent: {{colors.primary.default.hex}} !important;
+    --background-modifier-accent: {{colors.surface_container_highest.default.hex}}0d !important;
+    --background-modifier-accent-2: {{colors.surface_container_highest.default.hex}}1a !important;
+    --background-modifier-selected: {{colors.primary_container.default.hex}} !important;
+    --background-modifier-hover: {{colors.surface_container_highest.default.hex}}1a !important;
+    --background-modifier-active: {{colors.surface_container_highest.default.hex}}33 !important;
+
+    /* HSL source overrides */
+    --primary-600-hsl: {{colors.surface.default.hue}} calc(var(--saturation-factor, 1)*{{colors.surface.default.saturation}}%) {{colors.surface.default.lightness}}% !important;
+    --primary-630-hsl: {{colors.surface_container.default.hue}} calc(var(--saturation-factor, 1)*{{colors.surface_container.default.saturation}}%) {{colors.surface_container.default.lightness}}% !important;
+    --primary-660-hsl: {{colors.surface_container_low.default.hue}} calc(var(--saturation-factor, 1)*{{colors.surface_container_low.default.saturation}}%) {{colors.surface_container_low.default.lightness}}% !important;
+    --primary-700-hsl: {{colors.surface_container_lowest.default.hue}} calc(var(--saturation-factor, 1)*{{colors.surface_container_lowest.default.saturation}}%) {{colors.surface_container_lowest.default.lightness}}% !important;
+    --primary-800-hsl: {{colors.surface_container_highest.default.hue}} calc(var(--saturation-factor, 1)*{{colors.surface_container_highest.default.saturation}}%) {{colors.surface_container_highest.default.lightness}}% !important;
+
+    /* Brand */
+    --brand-500: {{colors.primary.default.hex}} !important;
+    --brand-560: {{colors.primary.default.hex}} !important;
+    --brand-600: {{colors.primary.default.hex}} !important;
+    --brand-experiment: {{colors.primary.default.hex}} !important;
+    --brand-experiment-560: {{colors.primary.default.hex}} !important;
+    --brand-experiment-600: {{colors.primary.default.hex}} !important;
+
+    /* Text */
+    --header-primary: {{colors.on_surface.default.hex}} !important;
+    --header-secondary: {{colors.on_surface_variant.default.hex}} !important;
+    --text-normal: {{colors.on_surface.default.hex}} !important;
+    --text-default: {{colors.on_surface.default.hex}} !important;
+    --text-muted: {{colors.outline.default.hex}} !important;
+    --text-link: {{colors.tertiary.default.hex}} !important;
+    --white: {{colors.on_surface.default.hex}} !important;
+
+    /* Interactive */
+    --interactive-normal: {{colors.on_surface_variant.default.hex}} !important;
+    --interactive-hover: {{colors.on_surface.default.hex}} !important;
+    --interactive-active: {{colors.primary.default.hex}} !important;
+    --interactive-muted: {{colors.outline_variant.default.hex}} !important;
+
+    /* Channels */
+    --channels-default: {{colors.on_surface_variant.default.hex}} !important;
+    --channel-icon: {{colors.on_surface_variant.default.hex}} !important;
+
+    /* Input / scrollbar */
+    --input-background: {{colors.surface_container_highest.default.hex}} !important;
+    --scrollbar-thin-thumb: {{colors.outline_variant.default.hex}} !important;
+    --scrollbar-auto-thumb: {{colors.outline_variant.default.hex}} !important;
+    --scrollbar-auto-track: {{colors.surface_container_low.default.hex}} !important;
+
+    /* Mentions / status */
+    --mention-foreground: {{colors.primary.default.hex}} !important;
+    --mention-background: {{colors.primary_container.default.hex}}33 !important;
+    --info-positive-foreground: {{colors.tertiary.default.hex}} !important;
+    --info-danger-foreground: {{colors.error.default.hex}} !important;
+    --status-danger: {{colors.error.default.hex}} !important;
+
+    /* Modal */
+    --modal-background: {{colors.surface_container.default.hex}} !important;
+}

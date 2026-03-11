@@ -2,6 +2,7 @@
   "bar.customModules.storage.paths": [
     "/"
   ],
+  "theme.font.name": "Inter",
   "theme.font.size": "0.9rem",
   "theme.font.weight": 500,
   "menus.transition": "crossfade",
