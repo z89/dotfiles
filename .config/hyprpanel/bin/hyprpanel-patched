@@ -13,6 +13,9 @@ sed -i 's/className: "box-left", hexpand: true/className: "box-left", hexpand: t
 sed -i 's/className: "box-center", halign: Gtk4.Align.CENTER/className: "box-center", halign: Gtk4.Align.CENTER, valign: Gtk4.Align.CENTER/' "$JS"
 sed -i 's/className: "box-right", halign: Gtk4.Align.END/className: "box-right", halign: Gtk4.Align.END, valign: Gtk4.Align.CENTER/' "$JS"
 
+# Vertically center the notification icon
+sed -i 's/className: "notification-card-image-container"/className: "notification-card-image-container", valign: Gtk4.Align.CENTER/' "$JS"
+
 # Patch toggleWindow handler to position dropdown menus before toggling.
 # Uses a unique context match so we only patch the CLI toggleWindow handler.
 python3 -c "

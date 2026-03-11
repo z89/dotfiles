@@ -9,3 +9,68 @@
 .event-top-padding * {
     margin-top: 40px;
 }
+
+/* Close button: top-aligned, no background, theme color */
+.close-notification-button {
+    background: transparent;
+    border-radius: 0;
+    min-width: 0px;
+    min-height: 0px;
+    padding: 0.3em 0.5em 6em 0.5em;
+    margin: 0;
+
+    label {
+        font-size: 1.7em;
+        color: $notification-label;
+        background: transparent;
+    }
+}
+
+.close-notification-button:hover {
+    background: transparent;
+
+    label {
+        color: $notification-text;
+        background: transparent;
+    }
+}
+
+.close-notification-button.menu {
+    background: transparent;
+    border-radius: 0;
+    min-width: 0px;
+    min-height: 0px;
+    padding: 0.3em 0.5em 6em 0.5em;
+    margin: 0;
+
+    label {
+        font-size: 1.7em;
+        color: $notification-label;
+        background: transparent;
+    }
+}
+
+.close-notification-button.menu:hover {
+    background: transparent;
+
+    label {
+        color: $notification-text;
+        background: transparent;
+    }
+}
+
+/* Remove left spacing from notification title */
+.notification-card-header-label {
+    margin-left: 0px;
+    padding-left: 0px;
+}
+
+/* Hide title icon (redundant with left icon) - collapse fully */
+.notification-icon {
+    min-width: 0px;
+    min-height: 0px;
+    font-size: 0px;
+    margin: -1px;
+    padding: 0px;
+    border: 0px;
+}
