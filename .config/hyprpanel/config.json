@@ -17,7 +17,7 @@
   "wallpaper.pywal": false,
   "theme.bar.menus.monochrome": false,
   "theme.bar.menus.opacity": 100,
-  "theme.matugen": false,
+  "theme.matugen": true,
   "theme.bar.transparent": false,
   "theme.bar.margin_sides": "1600px",
   "theme.bar.outer_spacing": "6px",
@@ -49,5 +49,10 @@
         "notifications"
       ]
     }
-  }
+  },
+  "wallpaper.enable": false,
+  "wallpaper.image": "/home/archie/Pictures/wallpapers/wallpaper.png",
+  "theme.matugen_settings.mode": "dark",
+  "theme.matugen_settings.scheme_type": "content",
+  "theme.matugen_settings.variation": "standard_1"
 }

@@ -1,0 +1,116 @@
+#!/usr/bin/env bash
+# Switch wallpaper + regenerate colorscheme with circle reveal animation
+# Usage:
+#   theme-switch              # open visual picker
+#   theme-switch <path>       # apply specific wallpaper
+#   theme-switch --random     # random wallpaper
+
+WALLPAPER_DIR="$HOME/Pictures/wallpapers"
+
+apply_theme() {
+    local wallpaper="$1"
+
+    if [[ ! -f "$wallpaper" ]]; then
+        notify-send -u critical "theme-switch" "File not found: $wallpaper"
+        exit 1
+    fi
+
+    # Get cursor position for circle reveal origin
+    local pos_x pos_y
+    pos_x=$(hyprctl cursorpos -j 2>/dev/null | python3 -c "import json,sys; print(json.load(sys.stdin)['x'])" 2>/dev/null || echo 960)
+    pos_y=$(hyprctl cursorpos -j 2>/dev/null | python3 -c "import json,sys; print(json.load(sys.stdin)['y'])" 2>/dev/null || echo 540)
+
+    # Generate colorscheme from wallpaper
+    matugen image "$wallpaper"
+
+    # Map matugen primary color to nearest GNOME accent preset
+    local primary_hex
+    primary_hex=$(grep 'accent_color' ~/.config/gtk-4.0/gtk.css | head -1 | grep -oP '#[0-9a-fA-F]{6}')
+    if [[ -n "$primary_hex" ]]; then
+        local accent
+        accent=$(python3 -c "
+import colorsys
+h = '$primary_hex'.lstrip('#')
+r, g, b = int(h[0:2],16)/255, int(h[2:4],16)/255, int(h[4:6],16)/255
+hue, sat, val = colorsys.rgb_to_hsv(r, g, b)
+deg = hue * 360
+# Map hue to nearest GNOME accent
+if sat < 0.15: name = 'slate'
+elif deg < 15 or deg >= 345: name = 'red'
+elif deg < 45: name = 'orange'
+elif deg < 70: name = 'yellow'
+elif deg < 160: name = 'green'
+elif deg < 200: name = 'teal'
+elif deg < 260: name = 'blue'
+elif deg < 300: name = 'purple'
+else: name = 'pink'
+print(name)
+")
+        gsettings set org.gnome.desktop.interface accent-color "$accent"
+    fi
+
+    # Set wallpaper with circle reveal from cursor position
+    swww img "$wallpaper" \
+        --transition-type grow \
+        --transition-pos "$pos_x,$pos_y" \
+        --transition-duration 1.5 \
+        --transition-fps 60 \
+        --transition-bezier 0.65,0,0.35,1
+
+    # Hyprland auto-reloads colors.conf on file change
+
+    # Update hyprpanel wallpaper to trigger its matugen color regeneration
+    hyprpanel "setWallpaper $wallpaper" &>/dev/null &
+
+    # Reload kitty colors in all running instances
+    for pid in $(pgrep kitty); do
+        kill -SIGUSR1 "$pid" 2>/dev/null
+    done
+
+    # Restart GTK apps to pick up new colors
+    if pgrep -x nautilus >/dev/null; then
+        pkill -x nautilus
+        sleep 0.3
+        nautilus --new-window &disown
+    fi
+
+    notify-send -u low -t 2000 "Theme" "$(basename "$wallpaper")"
+}
+
+open_picker() {
+    # Build rofi entries with image icons
+    local entries=""
+    while IFS= read -r img; do
+        local name
+        name=$(basename "$img")
+        entries+="${name}\0icon\x1f${img}\n"
+    done < <(find "$WALLPAPER_DIR" -type f \( -name '*.png' -o -name '*.jpg' -o -name '*.jpeg' -o -name '*.webp' \) | sort)
+
+    local chosen
+    chosen=$(printf "$entries" | rofi -dmenu \
+        -show-icons \
+        -theme-str 'window { width: 900px; height: 600px; }' \
+        -theme-str 'listview { columns: 3; lines: 2; spacing: 10px; fixed-columns: true; }' \
+        -theme-str 'element { orientation: vertical; padding: 10px; }' \
+        -theme-str 'element-icon { size: 250px; }' \
+        -theme-str 'element-text { horizontal-align: 0.5; }' \
+        -theme-str 'inputbar { enabled: false; }' \
+        -p "Wallpaper")
+
+    if [[ -n "$chosen" ]]; then
+        apply_theme "$WALLPAPER_DIR/$chosen"
+    fi
+}
+
+case "${1:-}" in
+    --random)
+        wallpaper=$(find "$WALLPAPER_DIR" -type f \( -name '*.png' -o -name '*.jpg' -o -name '*.jpeg' -o -name '*.webp' \) | shuf -n1)
+        apply_theme "$wallpaper"
+        ;;
+    "")
+        open_picker
+        ;;
+    *)
+        apply_theme "$1"
+        ;;
+esac
