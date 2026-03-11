@@ -6,7 +6,7 @@
 # Also patches toggleWindow CLI command to position dropdown menus correctly.
 
 JS="${XDG_RUNTIME_DIR:-/tmp}/dmFyIF-ags.js"
-eval "$(sed '/^gjs /d' /usr/share/hyprpanel/hyprpanel-app)"
+eval "$(sed '/gjs /d' /usr/share/hyprpanel/hyprpanel-app)"
 
 # Apply valign patches
 sed -i 's/className: "box-left", hexpand: true/className: "box-left", hexpand: true, valign: Gtk4.Align.CENTER/' "$JS"
