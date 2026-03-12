@@ -76,3 +76,30 @@ row:selected, listview row:selected {
 separator {
     background-color: @borders;
 }
+
+/* ---- Backdrop named colors (prevent libadwaita dimming) ---- */
+@define-color headerbar_backdrop_color @headerbar_bg_color;
+@define-color sidebar_backdrop_color @sidebar_bg_color;
+@define-color card_backdrop_color @card_bg_color;
+@define-color window_backdrop_color @window_bg_color;
+@define-color view_backdrop_color @view_bg_color;
+@define-color popover_backdrop_color @popover_bg_color;
+
+/* ---- Backdrop rules ---- */
+window:backdrop, .background:backdrop {
+    background-color: @window_bg_color;
+    color: @window_fg_color;
+}
+headerbar:backdrop, .titlebar:backdrop {
+    background-color: @headerbar_bg_color;
+    color: @headerbar_fg_color;
+    transition: none;
+}
+.sidebar:backdrop, .navigation-sidebar:backdrop {
+    background-color: @sidebar_bg_color;
+    color: @sidebar_fg_color;
+}
+.card:backdrop {
+    background-color: @card_bg_color;
+    color: @card_fg_color;
+}
