@@ -120,7 +120,7 @@ A Python engine that drives all color targets through one synchronized animation
 |--------|--------|-----|-------------|
 | `kitty` | Persistent Unix socket, kitty remote protocol | 60 | Terminal palette colors |
 | `hyprland` | Persistent IPC socket, `[[BATCH]]` commands | 60 | Border/shadow/glow colors |
-| `hyprpanel` | CSS string splice + `reloadCss` via Astal socket | 30 | All 400+ theme colors in compiled CSS |
+| `hyprpanel` | CSS string splice + persistent `CssProvider` reload via Astal socket | 30 | All 400+ theme colors in compiled CSS |
 | `gtk3` | CSS offset splice, write to `~/.config/gtk-3.0/gtk.css` | 30 | Blueman and other GTK3 apps |
 | `nautilus` | CSS offset splice, write to `~/.config/gtk-4.0/gtk.css` | 30 | Nautilus via mtime-polling extension |
 | `spotify` | CDP WebSocket, `Runtime.evaluate` sets CSS variables | 30 | Spicetify color properties |
@@ -134,32 +134,34 @@ All targets share one frame loop and use the same easing curve so colors transit
 - **Persistent socket connections:** Kitty, hyprland, and spotify open connections once in `*_init()` and reuse across all frames. Eliminates connect/close overhead per frame.
 - **Hyprland batch IPC:** Direct Unix socket with `[[BATCH]]` prefix instead of spawning `hyprctl` processes (was 120 process spawns/sec).
 - **CSS splice maps:** GTK3/nautilus targets build byte-offset maps at init (`_css_build_splice_map`), then per-frame use string slicing instead of regex.
-- **HyprPanel CSS splice:** Reads compiled CSS once at init, does string `.replace()` of old hex values with interpolated values per frame, writes to `/tmp/hyprpanel/main.css`, triggers `reloadCss` (~17ms total vs 200ms for full `applyTheme`).
+- **HyprPanel CSS splice:** Reads compiled CSS once at init, does string `.replace()` of old hex values with interpolated values per frame, writes to `/tmp/hyprpanel/main.css`, triggers `reloadCss` which reloads a persistent `CssProvider` (~17ms total vs 200ms for full `applyTheme`). Uses a bridge function to map theme keys to unique old hex values for CSS replacement.
 
 #### HyprPanel target deep dive
 
-The key insight: `applyTheme` triggers `_compileSass()` which runs the system `sass` compiler (~200ms per call, far too slow for 30fps). The `reloadCss` command (added via JS patch) just calls `app_default.apply_css("/tmp/hyprpanel/main.css", false)` which is near-instant (~17ms including file write + socket round-trip).
+The key insight: `applyTheme` triggers `_compileSass()` which runs the system `sass` compiler (~200ms per call, far too slow for 30fps). The `reloadCss` command (added via JS patch) uses a persistent `CssProvider` that is created once and reloaded each frame via `load_from_path()`, avoiding both SCSS recompilation and CSS provider accumulation (~17ms per frame including file write + socket round-trip).
+
+**Key mapping (bridge function):** The old/new JSON files use theme keys (`theme.bar.background`) as keys and `#hex` as values. Since the old and new themes have entirely different hex values, you can't find "common" entries by hex. The `hyprpanel_bridge` function finds common theme keys between old and new, then re-keys both to unique old hex values (preserving original case for CSS string matching). This produces ~30 interpolation keys instead of 380+ theme keys, and the output `{old_hex: interpolated_hex}` can be used directly for CSS replacement.
 
 Flow per frame:
-1. Interpolate all unique hex values from old JSON to new JSON
+1. Interpolate ~30 unique hex values using ease-in-out cubic easing
 2. Read the CSS template (captured at init from `/tmp/hyprpanel/main.css`)
-3. String-replace each old hex with its interpolated value
-4. Write the result back to `/tmp/hyprpanel/main.css`
-5. Send `reloadCss` to the Astal socket at `/run/user/1000/astal/hyprpanel.sock`
+3. String-replace each old `#hex` with its interpolated `#hex`
+4. Write the result back to `/tmp/hyprpanel/main.css` via low-level `os.open`/`os.write`
+5. Send `reloadCss` to the Astal socket — reloads the persistent `CssProvider` in-place
 
-After the fade completes, `hyprpanel_finalize()` sends `applyTheme /tmp/hyprpanel-colors-new.json` via Astal socket to sync `config.json` state with the final colors (so the next theme switch reads correct "old" values).
+After the fade completes, `hyprpanel_finalize()` sends `applyTheme /tmp/hyprpanel-colors-new.json` to sync `config.json` state with the final colors, then sends `clearFadeCss` to remove the persistent fade provider (so it doesn't override future theme updates).
 
 **If it breaks:** The most likely failure is `reloadCss` not being recognized (HyprPanel update overwrites JS bundle). Restart with `hyprpanel-launch` to re-apply all patches including the reloadCss command injection. Check `hyprpanel rc` manually to verify.
 
 ### `hyprpanel-colors` (color mapper)
 
 Python script that:
-1. Reads current `config.json` theme values → saves as `/tmp/hyprpanel-colors-old.json`
+1. Reads current `/tmp/hyprpanel/variables.scss` hex values → saves as `/tmp/hyprpanel-colors-old.json`
 2. Runs `matugen image <wallpaper> --dry-run --json hex` to get new Material Design palette
 3. Maps each Catppuccin default hex → catppuccin name → matugen variation token → new hex
 4. Writes `/tmp/hyprpanel-colors-new.json`
 
-`color-fade` then reads these two files to interpolate between old and new values.
+Both JSON files use `{theme_key: "#hex"}` format. `color-fade` finds common theme keys, then uses `hyprpanel_bridge` to re-key to unique old hex values for CSS replacement.
 
 ### Nautilus live-reload extension
 

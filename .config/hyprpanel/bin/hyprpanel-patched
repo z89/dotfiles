@@ -168,7 +168,32 @@ new = '''        return \`Error applying theme: \${error}\`;
     category: \"Appearance\",
     args: [],
     handler: () => {
-      app_default.apply_css(\`\${TMP}/main.css\`, false);
+      if (!globalThis.__cfProv) {
+        globalThis.__cfProv = new Gtk4.CssProvider();
+        Gtk4.StyleContext.add_provider_for_screen(
+          Gdk.Screen.get_default(),
+          globalThis.__cfProv,
+          Gtk4.STYLE_PROVIDER_PRIORITY_USER
+        );
+      }
+      globalThis.__cfProv.load_from_path(\`\${TMP}/main.css\`);
+      return \"ok\";
+    }
+  },
+  {
+    name: \"clearFadeCss\",
+    aliases: [\"cfc\"],
+    description: \"Removes the color-fade CSS provider after animation completes.\",
+    category: \"Appearance\",
+    args: [],
+    handler: () => {
+      if (globalThis.__cfProv) {
+        Gtk4.StyleContext.remove_provider_for_screen(
+          Gdk.Screen.get_default(),
+          globalThis.__cfProv
+        );
+        globalThis.__cfProv = null;
+      }
       return \"ok\";
     }
   },

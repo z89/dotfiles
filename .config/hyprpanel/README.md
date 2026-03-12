@@ -68,21 +68,24 @@ Patched properties:
 
 **Fix:** Adds a `reset` parameter to `_applyCss(reset = true)`. The `applyColorOverrides` call site passes `reset=false` so animation frames layer CSS without clearing existing providers. Full reloads still use `reset=true`.
 
-### 6. reloadCss CLI command
+### 6. reloadCss + clearFadeCss CLI commands
 
-Adds a `reloadCss` (alias: `rc`) command to the HyprPanel CLI. This is the critical patch that enables smooth 30fps HyprPanel color transitions during theme switching.
+Adds `reloadCss` (alias: `rc`) and `clearFadeCss` (alias: `cfc`) commands to the HyprPanel CLI. These are the critical patches that enable smooth 30fps HyprPanel color transitions during theme switching.
 
-**What it does:** Re-reads `/tmp/hyprpanel/main.css` and applies it via `app_default.apply_css(path, false)` without triggering SCSS recompilation.
+**reloadCss** uses a persistent `CssProvider` stored in `globalThis.__cfProv`. On first call, it creates the provider and adds it to the screen at `STYLE_PROVIDER_PRIORITY_USER` (800, higher than APPLICATION at 600). On every call, it reloads the provider from `/tmp/hyprpanel/main.css` via `load_from_path()`. This avoids both SCSS recompilation and CSS provider accumulation (the previous approach of calling `apply_css(path, false)` added a new 115KB CSS provider every frame, causing GTK to cascade 12+ providers and freeze the UI).
 
-**Why it matters:** The stock `applyTheme` command triggers `_compileSass()` which runs the system `sass` compiler at ~200ms per call. The `reloadCss` command bypasses SCSS entirely and just loads the pre-compiled CSS file, completing in ~17ms (file write + socket round-trip). This makes 30fps color updates feasible.
+**clearFadeCss** removes the persistent fade provider from the screen and nulls the reference. Called by `hyprpanel_finalize()` after `applyTheme` to prevent the fade provider from overriding future theme updates.
+
+**Why a persistent provider:** `apply_css(path, false)` adds a NEW `CssProvider` each call. At 30fps over 0.4s, that's 12 providers stacked up, each loading 115KB of CSS. GTK has to cascade all of them, causing visible stutter and freezing. `apply_css(path, true)` avoids accumulation but causes a blank-CSS flash between clearing and re-applying. The persistent provider approach avoids both: the same provider is reloaded in-place, so there's always exactly one fade provider active.
 
 **How color-fade uses it:**
-1. At init, color-fade reads `/tmp/hyprpanel/main.css` as a template
-2. Each frame, it string-replaces old hex values with interpolated values and writes the result back
-3. It sends `reloadCss` to the Astal socket at `/run/user/1000/astal/hyprpanel.sock`
-4. HyprPanel picks up the new CSS without any SCSS compilation
+1. At init, color-fade reads `/tmp/hyprpanel/main.css` as a CSS template
+2. `hyprpanel_bridge` maps theme keys to ~30 unique old hex values (preserving original case for CSS matching)
+3. Each frame, it string-replaces old hex values with interpolated values and writes the result back
+4. It sends `reloadCss` to the Astal socket — the persistent provider reloads from the file
+5. After the fade, `hyprpanel_finalize` sends `applyTheme` then `clearFadeCss`
 
-**Testing:** Run `hyprpanel rc` (or `hyprpanel reloadCss`) manually. If it returns "ok", the patch is working. If it returns an error or "Unknown command", the JS patch was not applied (restart with `hyprpanel-launch`).
+**Testing:** Run `hyprpanel rc` (or `hyprpanel reloadCss`) manually. If it returns "ok", the patch is working. If it returns an error or "Unknown command", the JS patch was not applied (restart with `hyprpanel-launch`). Also test `hyprpanel cfc` for clearFadeCss.
 
 **If it breaks after a HyprPanel update:** The patch targets a specific string in the decoded JS bundle (the `applyTheme` command block followed by `setLayout`). If HyprPanel restructures its CLI commands, the string match in `hyprpanel-patched` may fail silently. Check `hyprpanel rc` after updates.
 
@@ -176,17 +179,22 @@ theme-switch
 
 ### Per-frame flow (hyprpanel target)
 
-1. **Init:** Reads `/tmp/hyprpanel/main.css` as a template string. Parses `/tmp/hyprpanel-colors-old.json` and `/tmp/hyprpanel-colors-new.json` to get unique hex → RGB mappings. Stores old hex keys in context for string replacement.
+1. **Parse:** `hyprpanel_parse` reads both JSON files into `{theme_key: rgb}` dicts. `_init_target` finds ~380 common theme keys.
 
-2. **Each frame (30fps):**
-   - Interpolate all unique hex values using ease-in-out cubic easing
+2. **Bridge:** `hyprpanel_bridge` re-keys from theme keys to ~30 unique old hex values (preserving original case from the JSON for exact CSS string matching). Both `old_bridged` and `new_bridged` are keyed by old hex, so `_interp_frame` outputs `{old_hex: interpolated_hex}` which `hyprpanel_apply` can use directly for CSS replacement.
+
+3. **Init:** Reads `/tmp/hyprpanel/main.css` as a CSS template string.
+
+4. **Each frame (30fps):**
+   - Interpolate ~30 unique hex values using ease-in-out cubic easing
    - Take the CSS template and `.replace()` each old `#hex` with its interpolated `#hex`
    - Write the result to `/tmp/hyprpanel/main.css` via `os.open` + `os.write` (low-level, no buffering)
    - Open a new Unix socket to `/run/user/1000/astal/hyprpanel.sock`
    - Send `reloadCss`, call `shutdown(SHUT_WR)`, read response, close
+   - `reloadCss` reloads the persistent `CssProvider` in-place (no provider accumulation)
    - Total per-frame cost: ~17ms
 
-3. **Finalize:** After the fade completes, sends `applyTheme /tmp/hyprpanel-colors-new.json` via the Astal socket. This triggers a full SCSS recompile and syncs `config.json` with the final colors, so the next theme switch reads correct "old" values.
+5. **Finalize:** Sends `applyTheme /tmp/hyprpanel-colors-new.json` via Astal socket (full SCSS recompile, syncs `config.json`), then sends `clearFadeCss` to remove the persistent fade provider.
 
 ### Dependencies
 
@@ -202,11 +210,13 @@ The hyprpanel color-fade target depends on three things being present:
 
 | Symptom | Cause | Fix |
 |---------|-------|-----|
-| HyprPanel colors jump instead of fading | `reloadCss` patch missing | Restart with `~/.config/hyprpanel/bin/hyprpanel-launch` |
+| HyprPanel colors jump instead of fading | `reloadCss` patch missing or bridge returning 0 keys | Restart with `hyprpanel-launch`; check old JSON hex values appear in compiled CSS |
+| UI freezes/stutters during fade | CSS provider accumulation (old `apply_css(false)` per frame) | Ensure `reloadCss` uses persistent `CssProvider` with `load_from_path`, not `apply_css` |
 | Colors snap back mid-fade then re-animate | `modules.scss` hot-reload firing | Check that modules.scss monitor removal patch is applied |
 | Colors flash white mid-fade | `_applyCss` called with `reset=true` | Check that `applyColorOverrides` passes `reset=false` |
-| No color change at all | Missing old/new JSON files | Check that `hyprpanel-colors` ran before color-fade started |
-| Colors end at wrong values | `hyprpanel_finalize` not running | Check that `applyTheme` call at end succeeds (Astal socket available) |
+| No color change at all | Missing old/new JSON files, or hex case mismatch | Check `hyprpanel-colors` ran; verify old JSON hex case matches compiled CSS |
+| Colors end at wrong values | `hyprpanel_finalize` not running | Check that `applyTheme` + `clearFadeCss` calls succeed (Astal socket available) |
+| Stale colors after fade | `clearFadeCss` not called, fade provider overrides base | Check `hyprpanel_finalize` sends both `applyTheme` and `clearFadeCss` |
 
 ## Nautilus Extension
 
