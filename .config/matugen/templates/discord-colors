@@ -25,7 +25,7 @@
     --background-mod-normal: {{colors.surface_container_highest.default.hex}}26 !important;
     --background-mod-subtle: {{colors.surface_container_highest.default.hex}}40 !important;
     --background-mod-strong: {{colors.surface_container_highest.default.hex}}73 !important;
-    --background-feedback-notification: {{colors.error.default.hex}} !important;
+    --background-feedback-notification: {{colors.error_container.default.hex}} !important;
 
     /* New bg system */
     --bg-base-primary: {{colors.surface.default.hex}} !important;
@@ -101,4 +101,9 @@
 
     /* Modal */
     --modal-background: {{colors.surface_container.default.hex}} !important;
+}
+
+/* New messages bar */
+[class*="newMessagesBar"] {
+    background-color: {{colors.primary_container.default.hex}} !important;
 }

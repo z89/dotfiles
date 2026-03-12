@@ -4,9 +4,83 @@
 # box-left/center/right containers so buttons don't stretch vertically
 # when the bar has a custom min-height set in modules.scss.
 # Also patches toggleWindow CLI command to position dropdown menus correctly.
+# Also sets margin_left/margin_right on the bar window JSX element so the
+# layer-shell surface is physically sized to the visible bar width, preventing
+# the transparent CSS margin areas from capturing mouse input.
+# The companion CSS override in modules.scss zeroes out the CSS margins so
+# bar content fills the narrowed surface correctly.
 
 JS="${XDG_RUNTIME_DIR:-/tmp}/dmFyIF-ags.js"
 eval "$(sed '/gjs /d' /usr/share/hyprpanel/hyprpanel-app)"
+
+# Patch bar window JSX to set layer-shell left/right margins from config.
+# margin_left/margin_right on AstalWindow map directly to gtk_layer_shell_set_margin(),
+# shrinking the surface so the areas beside the bar are free for other windows.
+#
+# Also patch _buildCssVariable to emit 0px for bar-margin_sides so the SCSS
+# variable itself is zeroed out — bar.scss then generates margin-left: 0px
+# naturally, preventing the CSS margin from collapsing inside the narrowed surface.
+python3 -c "
+with open('$JS', 'r') as f:
+    content = f.read()
+
+# Layer-shell margin patch
+old1 = 'namespace: \`bar-\${this._hyprlandMonitor}\`,'
+new1 = ('namespace: \`bar-\${this._hyprlandMonitor}\`,'
+        ' margin_left: parseInt(String(configuration_default.theme.bar.margin_sides.get())) || 0,'
+        ' margin_right: parseInt(String(configuration_default.theme.bar.margin_sides.get())) || 0,')
+content = content.replace(old1, new1, 1)
+
+# CSS variable patch — zero out bar-margin_sides in SCSS so the surface fills correctly
+old2 = '  _buildCssVariable(variableName, property2) {\n    const propertyValue = property2.get();\n    return \`\$\${variableName}: \${propertyValue};\`;\n  }'
+new2 = ('  _buildCssVariable(variableName, property2) {\n'
+        '    if (variableName === \"bar-margin_sides\") return \`\$\${variableName}: 0px;\`;\n'
+        '    const propertyValue = property2.get();\n'
+        '    return \`\$\${variableName}: \${propertyValue};\`;\n'
+        '  }')
+content = content.replace(old2, new2, 1)
+
+# _applyCss flash fix — animation frames should add CSS on top, not reset all providers.
+# reset=true clears every CSS provider before re-applying, causing a blank-CSS flash each frame.
+# Change applyColorOverrides to call _applyCss(false) so the new compiled CSS is layered in
+# without wiping the existing providers mid-frame.
+old3 = ('  _applyCss() {\n'
+        '    const compiledCssPath = \`\${TMP}/main.css\`;\n'
+        '    app_default.apply_css(compiledCssPath, true);\n'
+        '  }')
+new3 = ('  _applyCss(reset = true) {\n'
+        '    const compiledCssPath = \`\${TMP}/main.css\`;\n'
+        '    app_default.apply_css(compiledCssPath, reset);\n'
+        '  }')
+content = content.replace(old3, new3, 1)
+
+# Change the applyColorOverrides call site to pass reset=false so animation frames
+# don't clear existing CSS providers (eliminates per-frame flash during color-fade).
+# The other call site (applyCss, used for full reloads) keeps reset=true by default.
+old4 = ('      await this._compileSass(lines);\n'
+        '      this._applyCss();\n'
+        '    } catch (error) {')
+new4 = ('      await this._compileSass(lines);\n'
+        '      this._applyCss(false);\n'
+        '    } catch (error) {')
+content = content.replace(old4, new4, 1)
+
+# Remove modules.scss from the HotReload monitor list.
+# HyprPanel watches modules.scss for changes and calls applyCss(reset=true) when it fires.
+# During theme switching, matugen writes modules.scss and the file monitor fires (with a
+# ~200-500ms GFileMonitor delay) after color-fade has started accumulating CSS providers.
+# The reset=true in that applyCss() wipes all animation providers, snapping colors back to
+# the old theme mid-animation — causing the flash-back-to-old then re-animate sequence.
+# Removing it from the monitor list prevents that race entirely. The new modules.scss content
+# is still picked up on the first color-fade compilation frame since _compileSass reads it.
+old5 = ('    \`\${CONFIG_DIR}/modules.scss\`\n'
+        '  ];')
+new5 = ('  ];')
+content = content.replace(old5, new5, 1)
+
+with open('$JS', 'w') as f:
+    f.write(content)
+"
 
 # Apply valign patches
 sed -i 's/className: "box-left", hexpand: true/className: "box-left", hexpand: true, valign: Gtk4.Align.CENTER/' "$JS"
@@ -50,5 +124,162 @@ content = content.replace(old, new, 1)
 with open('$JS', 'w') as f:
     f.write(content)
 "
+
+# Patch openDropdownMenu to offset click X by barMarginSides.
+# event.get_root_coords() on Wayland returns surface-relative coords, not
+# screen-absolute. With margin_left=barMarginSides on the bar layer-shell surface,
+# all click X values are short by barMarginSides, causing dropdowns to appear
+# barMarginSides pixels to the left of the correct position.
+python3 -c "
+with open('$JS', 'r') as f:
+    content = f.read()
+
+old = 'const adjustedXCoord = clickPos[1] + middleOffset;'
+new = 'const adjustedXCoord = clickPos[1] + middleOffset + (parseInt(String(configuration_default.theme.bar.margin_sides.get())) || 0);'
+
+content = content.replace(old, new, 1)
+with open('$JS', 'w') as f:
+    f.write(content)
+"
+
+# ── swaync integration ──
+# Replaces HyprPanel's built-in notification system with swaync.
+# 1. Notification bar button click → swaync-client -t (toggle panel)
+# 2. Notification count badge → polls swaync-client -c every 2s
+# 3. Popup notifications disabled (swaync handles popups)
+JS_PATH="$JS" python3 << 'SWAYNC_PATCH'
+import re, os
+
+js_path = os.environ["JS_PATH"]
+with open(js_path, 'r') as f:
+    content = f.read()
+
+# 1. Replace notification bar click handler: open swaync panel instead of dropdown menu
+content = content.replace(
+    'openDropdownMenu(clicked, event, "notificationsmenu");',
+    'GLib2.spawn_command_line_async("swaync-client -t");',
+    1
+)
+
+# 2. Replace notification count: poll swaync-client -c instead of binding to AstalNotifd.
+#    Uses regex to match the boxChildren Variable.derive block regardless of unicode escapes.
+old_pattern = r'const boxChildren = Variable\.derive\(\s*\[\s*bind\(notifdService2.*?return /\* @__PURE__ \*/ jsx2\(NotifIcon, \{\}\);\s*\}\s*\);'
+new_code = r"""const _swayncCount = Variable(0);
+  GLib2.timeout_add(GLib2.PRIORITY_DEFAULT, 2000, () => {
+    try {
+      const [ok, stdout] = GLib2.spawn_command_line_sync("swaync-client -c");
+      if (ok && stdout) {
+        const n = parseInt(new TextDecoder().decode(stdout).trim()) || 0;
+        _swayncCount.set(n);
+      }
+    } catch(e) {}
+    return true;
+  });
+  const boxChildren = Variable.derive(
+    [
+      bind(_swayncCount),
+      bind(show_total),
+      bind(hideCountWhenZero)
+    ],
+    (count, showTotal, hideCountForZero) => {
+      const NotifIcon = () => /* @__PURE__ */ jsx2(
+        "label",
+        {
+          halign: Gtk4.Align.CENTER,
+          className: "bar-button-icon notifications txt-icon bar",
+          label: count > 0 ? "\u{F116B}" : "\u{F009A}"
+        }
+      );
+      const NotifLabel = () => /* @__PURE__ */ jsx2(
+        "label",
+        {
+          halign: Gtk4.Align.CENTER,
+          className: "bar-button-label notifications",
+          label: count.toString()
+        }
+      );
+      if (showTotal) {
+        if (hideCountForZero && count === 0) {
+          return /* @__PURE__ */ jsx2(NotifIcon, {});
+        }
+        return /* @__PURE__ */ jsxs("box", { children: [
+          /* @__PURE__ */ jsx2(NotifIcon, {}),
+          /* @__PURE__ */ jsx2(NotifLabel, {})
+        ] });
+      }
+      return /* @__PURE__ */ jsx2(NotifIcon, {});
+    }
+  );"""
+
+m = re.search(old_pattern, content, re.DOTALL)
+if m:
+    content = content[:m.start()] + new_code + content[m.end():]
+
+# 3. Disable popup tracking so HyprPanel doesn't show its own popup notifications
+content = content.replace(
+    'trackPopupNotifications(popupNotifications);',
+    '// trackPopupNotifications(popupNotifications); // disabled: swaync handles popups',
+    1
+)
+
+with open(js_path, 'w') as f:
+    f.write(content)
+
+print("swaync patches applied")
+SWAYNC_PATCH
+
+# Add reloadCss command: re-reads /tmp/hyprpanel/main.css without SCSS recompilation.
+# Used by color-fade to apply interpolated CSS at 60fps (applyTheme triggers a full
+# sass compile at ~200ms/call which is too slow for smooth animation).
+python3 -c "
+with open('$JS', 'r') as f:
+    content = f.read()
+
+# Insert the reloadCss command after the applyTheme command block
+old = '''        return \`Error applying theme: \${error}\`;
+      }
+    }
+  },
+  {
+    name: \"setLayout\",'''
+
+new = '''        return \`Error applying theme: \${error}\`;
+      }
+    }
+  },
+  {
+    name: \"reloadCss\",
+    aliases: [\"rc\"],
+    description: \"Re-reads compiled CSS from /tmp/hyprpanel/main.css without SCSS recompilation.\",
+    category: \"Appearance\",
+    args: [],
+    handler: () => {
+      app_default.apply_css(\`\${TMP}/main.css\`, false);
+      return \"ok\";
+    }
+  },
+  {
+    name: \"setLayout\",'''
+
+content = content.replace(old, new, 1)
+with open('$JS', 'w') as f:
+    f.write(content)
+"
+
+# Redirect all internal restart/quit commands to the patched launcher.
+# HyprPanel restarts itself via 'hyprpanel -q; hyprpanel' (stock launcher) in:
+#   1. restartCommand option default (line ~4691)
+#   2. useTheme function (line ~5389)
+#   3. Hardcoded restart CLI handler (line ~15706)
+#   4. Hardcoded quit CLI handler (line ~15721)
+# The stock launcher re-decodes the JS bundle, overwriting all patches.
+# Replace every occurrence with the patched launcher path.
+PATCHED_LAUNCH="$HOME/.config/hyprpanel/bin/hyprpanel-launch"
+sed -i \
+    -e "s|\"hyprpanel -q; hyprpanel\"|\"$PATCHED_LAUNCH\"|g" \
+    -e "s|'hyprpanel -q; hyprpanel'|'$PATCHED_LAUNCH'|g" \
+    -e "s|'bash -c \"hyprpanel -q; hyprpanel\"'|'bash -c \"$PATCHED_LAUNCH\"'|g" \
+    -e "s|'bash -c \"hyprpanel -q\"'|'bash -c \"pkill -f gjs.*dmFyIF-ags.js\"'|g" \
+    "$JS"
 
 exec gjs -m "$JS"

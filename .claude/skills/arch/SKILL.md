@@ -38,7 +38,7 @@ This file defines the user's system. Load it before any task involving packages,
 - **WM:** Hyprland — config at `~/.config/hypr/hyprland.conf`
 - **Bar:** hyprpanel
 - **Launcher:** wofi
-- **Notifications:** hyprpanel (built-in)
+- **Notifications:** swaync (replaces HyprPanel's built-in; bar icon delegates to swaync-client)
 - **Display:** Wayland-native (Hyprland)
 - **Colour scheme:** matugen
 

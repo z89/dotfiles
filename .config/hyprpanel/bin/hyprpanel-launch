@@ -2,6 +2,39 @@
 # Reload-safe HyprPanel launcher.
 # Kills any running instance before starting a fresh patched one.
 # Called by hyprland.conf via 'exec =' so it runs on every reload.
+#
+# Startup order: swaync must claim org.freedesktop.Notifications before
+# HyprPanel's AstalNotifd tries to. Kill both, start swaync, wait for
+# DBus ownership, then start hyprpanel-patched.
 pkill -f "gjs.*dmFyIF-ags.js" 2>/dev/null
+pkill -9 -f "swaync-client" 2>/dev/null
+pkill swaync 2>/dev/null
 sleep 0.3
+
+# Start swaync and wait for it to claim the notification DBus name
+swaync &
+for i in $(seq 1 20); do
+    busctl --user list 2>/dev/null | grep -q 'org.erikreider.swaync' && break
+    sleep 0.1
+done
+
+# Persist the last theme colors into config.json before starting.
+# color-fade applies colors via astal IPC (in-memory only), so config.json
+# drifts stale after a theme switch. Merging the colors-new file here
+# ensures hyprpanel always boots with the current theme.
+COLORS_NEW="/tmp/hyprpanel-colors-new.json"
+CONFIG="$HOME/.config/hyprpanel/config.json"
+if [[ -f "$COLORS_NEW" && -f "$CONFIG" ]]; then
+    python3 -c "
+import json
+with open('$COLORS_NEW') as f:
+    colors = json.load(f)
+with open('$CONFIG') as f:
+    config = json.load(f)
+config.update(colors)
+with open('$CONFIG', 'w') as f:
+    json.dump(config, f, indent=2)
+" 2>/dev/null
+fi
+
 ~/.config/hyprpanel/bin/hyprpanel-patched &

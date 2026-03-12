@@ -11,11 +11,11 @@ output_path = "~/.config/kitty/colors.conf"
 
 [templates.gtk3-colors]
 input_path = "~/.config/matugen/templates/gtk3-colors"
-output_path = "~/.config/gtk-3.0/gtk.css"
+output_path = "~/.cache/matugen/gtk3-colors.css"
 
 [templates.gtk4-colors]
 input_path = "~/.config/matugen/templates/gtk4-colors"
-output_path = "~/.config/gtk-4.0/gtk.css"
+output_path = "~/.cache/matugen/gtk4-colors.css"
 
 [templates.ycombo-colors]
 input_path = "~/.config/matugen/templates/ycombo-colors"
@@ -36,3 +36,27 @@ output_path = "~/.config/BetterDiscord/themes/matugen.theme.css"
 [templates.notion-colors]
 input_path = "~/.config/matugen/templates/notion-colors"
 output_path = "~/.cache/matugen/notion-colors.css"
+
+[templates.hyprpanel-colors]
+input_path = "~/.config/matugen/templates/hyprpanel-colors"
+output_path = "~/.config/hyprpanel/matugen-colors.scss"
+
+[templates.hyprpanel-modules]
+input_path = "~/.config/matugen/templates/hyprpanel-modules"
+output_path = "~/.config/hyprpanel/modules.scss"
+
+[templates.wofi-colors]
+input_path = "~/.config/matugen/templates/wofi-colors"
+output_path = "~/.cache/matugen/wofi-colors.css"
+
+[templates.rofi-colors]
+input_path = "~/.config/matugen/templates/rofi-colors"
+output_path = "~/.config/rofi/colors/matugen.rasi"
+
+[templates.swaync-colors]
+input_path = "~/.config/matugen/templates/swaync-colors"
+output_path = "~/.config/swaync/style.css"
+
+[templates.starship-colors]
+input_path = "~/.config/matugen/templates/starship-colors"
+output_path = "~/.config/starship.toml"

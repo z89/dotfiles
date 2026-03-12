@@ -1,9 +1,12 @@
 .bar .bar-panel {
-    min-height: 46px;
+    min-height: 48px;
 }
 
+/* Module background: surface-container from active matugen theme */
 .bar_item_box_visible {
     min-height: 25px;
+    background-color: #271d1dbf;
+    border-radius: 8px;
 }
 
 .event-top-padding * {

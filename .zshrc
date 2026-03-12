@@ -29,6 +29,8 @@ setopt HIST_IGNORE_SPACE
 # ── Completion ───────────────────────────────────────────────────────────────
 autoload -Uz compinit
 compinit
+zstyle ':completion:*' menu select
+zstyle ':completion:*' list-colors "${(s.:.)LS_COLORS}" "ma=48;2;61;50;49"
 
 # ── Options ──────────────────────────────────────────────────────────────────
 unsetopt HIST_VERIFY
@@ -47,13 +49,17 @@ typeset -g -A key
 
 # ── Aliases ──────────────────────────────────────────────────────────────────
 alias vim="nvim"
+alias vlc='QT_QPA_PLATFORM=xcb vlc'
 
 # ── Functions ────────────────────────────────────────────────────────────────
-asp() { export AWS_PROFILE=$(aws configure list-profiles | fzf) }
+asp() { local p=$(aws configure list-profiles | fzf) && [ -n "$p" ] && export AWS_PROFILE=$p }
 
 # ── Plugins ──────────────────────────────────────────────────────────────────
 source /usr/share/zsh/plugins/zsh-autosuggestions/zsh-autosuggestions.zsh
 source /usr/share/zsh/plugins/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh
+ZSH_HIGHLIGHT_STYLES[command]='fg=magenta'
+ZSH_HIGHLIGHT_STYLES[builtin]='fg=magenta'
+ZSH_HIGHLIGHT_STYLES[alias]='fg=magenta'
 
 # fzf
 source /usr/share/fzf/key-bindings.zsh

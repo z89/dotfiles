@@ -5,10 +5,20 @@
 Whenever you are about to perform any git or GitHub operation (commit, push, branch, PR, tag, init, etc.), first read and strictly follow:
 ~/.claude/skills/commit/SKILL.md
 
+## HyprPanel Tasks
+
+Whenever the task involves hyprpanel (config, SCSS, theming, patches, launching, or the theme switcher), first read and strictly follow:
+~/.claude/skills/hyprpanel/SKILL.md
+
 ## OS / System / Package / Config Tasks
 
 Whenever the task involves packages, system services, hardware, desktop config (hyprland, hyprpanel etc.), shell config, or anything Arch/Linux-specific, first read:
 ~/.claude/skills/arch/SKILL.md
+
+## Terminal Tasks
+
+Whenever the task involves kitty, zsh, starship, terminal colors, prompt layout, or terminal plugins, first read:
+~/.claude/skills/terminal/SKILL.md
 
 ## Dotfiles Repo
 

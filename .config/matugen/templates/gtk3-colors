@@ -21,13 +21,239 @@
 @define-color destructive_fg_color {{colors.on_error_container.default.hex}};
 @define-color success_color {{colors.tertiary.default.hex}};
 @define-color warning_color {{colors.tertiary_container.default.hex}};
+@define-color borders {{colors.outline_variant.default.hex}};
+@define-color surface_bright {{colors.surface_bright.default.hex}};
+@define-color surface_dim {{colors.surface_dim.default.hex}};
+@define-color surface_container_lowest {{colors.surface_container_lowest.default.hex}};
+@define-color surface_container_low {{colors.surface_container_low.default.hex}};
+@define-color surface_container {{colors.surface_container.default.hex}};
+@define-color surface_container_high {{colors.surface_container_high.default.hex}};
+@define-color surface_container_highest {{colors.surface_container_highest.default.hex}};
 
-.background {
+/* ---- Base ---- */
+.background, window {
     background-color: @window_bg_color;
     color: @window_fg_color;
 }
 
-headerbar, .titlebar {
+/* ---- Headerbar / Toolbar ---- */
+headerbar, .titlebar, toolbar, .toolbar {
     background-color: @headerbar_bg_color;
     color: @headerbar_fg_color;
+    border-color: @borders;
+}
+
+/* ---- Menus ---- */
+menubar, .menubar {
+    background-color: @headerbar_bg_color;
+    color: @headerbar_fg_color;
+}
+
+menu, .menu, .context-menu {
+    background-color: @popover_bg_color;
+    color: @popover_fg_color;
+    border-color: @borders;
+}
+
+menuitem, .menuitem {
+    color: @popover_fg_color;
+}
+
+menuitem:hover {
+    background-color: @accent_bg_color;
+    color: @accent_fg_color;
+}
+
+/* ---- Buttons ---- */
+button {
+    background-image: none;
+    background-color: @surface_container_high;
+    color: @window_fg_color;
+    border-color: @borders;
+}
+
+button:hover {
+    background-color: @surface_container_highest;
+}
+
+button:active, button:checked {
+    background-color: @accent_bg_color;
+    color: @accent_fg_color;
+}
+
+button:disabled {
+    opacity: 0.5;
+}
+
+button.suggested-action {
+    background-color: @accent_bg_color;
+    color: @accent_fg_color;
+}
+
+button.destructive-action {
+    background-color: @destructive_bg_color;
+    color: @destructive_fg_color;
+}
+
+/* ---- Toggles / Switches / Checks / Radios ---- */
+switch {
+    background-color: @surface_container_highest;
+    border-color: @borders;
+}
+
+switch:checked {
+    background-color: @accent_bg_color;
+}
+
+switch slider {
+    background-color: @window_fg_color;
+}
+
+checkbutton check, radiobutton radio {
+    background-color: @surface_container_high;
+    border-color: @borders;
+}
+
+checkbutton check:checked, radiobutton radio:checked {
+    background-color: @accent_bg_color;
+    color: @accent_fg_color;
+}
+
+/* ---- Selection / Treeview / Listbox ---- */
+treeview, .view {
+    background-color: @view_bg_color;
+    color: @view_fg_color;
+}
+
+treeview:selected, .view:selected,
+row:selected, row:focus:selected,
+treeview.view:selected:focus,
+list row:selected {
+    background-color: @accent_bg_color;
+    color: @accent_fg_color;
+}
+
+treeview:hover, row:hover {
+    background-color: @surface_container_low;
+}
+
+treeview header button {
+    background-color: @headerbar_bg_color;
+    color: @headerbar_fg_color;
+    border-color: @borders;
+}
+
+/* ---- Entry / Text Input ---- */
+entry {
+    background-color: @surface_container_lowest;
+    color: @window_fg_color;
+    border-color: @borders;
+    caret-color: @accent_color;
+}
+
+entry:focus {
+    border-color: @accent_color;
+}
+
+/* ---- Scrollbar ---- */
+scrollbar slider {
+    background-color: @surface_container_highest;
+}
+
+scrollbar slider:hover {
+    background-color: @accent_color;
+}
+
+scrollbar trough {
+    background-color: @surface_container_low;
+}
+
+/* ---- Sidebar / Navigation ---- */
+.sidebar, .navigation-sidebar {
+    background-color: @sidebar_bg_color;
+    color: @sidebar_fg_color;
+}
+
+.sidebar row:selected {
+    background-color: @accent_bg_color;
+    color: @accent_fg_color;
+}
+
+/* ---- Popover / Tooltip ---- */
+popover, popover.background {
+    background-color: @popover_bg_color;
+    color: @popover_fg_color;
+    border-color: @borders;
+}
+
+tooltip, tooltip.background {
+    background-color: @surface_container_high;
+    color: @window_fg_color;
+}
+
+/* ---- Dialog / Messagebox ---- */
+dialog, messagedialog {
+    background-color: @dialog_bg_color;
+    color: @dialog_fg_color;
+}
+
+/* ---- Notebook / Tabs ---- */
+notebook, .notebook {
+    background-color: @view_bg_color;
+}
+
+notebook header, notebook header tabs {
+    background-color: @headerbar_bg_color;
+}
+
+notebook tab {
+    background-color: @surface_container;
+    color: @window_fg_color;
+    border-color: @borders;
+}
+
+notebook tab:checked {
+    background-color: @view_bg_color;
+    color: @accent_color;
+}
+
+/* ---- Infobar / Statusbar ---- */
+infobar, .info, statusbar {
+    background-color: @surface_container;
+    color: @window_fg_color;
+}
+
+/* ---- Progressbar / Scale / Levelbar ---- */
+progressbar progress, levelbar block.filled {
+    background-color: @accent_color;
+}
+
+progressbar trough, levelbar trough, scale trough {
+    background-color: @surface_container_highest;
+}
+
+scale slider {
+    background-color: @accent_color;
+}
+
+/* ---- Separator ---- */
+separator {
+    background-color: @borders;
+}
+
+/* ---- Card ---- */
+.card {
+    background-color: @card_bg_color;
+    color: @card_fg_color;
+    border-color: @borders;
+}
+
+/* ---- Link ---- */
+*:link, button.link {
+    color: @accent_color;
+}
+
+/* ---- Spinner ---- */
+spinner {
+    color: @accent_color;
 }
