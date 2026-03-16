@@ -9,9 +9,18 @@ sleep 0.3
 # color-fade applies colors via astal IPC (in-memory only), so config.json
 # drifts stale after a theme switch. Merging the colors-new file here
 # ensures hyprpanel always boots with the current theme.
-COLORS_NEW="/tmp/hyprpanel-colors-new.json"
+# Check persistent path first (survives reboot), fall back to /tmp.
+COLORS_PERSISTENT="$HOME/.config/hyprpanel/colors-new.json"
+COLORS_TMP="/tmp/hyprpanel-colors-new.json"
+if [[ -f "$COLORS_TMP" ]]; then
+    COLORS_NEW="$COLORS_TMP"
+elif [[ -f "$COLORS_PERSISTENT" ]]; then
+    COLORS_NEW="$COLORS_PERSISTENT"
+else
+    COLORS_NEW=""
+fi
 CONFIG="$HOME/.config/hyprpanel/config.json"
-if [[ -f "$COLORS_NEW" && -f "$CONFIG" ]]; then
+if [[ -n "$COLORS_NEW" && -f "$CONFIG" ]]; then
     python3 -c "
 import json
 with open('$COLORS_NEW') as f:
