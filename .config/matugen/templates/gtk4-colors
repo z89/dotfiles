@@ -54,10 +54,31 @@ headerbar, .titlebar {
     color: @card_fg_color;
 }
 
-/* ---- Popover ---- */
+/* ---- Popover / Context Menu ---- */
 popover, popover.background {
     background-color: @popover_bg_color;
     color: @popover_fg_color;
+}
+
+popover.menu box.circular-box {
+    background-color: @popover_bg_color;
+}
+
+popover.menu modelbutton {
+    color: @popover_fg_color;
+}
+
+popover.menu modelbutton:hover {
+    background-color: @accent_bg_color;
+    color: @accent_fg_color;
+}
+
+popover.menu separator {
+    background-color: @borders;
+}
+
+popover.menu accelerator {
+    color: alpha(@popover_fg_color, 0.55);
 }
 
 /* ---- Dialog ---- */
