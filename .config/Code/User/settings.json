@@ -88,4 +88,5 @@
     "editor.wordBasedSuggestions": "off",
   },
   "dart.openDevTools": "flutter",
+  "redhat.telemetry.enabled": false,
 }
