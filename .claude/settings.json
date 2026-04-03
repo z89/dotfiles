@@ -1,14 +1,23 @@
 {
-  "enabledPlugins": {
-    "clangd-lsp@claude-plugins-official": true,
-    "superpowers@claude-plugins-official": true
-  },
-  "extraKnownMarketplaces": {
-    "superpowers-marketplace": {
-      "source": {
-        "source": "github",
-        "repo": "obra/superpowers-marketplace"
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash -c 'ZSTACK_DIR=$(dirname $(dirname $(readlink -f ~/.claude/skills/z:build))) && $ZSTACK_DIR/bin/zstack-quality-gate'"
+          }
+        ]
       }
-    }
+    ]
+  },
+  "enabledPlugins": {
+    "clangd-lsp@claude-plugins-official": true
+  },
+  "permissions": {
+    "allow": [
+      "Bash(pnpm dlx:*)"
+    ]
   }
 }

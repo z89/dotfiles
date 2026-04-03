@@ -7,5 +7,6 @@
 !settings.json
 !skills/
 !skills/**
+skills/z:*
 !hooks/
 !hooks/**
