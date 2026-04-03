@@ -17,10 +17,6 @@ output_path = "~/.cache/matugen/gtk3-colors.css"
 input_path = "~/.config/matugen/templates/gtk4-colors"
 output_path = "~/.cache/matugen/gtk4-colors.css"
 
-[templates.ycombo-colors]
-input_path = "~/.config/matugen/templates/ycombo-colors"
-output_path = "~/Documents/Github-Projects/ycombo/colors.conf"
-
 [templates.spicetify-colors]
 input_path = "~/.config/matugen/templates/spicetify-colors"
 output_path = "~/.config/spicetify/Themes/matugen/color.ini"

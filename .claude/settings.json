@@ -1,7 +1,11 @@
 {
   "permissions": {
     "allow": [
-      "Bash(pnpm dlx:*)"
+      "Bash(pnpm dlx:*)",
+      "Bash(pnpm build:*)",
+      "Read(//home/archie/.claude/skills/commit/**)",
+      "Bash(export SSH_AUTH_SOCK=\"/run/user/1000/ssh-agent.socket\")",
+      "Bash(ssh-add -l)"
     ],
     "additionalDirectories": [
       "/home/archie/Documents/Github-Projects/***REDACTED***"
