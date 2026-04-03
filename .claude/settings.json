@@ -1,4 +1,12 @@
 {
+  "permissions": {
+    "allow": [
+      "Bash(pnpm dlx:*)"
+    ],
+    "additionalDirectories": [
+      "/home/archie/Documents/Github-Projects/***REDACTED***"
+    ]
+  },
   "hooks": {
     "PreToolUse": [
       {
@@ -14,10 +22,5 @@
   },
   "enabledPlugins": {
     "clangd-lsp@claude-plugins-official": true
-  },
-  "permissions": {
-    "allow": [
-      "Bash(pnpm dlx:*)"
-    ]
   }
 }
