@@ -5,7 +5,19 @@
       "Bash(pnpm build:*)",
       "Read(//home/archie/.claude/skills/commit/**)",
       "Bash(export SSH_AUTH_SOCK=\"/run/user/1000/ssh-agent.socket\")",
-      "Bash(ssh-add -l)"
+      "Bash(ssh-add -l)",
+      "Bash(pkill -f \"next dev\")",
+      "Bash(git commit -m ' *)",
+      "Bash(git merge feat/***REDACTED*** --no-ff -m ' *)",
+      "Bash(git cherry-pick *)",
+      "Bash(command -v latexmk pdflatex)",
+      "Bash(code --list-extensions)",
+      "Bash(pdfinfo /home/archie/Documents/Github-Projects/***REDACTED***/lec9.pdf)",
+      "Bash(pdfinfo /home/archie/Documents/Github-Projects/***REDACTED***/lec10.pdf)",
+      "Bash(pdfinfo /home/archie/Documents/Github-Projects/***REDACTED***/tut9.pdf)",
+      "Bash(pdfinfo /home/archie/Documents/Github-Projects/***REDACTED***/tut10.pdf)",
+      "Skill(commit)",
+      "Skill(commit:*)"
     ],
     "additionalDirectories": [
       "/home/archie/Documents/Github-Projects/***REDACTED***"
@@ -26,5 +38,6 @@
   },
   "enabledPlugins": {
     "clangd-lsp@claude-plugins-official": true
-  }
+  },
+  "autoCompactEnabled": false
 }

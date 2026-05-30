@@ -40,30 +40,13 @@ new2 = ('  _buildCssVariable(variableName, property2) {\n'
         '  }')
 content = content.replace(old2, new2, 1)
 
-# _applyCss flash fix — animation frames should add CSS on top, not reset all providers.
-# reset=true clears every CSS provider before re-applying, causing a blank-CSS flash each frame.
-# Change applyColorOverrides to call _applyCss(false) so the new compiled CSS is layered in
-# without wiping the existing providers mid-frame.
-old3 = ('  _applyCss() {\n'
-        '    const compiledCssPath = \`\${TMP}/main.css\`;\n'
-        '    app_default.apply_css(compiledCssPath, true);\n'
-        '  }')
-new3 = ('  _applyCss(reset = true) {\n'
-        '    const compiledCssPath = \`\${TMP}/main.css\`;\n'
-        '    app_default.apply_css(compiledCssPath, reset);\n'
-        '  }')
-content = content.replace(old3, new3, 1)
-
-# Change the applyColorOverrides call site to pass reset=false so animation frames
-# don't clear existing CSS providers (eliminates per-frame flash during color-fade).
-# The other call site (applyCss, used for full reloads) keeps reset=true by default.
-old4 = ('      await this._compileSass(lines);\n'
-        '      this._applyCss();\n'
-        '    } catch (error) {')
-new4 = ('      await this._compileSass(lines);\n'
-        '      this._applyCss(false);\n'
-        '    } catch (error) {')
-content = content.replace(old4, new4, 1)
+# [REVERTED 2026-05-25] _applyCss flash fix removed — it was obsolete and caused a
+# CSS provider leak. applyColorOverrides called _applyCss(false) which adds a new
+# ~115KB CSS provider per applyTheme without removing previous ones, gradually
+# slowing the GTK4 cascade until the bar freezes. color-fade per-frame updates
+# now go through reloadCss + globalThis.__cfProv (own provider lifecycle), so
+# applyColorOverrides doesn't need to layer-add anymore.
+# Backup at hyprpanel-patched.bak. Restore old3/new3 + old4/new4 to revert.
 
 # Remove modules.scss from the HotReload monitor list.
 # HyprPanel watches modules.scss for changes and calls applyCss(reset=true) when it fires.

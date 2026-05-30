@@ -89,4 +89,7 @@
   },
   "dart.openDevTools": "flutter",
   "redhat.telemetry.enabled": false,
+  "workbench.externalUriOpeners": {
+    "*": "default",
+  },
 }
