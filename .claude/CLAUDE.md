@@ -10,6 +10,13 @@ Whenever you are about to perform any git or GitHub operation (commit, push, bra
 Whenever the task involves hyprpanel (config, SCSS, theming, patches, launching, or the theme switcher), first read and strictly follow:
 ~/.claude/skills/hyprpanel/SKILL.md
 
+Hard rules (enforced by ~/.claude/hooks/hyprpanel-guard.py):
+- Start/restart ONLY via `~/.config/hyprpanel/bin/hyprpanel-launch`. The `hyprpanel-watchdog` (hyprland exec-once) owns the lifecycle and is the sole parent; it restarts through `hyprpanel-launch` too. Never run the stock binary (`hyprpanel-app`, `hyprpanel -q`, or a direct `gjs -m … dmFyIF-ags.js`) — it skips all JS patches and breaks the theme switcher.
+- Kill-only is `pkill -f "gjs.*dmFyIF-ags.js"`. Plain `hyprpanel <cmd>` CLI calls (rc, cfc, applyTheme, toggleWindow …) are fine — they talk to the running patched instance.
+- Never edit the decoded JS bundle (`$XDG_RUNTIME_DIR/dmFyIF-ags.js`) directly — it is rewritten on every launch. All JS changes go through sed/python patches in `hyprpanel-patched`.
+- Never edit generated files by hand: `matugen-colors.scss` (edit the matugen template), or anything under `/usr/share/hyprpanel/`.
+- `hyprpanel-launch` is the single source of truth for the start sequence (kill → socket cleanup → persist theme colors into config.json → log rotation → exec patched). Add new start-time logic there, never in a parallel path.
+
 ## OS / System / Package / Config Tasks
 
 Whenever the task involves packages, system services, hardware, desktop config (hyprland, hyprpanel etc.), shell config, or anything Arch/Linux-specific, first read:

@@ -13,7 +13,7 @@ Load this before any task that touches hyprpanel config, SCSS, JS patches, themi
 
 ## Critical: Always Use the Patched Launcher
 
-**Never start hyprpanel with `hyprpanel`, `hyprpanel -q`, or `/usr/share/hyprpanel/hyprpanel-app` directly.**
+**Never start hyprpanel with `hyprpanel`, `hyprpanel -q`, or `/usr/share/hyprpanel/hyprpanel-app` directly.** A PreToolUse hook (`~/.claude/hooks/hyprpanel-guard.py`) hard-blocks these and direct `gjs -m … dmFyIF-ags.js` launches.
 
 The stock binary skips all JS patches (modules stretch to bar height, menus misposition, notification images mis-align).
 
@@ -21,8 +21,9 @@ The stock binary skips all JS patches (modules stretch to bar height, menus misp
 |--------|----------------|
 | Start / restart | `~/.config/hyprpanel/bin/hyprpanel-launch` |
 | Kill only | `pkill -f "gjs.*dmFyIF-ags.js"` |
+| CLI to running instance | `hyprpanel <cmd>` (rc, cfc, applyTheme, toggleWindow …) — allowed |
 
-`hyprpanel-launch` kills any running instance, waits 0.3 s, then starts `hyprpanel-patched` in the background. It is the `exec-once` target in `hyprland.conf` so hyprland reloads always use the patched version.
+`hyprpanel-launch` is the **single source of truth** for the start sequence and is theme-switcher aware. In order it: two-stage kills any running instance (SIGTERM → SIGKILL, since a frozen main loop ignores the graceful SIGTERM), removes a stale Astal D-Bus socket, persists the last theme colors (`colors-new.json`) into `config.json`, rotates diagnostic logs, then starts `hyprpanel-patched` with stderr captured to `/tmp/hyprpanel-stderr.log`. Add new start-time logic **here only** — never in a parallel path.
 
 ---
 
@@ -30,15 +31,36 @@ The stock binary skips all JS patches (modules stretch to bar height, menus misp
 
 ```
 hyprland.conf exec-once
-  └─ ~/.config/hyprpanel/bin/hyprpanel-launch
-       └─ ~/.config/hyprpanel/bin/hyprpanel-patched
-            1. Runs stock hyprpanel-app with gjs launch line stripped (sed '/gjs /d')
-               → decodes JS bundle to $XDG_RUNTIME_DIR/dmFyIF-ags.js without executing it
-            2. Applies sed patches to decoded JS
-            3. Runs: gjs -m $XDG_RUNTIME_DIR/dmFyIF-ags.js
+  └─ ~/.config/hyprpanel/bin/hyprpanel-watchdog   (owns lifecycle; sole parent)
+       └─ ~/.config/hyprpanel/bin/hyprpanel-launch  (called on start + every restart)
+            └─ ~/.config/hyprpanel/bin/hyprpanel-patched
+                 1. Runs stock hyprpanel-app with gjs launch line stripped (sed '/gjs /d')
+                    → decodes JS bundle to $XDG_RUNTIME_DIR/dmFyIF-ags.js without executing it
+                 2. Applies sed/python patches to decoded JS (incl. diagnostic instrumentation)
+                 3. Runs: gjs -m $XDG_RUNTIME_DIR/dmFyIF-ags.js
 ```
 
+The **watchdog** is the `exec-once` target (not `hyprpanel-launch` directly). It monitors `/tmp/hyprpanel-heartbeat` and restarts on freeze/death — always by calling `hyprpanel-launch`, so the theme-switcher-aware start path is never bypassed. See **Freeze Watchdog & Diagnostics** below.
+
 **Update risk:** If a HyprPanel package update changes the gjs invocation line in the stock script, the sed filter `/gjs /d` may stop matching. Symptom: modules stretch to bar height (valign patch not applied). Check the stock script at `/usr/share/hyprpanel/hyprpanel-app` if this happens.
+
+---
+
+## Freeze Watchdog & Diagnostics
+
+The GJS main loop occasionally freezes (bar renders but clock stops, clicks/hover dead). `hyprpanel-watchdog` detects and recovers from this, and the `hyprpanel-patched` bundle is instrumented to diagnose the cause.
+
+**Instrumentation** (injected by `hyprpanel-patched` at the end of the bundle):
+- **Heartbeat:** a `GLib.timeout_add` writes `/tmp/hyprpanel-heartbeat` every 2 s and logs `HEARTBEAT` to `/tmp/hyprpanel-diag.log`. When it stalls, the main loop is blocked.
+- **Command trace:** the Astal `vfunc_request` handler logs `CMD_START`/`CMD_END <ms>` per CLI call. A `CMD_START` with no `CMD_END` = the hung command.
+- **themeManager wrappers:** `applyCss`, `applyColorOverrides`, `_compileSass`, `_applyCss` log `_START`/`_END <ms>`/`_THROW`/`_REJECT`, so a freeze during theming shows the exact stage. (Boot's first `applyCss` runs during module eval, before wrappers install, so it isn't traced — expected.)
+
+**Watchdog** (`hyprpanel-watchdog`):
+- Polls the heartbeat; on >8 s stale (freeze) or no gjs process (death) it captures a freeze set to `~/.local/state/hyprpanel-freezes/` — `freeze-<ts>.log` (per-thread wchan/syscall, gdb backtraces if Yama allows, log tails), `freeze-<ts>.events.log` (all non-HEARTBEAT diag lines: CMD_*/theme stages/errors), and `freeze-<ts>.stderr.log`. This dir is **persistent (survives reboot)** unlike the `/tmp` live logs; pruned to the newest 100 sets. It then sends **SIGABRT** to trigger a `systemd-coredump` for postmortem (`coredumpctl gdb <pid>`, also reboot-safe), and restarts via `hyprpanel-launch`.
+- **Circuit breaker:** ≥3 restarts within 180 s pauses restarts for 15 min and sends a critical `notify-send`, preventing a restart spin-loop.
+- Diagnostic logs auto-rotate at 5 MB (`.1` segment) inside `hyprpanel-launch`.
+
+**If gdb attach in the report says "Operation not permitted":** that's `ptrace_scope=1` (Yama). Use the coredump instead — `coredumpctl gdb` then `thread apply all bt`.
 
 ---
 
@@ -223,8 +245,14 @@ Generated to `~/.config/hyprpanel/matugen-colors.scss` on every theme switch. Co
 
 | File | Purpose |
 |------|---------|
-| `~/.config/hyprpanel/bin/hyprpanel-launch` | Safe restart script — always use this |
-| `~/.config/hyprpanel/bin/hyprpanel-patched` | Patched launcher (decodes + patches JS bundle) |
+| `~/.config/hyprpanel/bin/hyprpanel-watchdog` | Lifecycle owner: hyprland exec-once target, monitors heartbeat, restarts on freeze via hyprpanel-launch |
+| `~/.config/hyprpanel/bin/hyprpanel-launch` | Safe restart script — single source of truth for the start sequence; always use this |
+| `~/.config/hyprpanel/bin/hyprpanel-patched` | Patched launcher (decodes + patches JS bundle, injects diagnostic instrumentation) |
+| `~/.claude/hooks/hyprpanel-guard.py` | PreToolUse hook: blocks stock-binary starts + edits to regenerated/stock files |
+| `/tmp/hyprpanel-diag.log` | Heartbeat + CLI command trace + themeManager stage trace |
+| `/tmp/hyprpanel-stderr.log` | gjs stderr (GJS warnings/exceptions) |
+| `~/.local/state/hyprpanel-freezes/` | Per-freeze reports + `.events.log` + `.stderr.log` — persistent (survives reboot), pruned to newest 100 |
+| `/tmp/hyprpanel-heartbeat` | Liveness file (mtime updated every 2s); watchdog watches it |
 | `~/.config/hyprpanel/modules.scss` | Custom SCSS overrides (appended to compiled stylesheet) |
 | `~/.config/hyprpanel/matugen-colors.scss` | Generated matugen SCSS variables — do not edit |
 | `~/.config/hyprpanel/config.json` | HyprPanel settings + 400+ theme color overrides |

@@ -453,7 +453,7 @@
   "theme.bar.buttons.hyprsunset.text": "#dfbbdf",
   "theme.bar.buttons.hyprsunset.icon": "#dfbbdf",
   "theme.bar.buttons.hyprsunset.icon_background": "#2f3032",
-  "bar.customModules.hyprsunset.temperature": 5500,
+  "bar.customModules.hyprsunset.temperature": 5000,
   "theme.bar.buttons.submap.border": "#bec7d5",
   "theme.bar.buttons.submap.background": "#2f3032",
   "theme.bar.buttons.submap.text": "#bec7d5",

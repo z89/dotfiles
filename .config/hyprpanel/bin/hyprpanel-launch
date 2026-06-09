@@ -2,8 +2,26 @@
 # Reload-safe HyprPanel launcher.
 # Kills any running instance before starting a fresh patched one.
 # Called by hyprland.conf via 'exec =' so it runs on every reload.
-pkill -f "gjs.*dmFyIF-ags.js" 2>/dev/null
-sleep 0.3
+# Two-stage kill: SIGTERM gives Astal a chance to release the D-Bus name cleanly,
+# then SIGKILL guarantees death even if the main loop is frozen and the graceful
+# shutdown handler never runs.
+pkill -TERM -f "gjs.*dmFyIF-ags.js" 2>/dev/null
+for _ in 1 2 3; do
+    sleep 0.3
+    pgrep -f "gjs.*dmFyIF-ags.js" >/dev/null 2>&1 || break
+done
+if pgrep -f "gjs.*dmFyIF-ags.js" >/dev/null 2>&1; then
+    pkill -KILL -f "gjs.*dmFyIF-ags.js" 2>/dev/null
+    sleep 0.3
+fi
+
+# Clean up any stale Astal D-Bus socket left by the dead process. If the socket
+# file exists but no process holds it, the next gjs would still timeout on the
+# proxy probe. fuser -k tests if anyone holds it.
+SOCK=/run/user/$(id -u)/astal/hyprpanel.sock
+if [[ -S "$SOCK" ]] && ! fuser "$SOCK" >/dev/null 2>&1; then
+    rm -f "$SOCK"
+fi
 
 # Persist the last theme colors into config.json before starting.
 # color-fade applies colors via astal IPC (in-memory only), so config.json
@@ -33,4 +51,11 @@ with open('$CONFIG', 'w') as f:
 " 2>/dev/null
 fi
 
-~/.config/hyprpanel/bin/hyprpanel-patched &
+# Rotate diagnostic logs if they exceed 5MB (keep last segment as .1).
+for f in /tmp/hyprpanel-diag.log /tmp/hyprpanel-stderr.log; do
+    if [[ -f "$f" && $(stat -c%s "$f" 2>/dev/null) -gt 5242880 ]]; then
+        mv "$f" "$f.1"
+    fi
+done
+
+~/.config/hyprpanel/bin/hyprpanel-patched >> /tmp/hyprpanel-stderr.log 2>&1 &

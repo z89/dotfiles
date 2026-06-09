@@ -188,6 +188,142 @@ with open('$JS', 'w') as f:
     f.write(content)
 "
 
+# --- DIAGNOSTIC INJECTION (heartbeat + command tracing) ---
+# Adds three things to the bundle:
+#   1. globalThis.__hpLog(line)  — append-mode log writer to /tmp/hyprpanel-diag.log
+#   2. vfunc_request wrapper     — logs CMD_START / CMD_END with elapsed ms per CLI call
+#   3. GLib heartbeat timer      — writes "HEARTBEAT <ts>" every 2s while main loop is alive
+# Remove this whole block to disable. Log rotation is handled by hyprpanel-launch.
+python3 -c "
+with open('$JS', 'r') as f:
+    content = f.read()
+
+old_vfunc = '''    vfunc_request(msg, conn) {
+      if (typeof this.requestHandler === \"function\") {
+        this.requestHandler(msg, (response) => {
+          IO.write_sock(
+            conn,
+            String(response),
+            (_, res) => IO.write_sock_finish(res)
+          );
+        });
+      } else {
+        super.vfunc_request(msg, conn);
+      }
+    }'''
+
+new_vfunc = '''    vfunc_request(msg, conn) {
+      const __hpT0 = Date.now();
+      const __hpCmd = String(msg).slice(0, 80).replace(/\\\\n/g, ' ');
+      if (globalThis.__hpLog) globalThis.__hpLog(\`CMD_START \${__hpCmd}\`);
+      if (typeof this.requestHandler === \"function\") {
+        this.requestHandler(msg, (response) => {
+          if (globalThis.__hpLog) globalThis.__hpLog(\`CMD_END \${Date.now()-__hpT0}ms \${__hpCmd}\`);
+          IO.write_sock(
+            conn,
+            String(response),
+            (_, res) => IO.write_sock_finish(res)
+          );
+        });
+      } else {
+        super.vfunc_request(msg, conn);
+      }
+    }'''
+
+content = content.replace(old_vfunc, new_vfunc, 1)
+with open('$JS', 'w') as f:
+    f.write(content)
+"
+
+# Append heartbeat + logger setup at end of bundle (runs after app_default.start).
+cat >> "$JS" <<'EOF'
+
+// --- HyprPanel diagnostic instrumentation ---
+{
+  const GLib = imports.gi.GLib;
+  const Gio = imports.gi.Gio;
+  const LOG_PATH = "/tmp/hyprpanel-diag.log";
+  try {
+    const f = Gio.File.new_for_path(LOG_PATH);
+    const stream = f.append_to(Gio.FileCreateFlags.NONE, null);
+    globalThis.__hpLog = (line) => {
+      try {
+        const ts = new Date().toISOString();
+        const buf = new TextEncoder().encode(`${ts} ${line}\n`);
+        stream.write_all(buf, null);
+        stream.flush(null);
+      } catch (e) {}
+    };
+    globalThis.__hpLog(`BOOT pid=${GLib.getenv("PID") || ""}`);
+  } catch (e) {
+    globalThis.__hpLog = () => {};
+  }
+  GLib.timeout_add(GLib.PRIORITY_DEFAULT, 2000, () => {
+    try {
+      GLib.file_set_contents("/tmp/hyprpanel-heartbeat", String(GLib.get_real_time()));
+      if (globalThis.__hpLog) globalThis.__hpLog("HEARTBEAT");
+    } catch (e) {}
+    return true;
+  });
+
+  // Wrap themeManager methods so we see when long-running work is happening.
+  // themeManager is declared at module scope earlier in the bundle, so it's
+  // accessible here without globalThis qualification.
+  try {
+    if (typeof themeManager !== "undefined" && themeManager) {
+      const wrap = (name, isAsync) => {
+        const orig = themeManager[name];
+        if (typeof orig !== "function") return;
+        themeManager[name] = function (...args) {
+          const t0 = Date.now();
+          globalThis.__hpLog(`${name}_START`);
+          try {
+            const r = orig.apply(this, args);
+            if (isAsync && r && typeof r.then === "function") {
+              return r.then(
+                (v) => { globalThis.__hpLog(`${name}_END ${Date.now()-t0}ms`); return v; },
+                (e) => { globalThis.__hpLog(`${name}_REJECT ${Date.now()-t0}ms ${e}`); throw e; }
+              );
+            }
+            globalThis.__hpLog(`${name}_END ${Date.now()-t0}ms`);
+            return r;
+          } catch (e) {
+            globalThis.__hpLog(`${name}_THROW ${Date.now()-t0}ms ${e}`);
+            throw e;
+          }
+        };
+      };
+      wrap("applyCss", true);
+      wrap("applyColorOverrides", true);
+      wrap("_compileSass", true);
+      wrap("_applyCss", false);
+    }
+  } catch (e) {
+    globalThis.__hpLog(`THEME_WRAP_ERR ${e}`);
+  }
+
+  // Log uncaught promise rejections. GJS prints these to stderr by default,
+  // but routing through __hpLog timestamps them in the diag log next to the
+  // last successful heartbeat — far easier to correlate with a freeze.
+  try {
+    const Gjs = imports.system;
+    if (Gjs && typeof Gjs.addressOf === "function") {
+      // GJS lacks a documented unhandledrejection event; we attach via the
+      // standard event-target API if exposed, otherwise rely on stderr.
+      if (typeof globalThis.addEventListener === "function") {
+        globalThis.addEventListener("unhandledrejection", (ev) => {
+          try {
+            const r = ev && ev.reason;
+            const msg = r && r.stack ? r.stack : String(r);
+            globalThis.__hpLog(`UNHANDLED_REJECTION ${msg.slice(0, 300)}`);
+          } catch (e) {}
+        });
+      }
+    }
+  } catch (e) {}
+}
+EOF
+
 # Redirect all internal restart/quit commands to the patched launcher.
 # HyprPanel restarts itself via 'hyprpanel -q; hyprpanel' (stock launcher) in:
 #   1. restartCommand option default (line ~4691)
