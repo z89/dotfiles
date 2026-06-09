@@ -39,9 +39,27 @@ def main():
     cmd = (data.get("tool_input", {}) or {}).get("command", "") or ""
     cwd = data.get("cwd") or os.getcwd()
 
+    # Optional git global options that may sit between `git` and the subcommand
+    # (e.g. `git -C <dir> commit`, `git -c k=v commit`, `git --git-dir=… commit`).
+    gitopts = (
+        r"(?:\s+(?:-C\s+\S+|-c\s+\S+|--git-dir(?:=\S+|\s+\S+)|"
+        r"--work-tree(?:=\S+|\s+\S+)|--namespace(?:=\S+|\s+\S+)|"
+        r"--exec-path(?:=\S+)?|--paginate|--no-pager|-p|--bare|"
+        r"--no-replace-objects|--literal-pathspecs|--no-optional-locks|"
+        r"--glob-pathspecs|--noglob-pathspecs|--icase-pathspecs|"
+        r"--no-advice|--no-lazy-fetch))*"
+    )
+
     # Only act on commands that actually run `git commit`.
-    if not re.search(r"(^|&&|\|\||;|`|\$\()\s*git\s+commit\b", cmd):
+    m = re.search(r"(?:^|&&|\|\||;|`|\$\()\s*git" + gitopts + r"\s+commit\b", cmd)
+    if not m:
         allow()
+
+    # If the git invocation uses `-C <dir>`, scan that repo, not the shell cwd.
+    cdir = re.search(r"-C\s+(\S+)", m.group(0))
+    if cdir:
+        p = cdir.group(1)
+        cwd = p if os.path.isabs(p) else os.path.join(cwd, p)
 
     # Deliberate, reviewed override.
     if re.search(r"\bCLAUDE_ALLOW_SECRETS=1\b", cmd):

@@ -242,6 +242,16 @@
           }
         ]
       }
+    ],
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash /home/archie/.claude/hooks/mark-commit-skill.sh"
+          }
+        ]
+      }
     ]
   },
   "enabledPlugins": {

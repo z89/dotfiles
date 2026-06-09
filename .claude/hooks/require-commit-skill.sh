@@ -12,7 +12,11 @@ echo "$COMMAND" | grep -qE '(^|&&|\|\||;|`|\$\()\s*git\s' || exit 0
 # Allow read-only git commands (unless combined with a mutating one below)
 MUTATING='(commit|push|add|reset|checkout|merge|rebase|cherry-pick|tag|stash|rm|mv|restore|switch|pull|fetch|clone|init|remote\s+(add|remove|rename|set-url))'
 
-echo "$COMMAND" | grep -qE "(^|&&|\|\||;|\`|\\\$\()\s*git\s+${MUTATING}\b" || exit 0
+# Optional git global options that may sit between `git` and the subcommand,
+# e.g. `git -C <dir> commit`, `git -c k=v commit`, `git --git-dir=… commit`.
+GITOPTS='(\s+(-C\s+\S+|-c\s+\S+|--git-dir(=\S+|\s+\S+)|--work-tree(=\S+|\s+\S+)|--namespace(=\S+|\s+\S+)|--exec-path(=\S+)?|--paginate|--no-pager|-p|--bare|--no-replace-objects|--literal-pathspecs|--no-optional-locks|--glob-pathspecs|--noglob-pathspecs|--icase-pathspecs|--no-advice|--no-lazy-fetch))*'
+
+echo "$COMMAND" | grep -qE "(^|&&|\|\||;|\`|\\\$\()\s*git${GITOPTS}\s+${MUTATING}\b" || exit 0
 
 # Allow if /commit skill has been loaded in this session
 if [[ -n "$SESSION_ID" && -f "/tmp/claude-commit-skill-${SESSION_ID}" ]]; then
