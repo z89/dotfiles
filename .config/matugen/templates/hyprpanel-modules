@@ -5,13 +5,13 @@
 /* Module background: surface-container from active matugen theme */
 .bar_item_box_visible {
     min-height: 25px;
-    background-color: #2a1c1cbf;
+    background-color: {{colors.surface_container.default.hex}}bf;
     border-radius: 8px;
 }
 
 /* Dropdown panel background: surface-dim from active matugen theme */
 .menu-items {
-    background-color: #1c1010;
+    background-color: {{colors.surface_dim.default.hex}};
 }
 
 .event-top-padding * {
