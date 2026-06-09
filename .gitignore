@@ -17,6 +17,7 @@
 !.zsh-themes/custom-z89.zsh-theme
 !.gitignore
 !README.md
+!assets/
 !.claude/
 !.git-commit-template
 !.gitconfig
