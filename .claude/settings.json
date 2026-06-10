@@ -190,13 +190,41 @@
       "Bash(git lfs *)",
       "Bash(git reset *)",
       "Bash(git commit -q -m ' *)",
-      "Bash(git remote *)"
+      "Bash(git remote *)",
+      "Bash(ls /home/archie/Documents/***REDACTED***-docs/engineering/architecture/ && echo \"---\" && ls /home/archie/Documents/)",
+      "Read(//home/archie/Documents/**)",
+      "Bash(git init *)",
+      "Bash(git -C /home/archie/Documents/Github-Projects/***REDACTED*** log --oneline)",
+      "Bash(git -C /home/archie/Documents/Github-Projects/***REDACTED*** commit -S -m \"init commit\")",
+      "Bash(git -C /home/archie/Documents/Github-Projects/***REDACTED*** log --show-signature -1)",
+      "Bash(gh repo *)",
+      "Bash(git -C /home/archie/Documents/Github-Projects/***REDACTED*** status)",
+      "Bash(go version *)",
+      "Bash(docker --version)",
+      "Bash(docker compose *)",
+      "Bash(go build *)",
+      "Bash(go vet *)",
+      "Bash(go test *)",
+      "Bash(docker info *)",
+      "Bash(systemctl is-active *)",
+      "Bash(gofmt -l .)",
+      "Bash(gofmt -w main.go)",
+      "Bash(docker version *)",
+      "Bash(systemctl is-enabled *)",
+      "Read(//var/run/**)",
+      "Skill(arch)",
+      "Skill(arch:*)",
+      "Read(//usr/lib/docker/**)",
+      "Read(//home/archie/.docker/**)",
+      "Bash(pacman -Q docker docker-compose docker-buildx)",
+      "Bash(pacman -Si docker-compose docker-buildx)"
     ],
     "additionalDirectories": [
       "/home/archie/Documents/Github-Projects/***REDACTED***",
       "/home/archie/Documents/Github-Projects/***REDACTED***/exploits/part_b/seeds",
       "/tmp/exporter",
-      "/tmp"
+      "/tmp",
+      "/home/archie/Documents/Github-Projects/***REDACTED***"
     ]
   },
   "hooks": {
@@ -257,6 +285,5 @@
   "enabledPlugins": {
     "clangd-lsp@claude-plugins-official": true
   },
-  "effortLevel": "xhigh",
   "autoCompactEnabled": false
 }

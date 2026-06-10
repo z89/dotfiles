@@ -51,6 +51,11 @@ typeset -g -A key
 alias vim="nvim"
 alias vlc='QT_QPA_PLATFORM=xcb vlc'
 
+# Directory navigation
+alias ..='cd ..'
+alias ...='cd ../..'
+alias ....='cd ../../..'
+
 # ── Functions ────────────────────────────────────────────────────────────────
 asp() { local p=$(aws configure list-profiles | fzf) && [ -n "$p" ] && export AWS_PROFILE=$p }
 
