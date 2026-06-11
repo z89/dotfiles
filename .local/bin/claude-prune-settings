@@ -1,0 +1,111 @@
+#!/usr/bin/env python3
+"""Relocate project-specific permission rules out of the tracked, public
+~/.claude/settings.json into the untracked ~/.claude/settings.local.json.
+
+Claude Code merges both files, so the rules keep working — they just stop
+accumulating in the file that is committed to the public dotfiles repo.
+
+A rule is "project-specific" if it references a path under ~/Documents
+(excluding the ycombo/hyprlax desktop integrations) or matches a pattern in
+~/.claude/secret-denylist.txt.
+
+Usage:
+  claude-prune-settings            move the rules
+  claude-prune-settings --dry-run  show what would move, change nothing
+"""
+import json
+import os
+import re
+import sys
+
+HOME = os.path.expanduser("~")
+SETTINGS = os.path.join(HOME, ".claude", "settings.json")
+LOCAL = os.path.join(HOME, ".claude", "settings.local.json")
+DENYLIST = os.path.join(HOME, ".claude", "secret-denylist.txt")
+DOCS_PREFIX = os.path.join(HOME, "Documents") + os.sep
+EXCEPTIONS = ("ycombo", "hyprlax")
+
+
+def load_patterns():
+    if not os.path.isfile(DENYLIST):
+        return []
+    out = []
+    with open(DENYLIST) as fh:
+        for s in fh:
+            s = s.strip()
+            if s and not s.startswith("#"):
+                out.append(s)
+    return out
+
+
+def is_project(text, patterns):
+    if DOCS_PREFIX in text and not any(x in text for x in EXCEPTIONS):
+        return True
+    for p in patterns:
+        try:
+            if re.search(p, text, re.IGNORECASE):
+                return True
+        except re.error:
+            if p.lower() in text.lower():
+                return True
+    return False
+
+
+def load(path, default):
+    if not os.path.isfile(path):
+        return json.loads(json.dumps(default))
+    with open(path) as fh:
+        return json.load(fh)
+
+
+def main():
+    dry = "--dry-run" in sys.argv[1:]
+    patterns = load_patterns()
+
+    settings = load(SETTINGS, {})
+    local = load(LOCAL, {"permissions": {"allow": []}})
+
+    s_perm = settings.setdefault("permissions", {})
+    l_perm = local.setdefault("permissions", {})
+
+    moved = {"allow": [], "additionalDirectories": []}
+
+    for key in ("allow", "additionalDirectories"):
+        src = s_perm.get(key, [])
+        if not isinstance(src, list):
+            continue
+        keep, move = [], []
+        for entry in src:
+            (move if is_project(str(entry), patterns) else keep).append(entry)
+        if move:
+            dest = l_perm.setdefault(key, [])
+            for entry in move:
+                if entry not in dest:
+                    dest.append(entry)
+            moved[key] = move
+            s_perm[key] = keep
+
+    total = sum(len(v) for v in moved.values())
+    if total == 0:
+        print("Nothing to prune — settings.json has no project-specific rules.")
+        return
+
+    for key, items in moved.items():
+        for entry in items:
+            print(f"{'[dry-run] ' if dry else ''}move {key}: {entry}")
+
+    if dry:
+        print(f"\n{total} rule(s) would move to {LOCAL}")
+        return
+
+    with open(SETTINGS, "w") as fh:
+        json.dump(settings, fh, indent=2)
+        fh.write("\n")
+    with open(LOCAL, "w") as fh:
+        json.dump(local, fh, indent=2)
+        fh.write("\n")
+    print(f"\nMoved {total} rule(s) to {LOCAL}")
+
+
+if __name__ == "__main__":
+    main()

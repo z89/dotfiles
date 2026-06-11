@@ -158,6 +158,36 @@ def main():
                 findings.append(f"sensitive file: {n} ({label})")
                 break
 
+    # Project-specific paths must never reach this (public) repo. All real
+    # project work lives under ~/Documents; the only intentional exceptions are
+    # the ycombo/hyprlax desktop integrations referenced from the hypr config.
+    docs_prefix = os.path.expanduser("~/Documents/")
+    proj_exceptions = ("ycombo", "hyprlax")
+    for ln in added.splitlines():
+        if docs_prefix in ln and not any(x in ln for x in proj_exceptions):
+            findings.append("project path under ~/Documents in a tracked file")
+            break
+
+    # Extra keyword/regex denylist, kept OUT of the tracked repo so the terms
+    # themselves never leak (~/.claude/secret-denylist.txt; one pattern per
+    # line, '#' for comments, matched case-insensitively against additions).
+    denylist = os.path.expanduser("~/.claude/secret-denylist.txt")
+    if os.path.isfile(denylist):
+        try:
+            with open(denylist) as fh:
+                patterns = [s.strip() for s in fh
+                            if s.strip() and not s.lstrip().startswith("#")]
+        except Exception:
+            patterns = []
+        for p in patterns:
+            try:
+                hit = re.search(p, added, re.IGNORECASE)
+            except re.error:
+                hit = p.lower() in added.lower()
+            if hit:
+                findings.append(f"denylisted term ({p}) from secret-denylist.txt")
+                break
+
     if findings:
         uniq = []
         for f in findings:

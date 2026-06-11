@@ -35,6 +35,7 @@
 .local/bin/*
 !.local/bin/setup-spicetify
 !.local/bin/setup-betterdiscord
+!.local/bin/claude-prune-settings
 !.local/share/
 .local/share/*
 !.local/share/nautilus-python/

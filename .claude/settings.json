@@ -121,7 +121,8 @@
       "WebSearch",
       "WebFetch(domain:aws.amazon.com)",
       "Bash(exit 1)",
-      "Bash(unset AWS_PROFILE)"
+      "Bash(unset AWS_PROFILE)",
+      "Bash(export AWS_PAGER=\"\")"
     ],
     "additionalDirectories": [
       "/tmp/exporter",
