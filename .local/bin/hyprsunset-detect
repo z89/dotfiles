@@ -1,0 +1,50 @@
+#!/bin/bash
+# Prints 1 if it is currently night, 0 if day.
+# Derives coordinates from the system timezone, falling back to a 6pm-6am rule.
+
+get_coords_from_tz() {
+    local tz
+    tz=$(timedatectl show --property=Timezone --value 2>/dev/null)
+
+    python3 -c "
+tz_coords = {
+    'Australia/Brisbane': ('27.47S', '153.03E'),
+    'Australia/Sydney': ('33.87S', '151.21E'),
+    'Australia/Melbourne': ('37.81S', '144.96E'),
+    'Australia/Perth': ('31.95S', '115.86E'),
+    'Australia/Adelaide': ('34.93S', '138.60E'),
+    'Australia/Darwin': ('12.46S', '130.84E'),
+    'Australia/Hobart': ('42.88S', '147.33E'),
+    'Australia/Lord_Howe': ('31.55S', '159.08E'),
+    'Pacific/Auckland': ('36.85S', '174.76E'),
+    'America/New_York': ('40.71N', '74.01W'),
+    'America/Chicago': ('41.88N', '87.63W'),
+    'America/Denver': ('39.74N', '104.98W'),
+    'America/Los_Angeles': ('34.05N', '118.24W'),
+    'Europe/London': ('51.51N', '0.13W'),
+    'Europe/Berlin': ('52.52N', '13.40E'),
+    'Europe/Paris': ('48.86N', '2.35E'),
+    'Asia/Tokyo': ('35.68N', '139.69E'),
+    'Asia/Singapore': ('1.35N', '103.82E'),
+}
+coords = tz_coords.get('$tz')
+if coords:
+    print(f'{coords[0]} {coords[1]}')
+else:
+    exit(1)
+"
+}
+
+coords=$(get_coords_from_tz)
+if [ -z "$coords" ]; then
+    # Fallback: treat 6pm-6am as night
+    hour=$(date +%H)
+    if [ "$hour" -ge 18 ] || [ "$hour" -lt 6 ]; then
+        echo 1
+    else
+        echo 0
+    fi
+else
+    sunwait poll $coords > /dev/null 2>&1
+    [ "$?" -eq 3 ] && echo 1 || echo 0
+fi

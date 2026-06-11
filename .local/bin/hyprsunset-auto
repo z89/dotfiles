@@ -1,0 +1,32 @@
+#!/bin/bash
+# Auto night-light using hyprsunset + sunwait, driven by hyprsunset-auto.timer.
+#
+# Acts ONLY when the day/night period actually changes (sunrise/sunset). Within
+# a period it never re-enforces, so a manual toggle by ANY method — the
+# hyprpanel button, the CLI, a keybind — sticks until the next real transition,
+# after which automation resumes. No override file or wrapper is needed; this
+# works regardless of how hyprsunset was toggled.
+
+TEMP=5000
+STATE_FILE="${XDG_RUNTIME_DIR:-/tmp}/hyprsunset-auto-state"
+SCRIPT_DIR="$(cd "$(dirname "$(readlink -f "$0")")" && pwd)"
+
+is_night=$("$SCRIPT_DIR/hyprsunset-detect")
+
+last=""
+[ -f "$STATE_FILE" ] && last=$(cat "$STATE_FILE" 2>/dev/null)
+
+# Same period as the last time we applied -> respect whatever state the user
+# (or the hyprpanel button) currently has it in. Do nothing.
+[ "$last" = "$is_night" ] && exit 0
+
+# Period changed (or first run this session): enforce the automatic state.
+if [ "$is_night" -eq 1 ]; then
+    if ! pgrep -x hyprsunset > /dev/null; then
+        nohup hyprsunset -t "$TEMP" > /dev/null 2>&1 &
+    fi
+else
+    pkill -x hyprsunset 2>/dev/null
+fi
+
+echo "$is_night" > "$STATE_FILE"
