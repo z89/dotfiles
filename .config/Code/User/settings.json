@@ -94,4 +94,5 @@
   },
   "hediet.vscode-drawio.resizeImages": null,
   "hediet.vscode-drawio.appearance": "dark",
+  "workbench.secondarySideBar.defaultVisibility": "hidden",
 }

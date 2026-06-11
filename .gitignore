@@ -35,4 +35,11 @@
 .local/bin/*
 !.local/bin/setup-spicetify
 !.local/bin/setup-betterdiscord
+!.local/share/
+.local/share/*
+!.local/share/nautilus-python/
+.local/share/nautilus-python/*
+!.local/share/nautilus-python/extensions/
+.local/share/nautilus-python/extensions/*
+!.local/share/nautilus-python/extensions/open-in-terminal.py
 !.config/notion-flags.conf
