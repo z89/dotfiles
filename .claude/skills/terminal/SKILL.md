@@ -160,15 +160,9 @@ Profile aliases (region is embedded in alias string, not pulled from `$region`):
 ```toml
 [aws.profile_aliases]
 default = ""
-***REDACTED*** = "***REDACTED*** (***REDACTED***)"
-***REDACTED*** = "***REDACTED*** (***REDACTED***)"
-***REDACTED*** = "***REDACTED*** (***REDACTED***)"
-***REDACTED*** = "***REDACTED*** (***REDACTED***)"
-***REDACTED*** = "***REDACTED*** (***REDACTED***)"
-***REDACTED*** = "***REDACTED*** (***REDACTED***)"
-***REDACTED*** = "***REDACTED*** (***REDACTED***)"
-***REDACTED*** = "***REDACTED*** (***REDACTED***)"
-***REDACTED*** = "***REDACTED*** (***REDACTED***)"
+work-dev = "work-dev (us-east-1)"
+work-staging = "work-staging (us-east-1)"
+work-prod = "work-prod (us-east-1)"
 ```
 
 ### Icons / Nerd Font symbols
