@@ -73,7 +73,6 @@
   "[java]": {
     "editor.defaultFormatter": "redhat.java",
   },
-  "jdk.telemetry.enabled": false,
   "terminal.integrated.suggest.enabled": false,
   "claudeCode.preferredLocation": "panel",
   "terminal.integrated.initialHint": false,
@@ -95,4 +94,14 @@
   "hediet.vscode-drawio.resizeImages": null,
   "hediet.vscode-drawio.appearance": "dark",
   "workbench.secondarySideBar.defaultVisibility": "hidden",
+  "dart.flutterSdkPath": "/home/archie/Downloads/flutter",
+  "jdk.telemetry.enabled": false,
+  "yaml.disableSchemaDetection": [
+    "**/.github/workflows/*.yml",
+    "**/.github/workflows/*.yaml",
+    "**/.gitea/workflows/*.yml",
+    "**/.gitea/workflows/*.yaml",
+    "**/.forgejo/workflows/*.yml",
+    "**/.forgejo/workflows/*.yaml",
+  ],
 }

@@ -179,7 +179,29 @@ def main():
                             if s.strip() and not s.lstrip().startswith("#")]
         except Exception:
             patterns = []
+        # A repo may exempt specific denylist patterns it legitimately contains, by
+        # listing them in .claude/secret-scan-allow.txt. The denylist exists to stop
+        # work-internal terms reaching the PUBLIC dotfiles repo; inside the private repo
+        # those same terms are the module path and appear on every line, so without
+        # this every commit needs CLAUDE_ALLOW_SECRETS=1 — which trains the habit of
+        # overriding the scanner, and that is how a real secret eventually walks past it.
+        #
+        # This narrows the keyword denylist ONLY. Private keys, credential patterns and
+        # sensitive files are checked above and cannot be exempted by a repo, so a repo
+        # can never opt out of the checks that actually matter.
+        exempt = []
+        allowfile = os.path.join(cwd, ".claude", "secret-scan-allow.txt")
+        if os.path.isfile(allowfile):
+            try:
+                with open(allowfile) as fh:
+                    exempt = [s.strip() for s in fh
+                              if s.strip() and not s.lstrip().startswith("#")]
+            except Exception:
+                exempt = []
+
         for p in patterns:
+            if p in exempt:
+                continue
             try:
                 hit = re.search(p, added, re.IGNORECASE)
             except re.error:

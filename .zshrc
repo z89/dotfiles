@@ -30,7 +30,7 @@ setopt HIST_IGNORE_SPACE
 autoload -Uz compinit
 compinit
 zstyle ':completion:*' menu select
-zstyle ':completion:*' list-colors "${(s.:.)LS_COLORS}" "ma=48;2;61;50;49"
+zstyle ':completion:*' list-colors "${(s.:.)LS_COLORS}" "ma=48;2;31;32;34"
 
 # ── Options ──────────────────────────────────────────────────────────────────
 unsetopt HIST_VERIFY
@@ -73,3 +73,10 @@ source /usr/share/fzf/completion.zsh
 
 # ── Starship ─────────────────────────────────────────────────────────────────
 eval "$(starship init zsh)"
+
+# ── Android SDK (Flutter dev) ─────────────────────────────────────────────────
+export ANDROID_HOME="$HOME/Android/Sdk"
+export ANDROID_SDK_ROOT="$ANDROID_HOME"
+export PATH="$PATH:$ANDROID_HOME/cmdline-tools/latest/bin:$ANDROID_HOME/platform-tools:$ANDROID_HOME/emulator"
+# Android tooling (sdkmanager/avdmanager) + Gradle need JDK 17, not the system default 26
+export JAVA_HOME="/usr/lib/jvm/java-17-openjdk"
