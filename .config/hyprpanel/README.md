@@ -5,7 +5,7 @@ HyprPanel is launched through a custom wrapper instead of the stock binary.
 
 ## Launch Chain
 
-hyprland.conf `exec-once` calls:
+hyprland.lua `hl.on("hyprland.start", ...)` calls:
 
 1. **`swaync`** — Starts the swaync notification daemon. Must start before HyprPanel so it claims the `org.freedesktop.Notifications` DBus name first.
 
@@ -60,7 +60,7 @@ Patched properties:
 
 3. **Popup tracking disabled** — `trackPopupNotifications(popupNotifications)` is commented out so HyprPanel doesn't show its own popup notifications (swaync handles all popups).
 
-**DBus ownership:** swaync starts before HyprPanel (via `exec-once` ordering in hyprland.conf) and claims `org.freedesktop.Notifications`. HyprPanel's AstalNotifd initializes but doesn't receive notifications since it lost the DBus name race. The notification count is read from swaync's client API instead.
+**DBus ownership:** swaync starts before HyprPanel (via ordering inside the `hyprland.start` handler in hyprland.lua) and claims `org.freedesktop.Notifications`. HyprPanel's AstalNotifd initializes but doesn't receive notifications since it lost the DBus name race. The notification count is read from swaync's client API instead.
 
 ### 5. CSS flash fix (_applyCss reset parameter)
 

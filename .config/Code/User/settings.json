@@ -104,4 +104,5 @@
     "**/.forgejo/workflows/*.yml",
     "**/.forgejo/workflows/*.yaml",
   ],
+  "chatgpt.followUpQueueMode": "steer",
 }

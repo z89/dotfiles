@@ -65,6 +65,30 @@ with open('$JS', 'w') as f:
     f.write(content)
 "
 
+# Workspace switching under a Lua Hyprland config.
+# AstalHyprland's dispatch() sends the raw IPC line `dispatch workspace <n>`.
+# Since Hyprland 0.55 the config is Lua, and the IPC `dispatch` command now
+# evaluates its argument as a Lua expression — so `dispatch workspace 2` fails
+# with: return hl.dispatch(workspace 2) — ')' expected near '2'.
+# Route the two call sites (workspace button click, workspace scroll) through
+# message() + eval instead, which the Lua parser accepts.
+# Matched by regex, not literal name: the minified service identifiers
+# (hyprlandService9 / hyprlandService12) are rebuilt on package updates.
+#
+# Applied ONLY when the running compositor actually uses the lua config
+# manager, because the reverse is also true: `eval` is rejected under the
+# legacy hyprlang parser ("eval is only supported with the lua config
+# manager"), where the stock dispatch() is the working form. The parser is
+# chosen at compositor startup, so during a .conf -> .lua migration a session
+# can still be legacy while hyprland.lua already exists on disk — probe the
+# live instance rather than testing for the file.
+# Note `hyprctl eval` exits 0 in both cases, so match on output, not $?.
+# Fail-safe: anything other than a clean "ok" (including hyprctl being
+# unreachable at launch) leaves the stock dispatch() untouched.
+if [ "$(hyprctl eval 'return 1' 2>/dev/null | head -1)" = "ok" ]; then
+    sed -i -E 's/([A-Za-z_$][A-Za-z0-9_$]*)\.dispatch\("workspace", ([A-Za-z0-9_.]+)\.toString\(\)\)/\1.message(`eval hl.dispatch(hl.dsp.focus({workspace=${\2}}))`)/g' "$JS"
+fi
+
 # Apply valign patches
 sed -i 's/className: "box-left", hexpand: true/className: "box-left", hexpand: true, valign: Gtk4.Align.CENTER/' "$JS"
 sed -i 's/className: "box-center", halign: Gtk4.Align.CENTER/className: "box-center", halign: Gtk4.Align.CENTER, valign: Gtk4.Align.CENTER/' "$JS"

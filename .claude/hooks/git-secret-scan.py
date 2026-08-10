@@ -1,16 +1,20 @@
 #!/usr/bin/env python3
 """PreToolUse hook for the Bash tool.
 
-Scans the content a `git commit` is about to record and blocks the commit if it
-contains likely secrets/credentials or sensitive files. Runs regardless of
-whether the /commit skill was loaded, so it is a backstop the model cannot skip.
+Scans the content a `git commit` is about to record and every outgoing commit a
+`git push` is about to publish. Blocks likely secrets, credentials, and
+sensitive files regardless of whether the commit skill was loaded.
 
-Escape hatch: prefix the command with CLAUDE_ALLOW_SECRETS=1 to bypass (use only
-for a deliberate, reviewed commit).
+There is deliberately NO escape hatch. An override flag is the thing an agent
+reaches for when a commit is refused, and a scanner that can be waved past is
+not a scanner. A genuine false positive is resolved by adding the offending
+term to that repository's .claude/secret-scan-allow.txt, which is reviewable
+and scoped, unlike a one-off bypass nobody sees again.
 """
 import json
 import os
 import re
+import shlex
 import subprocess
 import sys
 
@@ -28,6 +32,103 @@ def deny(reason):
         }
     }))
     sys.exit(0)
+
+
+def has_shell_composition(command):
+    """Return whether a git commit command contains unquoted shell control."""
+    quote = None
+    escaped = False
+    for index, char in enumerate(command):
+        if escaped:
+            escaped = False
+            continue
+        if char == "\\" and quote != "'":
+            escaped = True
+            continue
+        if quote:
+            if char == quote:
+                quote = None
+            elif quote == '"' and char == "`":
+                return True
+            elif quote == '"' and char == "$" and command[index:index + 2] == "$(":
+                return True
+            continue
+        if char in ("'", '"'):
+            quote = char
+        elif char in "\r\n;|&<>`":
+            return True
+        elif char == "$" and command[index:index + 2] == "$(":
+            return True
+        elif char in "()":
+            return True
+    return False
+
+
+def read_message_file(path, cwd):
+    """Return the contents of a `-F <file>` commit message, or None if unreadable."""
+    if path == "-":
+        return None  # message arrives on stdin; nothing to read here
+    full = path if os.path.isabs(path) else os.path.join(cwd, path)
+    try:
+        with open(full, encoding="utf-8", errors="replace") as fh:
+            return fh.read()
+    except Exception:
+        return None
+
+
+def commit_message(command, start, cwd):
+    """Return the message text this commit would record, or None if unparseable.
+
+    ONLY the message is returned -- never the whole command line.
+
+    The message belongs in the scan: a credential pasted into a commit message is
+    published exactly as surely as one inside a file. But scanning the raw command
+    string swept in every flag value too, so an ordinary invocation like
+
+        git -C ~/Documents/<project> commit -S -F msg.txt
+
+    was refused by the "project path under ~/Documents" rule below -- matched on
+    its own `-C` argument, with nothing wrong in the staged content at all. A guard
+    with no bypass cannot afford false positives, so the message is now extracted
+    properly instead.
+
+    Reading `-F` files is also a genuine gain: their contents were previously never
+    scanned, because only the path appeared in the command.
+    """
+    try:
+        words = shlex.split(command[start:])
+    except ValueError:
+        return None
+
+    parts = []
+    index = 0
+    while index < len(words):
+        word = words[index]
+        takes_value = word in ("-m", "--message", "-F", "--file")
+        if takes_value:
+            if index + 1 >= len(words):
+                return None
+            value = words[index + 1]
+            parts.append(value if word in ("-m", "--message")
+                         else read_message_file(value, cwd))
+            index += 2
+            continue
+        for prefix, is_file in (("--message=", False), ("--file=", True)):
+            if word.startswith(prefix):
+                value = word[len(prefix):]
+                parts.append(read_message_file(value, cwd) if is_file else value)
+                break
+        else:
+            # Attached short forms: -mMESSAGE, -Fmsg.txt
+            if len(word) > 2 and word[0] == "-" and word[1] in "mF":
+                value = word[2:]
+                parts.append(value if word[1] == "m"
+                             else read_message_file(value, cwd))
+        index += 1
+
+    # An amend or an editor-driven commit exposes no message here. That is fine:
+    # an amended message was already scanned when it was first written.
+    return "\n".join(p for p in parts if p)
 
 
 def main():
@@ -50,10 +151,43 @@ def main():
         r"--no-advice|--no-lazy-fetch))*"
     )
 
-    # Only act on commands that actually run `git commit`.
-    m = re.search(r"(?:^|&&|\|\||;|`|\$\()\s*git" + gitopts + r"\s+commit\b", cmd)
-    if not m:
+    # Find a commit or push anywhere first so composed tool calls cannot hide
+    # it. The operation is accepted only when it is the sole shell command. The
+    # scanner runs before Bash, so allowing `git add` (or a file write) before
+    # `git commit` in one payload would inspect the old index and miss what the
+    # earlier command is about to stage.
+    git_binary = r"(?:git|/(?:usr/)?bin/git)"
+    any_operation = re.search(
+        r"(?:^|&&|\|\||\||&|;|`|\$\(|\(|\{)\s*" + git_binary
+        + gitopts + r"\s+(?:commit|push)\b",
+        cmd,
+        re.MULTILINE,
+    )
+    socket = r"(?:/run/user/1000/ssh-agent\.socket|"
+    socket += r"\"/run/user/1000/ssh-agent\.socket\"|"
+    socket += r"'/run/user/1000/ssh-agent\.socket')"
+    signing_prefix = (
+        r"(?:SSH_AUTH_SOCK=" + socket + r"\s+|"
+        r"export\s+SSH_AUTH_SOCK=" + socket + r"\s*&&\s*)?"
+    )
+    standalone = re.match(
+        r"^\s*" + signing_prefix + r"(?P<git>" + git_binary + r")" + gitopts
+        + r"\s+(?P<operation>commit|push)\b",
+        cmd,
+    )
+
+    if not any_operation and not standalone:
         allow()
+    if not standalone or has_shell_composition(cmd[standalone.start("git"):].strip()):
+        deny(
+            "Git operation blocked by git-secret-scan: run `git commit` or `git push` "
+            "as a standalone Bash tool call. This lets the scanner inspect the exact "
+            "content being committed or pushed. Do not combine it with other commands, pipes, "
+            "redirections, command substitutions, or backticks."
+        )
+
+    m = standalone
+    operation = m.group("operation")
 
     # If the git invocation uses `-C <dir>`, scan that repo, not the shell cwd.
     cdir = re.search(r"-C\s+(\S+)", m.group(0))
@@ -61,33 +195,98 @@ def main():
         p = cdir.group(1)
         cwd = p if os.path.isabs(p) else os.path.join(cwd, p)
 
-    # Deliberate, reviewed override.
-    if re.search(r"\bCLAUDE_ALLOW_SECRETS=1\b", cmd):
-        allow()
-
     def git(args):
         try:
             r = subprocess.run(
                 ["git"] + args, cwd=cwd,
                 capture_output=True, text=True, timeout=15,
             )
-            return r.stdout
+            return r.returncode, r.stdout
         except Exception:
-            return ""
+            return 1, ""
 
-    diff = git(["diff", "--cached"])
-    names = [n for n in git(["diff", "--cached", "--name-only"]).splitlines() if n]
+    if operation == "commit":
+        metadata = commit_message(cmd, m.start("git"), cwd)
+        if metadata is None:
+            deny(
+                "Commit blocked by git-secret-scan: unable to parse the commit "
+                "command safely, so the message could not be scanned. Pass the "
+                "message with `-m` or `-F <file>`."
+            )
+        _, diff = git(["diff", "--cached"])
+        _, name_output = git(["diff", "--cached", "--name-only"])
+        names = [n for n in name_output.splitlines() if n]
 
-    # `git commit -a/--all` also sweeps tracked-but-unstaged modifications.
-    if re.search(r"\bcommit\b[^\n]*?(?:\s-(?!-)\w*a\w*\b|\s--all\b)", cmd):
-        diff += "\n" + git(["diff"])
-        names += [n for n in git(["diff", "--name-only"]).splitlines() if n]
+        # `git commit -a/--all` also sweeps tracked-but-unstaged modifications.
+        if re.search(r"\bcommit\b[^\n]*?(?:\s-(?!-)\w*a\w*\b|\s--all\b)", cmd):
+            _, unstaged_diff = git(["diff"])
+            _, unstaged_names = git(["diff", "--name-only"])
+            diff += "\n" + unstaged_diff
+            names += [n for n in unstaged_names.splitlines() if n]
+    else:
+        try:
+            words = shlex.split(cmd[m.start("git"):])
+        except ValueError:
+            deny("Push blocked by git-secret-scan: unable to parse the git push command safely.")
+
+        push_index = words.index("push")
+        push_args = words[push_index + 1:]
+        targets = []
+        positional = []
+        value_options = {"--receive-pack", "--exec", "--repo", "--push-option", "-o"}
+        skip_value = False
+        for word in push_args:
+            if skip_value:
+                skip_value = False
+                continue
+            if word in value_options:
+                skip_value = True
+                continue
+            if word.startswith("-"):
+                continue
+            positional.append(word)
+
+        refspecs = positional[1:] if positional else []
+        if "--mirror" in push_args:
+            targets = ["--all"]
+        else:
+            if "--all" in push_args:
+                targets.append("--branches")
+            if "--tags" in push_args:
+                targets.append("--tags")
+            for refspec in refspecs:
+                source = refspec.split(":", 1)[0]
+                if not source:  # Deleting a remote ref sends no local content.
+                    continue
+                if "*" in source:
+                    deny(
+                        "Push blocked by git-secret-scan: wildcard refspecs cannot be "
+                        "scanned safely. Push explicit branches or tags instead."
+                    )
+                targets.append(source.lstrip("+"))
+            if not targets:
+                targets = ["HEAD"]
+
+        # Scan every commit that is reachable from the pushed refs but from no
+        # locally known remote-tracking ref. This catches secrets added and then
+        # removed in an earlier outgoing commit, not merely the final tree diff.
+        rev_args = targets + ["--not", "--remotes"]
+        diff_rc, diff = git(["log", "--format=", "--patch", "--no-ext-diff"] + rev_args)
+        message_rc, metadata = git(["log", "--format=%B"] + rev_args)
+        names_rc, name_output = git(["log", "--format=", "--name-only"] + rev_args)
+        if diff_rc or message_rc or names_rc:
+            deny(
+                "Push blocked by git-secret-scan: unable to determine and scan the "
+                "outgoing commits. Push explicit local branches or tags after fixing "
+                "the Git ref or repository error."
+            )
+        names = [n for n in name_output.splitlines() if n]
 
     if not diff and not names:
         allow()
 
     # Only inspect added lines (ignore context and removals).
-    added = "\n".join(
+    added = metadata + "\n" + "\n".join(
         ln[1:] for ln in diff.splitlines()
         if ln.startswith("+") and not ln.startswith("+++")
     )
@@ -183,8 +382,8 @@ def main():
         # listing them in .claude/secret-scan-allow.txt. The denylist exists to stop
         # work-internal terms reaching the PUBLIC dotfiles repo; inside the private repo
         # those same terms are the module path and appear on every line, so without
-        # this every commit needs CLAUDE_ALLOW_SECRETS=1 — which trains the habit of
-        # overriding the scanner, and that is how a real secret eventually walks past it.
+        # this the scanner would refuse every commit in that repo — and a guard that
+        # always fires is a guard people find a way around.
         #
         # This narrows the keyword denylist ONLY. Private keys, credential patterns and
         # sensitive files are checked above and cannot be exempted by a repo, so a repo
@@ -217,11 +416,13 @@ def main():
                 uniq.append(f)
         bullet = "\n".join(f"  - {f}" for f in uniq)
         deny(
-            "Commit blocked by git-secret-scan: the staged change appears to "
+            f"{operation.capitalize()} blocked by git-secret-scan: the change appears to "
             "contain secrets or sensitive files:\n" + bullet +
-            "\n\nRemove the secret / unstage the file (and add it to .gitignore), "
-            "then retry. If this is a false positive and the content is safe to "
-            "commit, re-run the exact command prefixed with CLAUDE_ALLOW_SECRETS=1."
+            "\n\nRemove the secret and unstage the file, or remove it from the "
+            "outgoing Git history before retrying. Add sensitive files to .gitignore. "
+            "If this is a false positive, add the offending term to "
+            "this repository's .claude/secret-scan-allow.txt -- that is reviewable "
+            "and scoped. There is no bypass flag."
         )
 
     allow()

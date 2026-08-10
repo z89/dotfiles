@@ -30,7 +30,7 @@ The stock binary skips all JS patches (modules stretch to bar height, menus misp
 ## Launch Chain
 
 ```
-hyprland.conf exec-once
+hyprland.lua  hl.on("hyprland.start", ...)
   └─ ~/.config/hyprpanel/bin/hyprpanel-watchdog   (owns lifecycle; sole parent)
        └─ ~/.config/hyprpanel/bin/hyprpanel-launch  (called on start + every restart)
             └─ ~/.config/hyprpanel/bin/hyprpanel-patched
@@ -141,7 +141,7 @@ A Python engine that drives all color targets through one synchronized animation
 | Target | Method | FPS | Description |
 |--------|--------|-----|-------------|
 | `kitty` | Persistent Unix socket, kitty remote protocol | 60 | Terminal palette colors |
-| `hyprland` | Persistent IPC socket, `[[BATCH]]` commands | 60 | Border/shadow/glow colors |
+| `hyprland` | Persistent IPC socket, one `eval hl.config({...})` per frame | 60 | Border/shadow/glow colors |
 | `hyprpanel` | CSS string splice + persistent `CssProvider` reload via Astal socket | 30 | All 400+ theme colors in compiled CSS |
 | `gtk3` | CSS offset splice, write to `~/.config/gtk-3.0/gtk.css` | 30 | Blueman and other GTK3 apps |
 | `nautilus` | CSS offset splice, write to `~/.config/gtk-4.0/gtk.css` | 30 | Nautilus via mtime-polling extension |
@@ -154,7 +154,7 @@ All targets share one frame loop and use the same easing curve so colors transit
 - **Pre-flattened RGB arrays:** Old/new colors separated into parallel `old_r[]`, `old_g[]`, `old_b[]`, `new_r[]`, `new_g[]`, `new_b[]` lists. Per-frame interpolation uses direct index access, no tuple allocation.
 - **Hex lookup table:** `_HEX = [f"{i:02x}" for i in range(256)]` eliminates per-channel f-string formatting.
 - **Persistent socket connections:** Kitty, hyprland, and spotify open connections once in `*_init()` and reuse across all frames. Eliminates connect/close overhead per frame.
-- **Hyprland batch IPC:** Direct Unix socket with `[[BATCH]]` prefix instead of spawning `hyprctl` processes (was 120 process spawns/sec).
+- **Hyprland eval IPC:** Direct Unix socket instead of spawning `hyprctl` processes (was 120 process spawns/sec). A Lua config rejects `keyword` outright ("keyword can't work with non-legacy parsers. Use eval."), so all three colors go in a single `eval hl.config({...})` — one round trip per frame, replacing the old three-command `[[BATCH]]`.
 - **CSS splice maps:** GTK3/nautilus targets build byte-offset maps at init (`_css_build_splice_map`), then per-frame use string slicing instead of regex.
 - **HyprPanel CSS splice:** Reads compiled CSS once at init, does string `.replace()` of old hex values with interpolated values per frame, writes to `/tmp/hyprpanel/main.css`, triggers `reloadCss` which reloads a persistent `CssProvider` (~17ms total vs 200ms for full `applyTheme`). Uses a bridge function to map theme keys to unique old hex values for CSS replacement.
 
@@ -222,7 +222,7 @@ GFileMonitor was tried but events don't reliably dispatch inside nautilus-python
 | `hyprpanel-colors` | `~/.config/hyprpanel/matugen-colors.scss` | SCSS variables for HyprPanel |
 | `hyprpanel-modules` | `~/.config/hyprpanel/modules.scss` | Custom SCSS overrides |
 | `kitty-colors` | `~/.config/kitty/colors.conf` | Live path (kitty watches it) |
-| `hyprland-colors` | `~/.cache/matugen/hyprland-colors.conf` | Cache path, copied to live after fade |
+| `hyprland-colors` | `~/.cache/matugen/hyprland-colors.lua` | Cache path, copied to `~/.config/hypr/colors.lua` after fade |
 | `gtk3-colors` | `~/.cache/matugen/gtk3-colors.css` | Cache path, copied to live after fade |
 | `gtk4-colors` | `~/.cache/matugen/gtk4-colors.css` | Cache path, copied to live after fade |
 | `spicetify-colors` | `~/.config/spicetify/Themes/matugen/color.ini` | |
@@ -271,7 +271,7 @@ Generated to `~/.config/hyprpanel/matugen-colors.scss` on every theme switch. Co
 | Socket | Purpose |
 |--------|---------|
 | `/tmp/kitty-*` | Kitty remote control (persistent, reused across frames) |
-| `/run/user/1000/hypr/$HYPRLAND_INSTANCE_SIGNATURE/.socket.sock` | Hyprland IPC (persistent, `[[BATCH]]` commands) |
+| `/run/user/1000/hypr/$HYPRLAND_INSTANCE_SIGNATURE/.socket.sock` | Hyprland IPC (persistent, `eval` commands) |
 | `/run/user/1000/astal/hyprpanel.sock` | Astal/HyprPanel socket (new connection per frame for `reloadCss`) |
 | `localhost:9222` | Spotify CDP WebSocket (persistent, `Runtime.evaluate`) |
 | `localhost:9223` | Notion CDP (used by theme-switch, not color-fade) |

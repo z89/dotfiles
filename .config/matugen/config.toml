@@ -3,7 +3,7 @@ color_scheme = "dark"
 
 [templates.hyprland-colors]
 input_path = "~/.config/matugen/templates/hyprland-colors"
-output_path = "~/.cache/matugen/hyprland-colors.conf"
+output_path = "~/.cache/matugen/hyprland-colors.lua"
 
 [templates.kitty-colors]
 input_path = "~/.config/matugen/templates/kitty-colors"

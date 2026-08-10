@@ -1,7 +1,7 @@
 #!/bin/bash
 # Reload-safe HyprPanel launcher.
 # Kills any running instance before starting a fresh patched one.
-# Called by hyprland.conf via 'exec =' so it runs on every reload.
+# Called via hyprland.lua's hl.on("hyprland.start", ...) handler.
 # Two-stage kill: SIGTERM gives Astal a chance to release the D-Bus name cleanly,
 # then SIGKILL guarantees death even if the main loop is frozen and the graceful
 # shutdown handler never runs.

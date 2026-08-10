@@ -78,7 +78,6 @@
       "Bash(command -v latexmk pdflatex)",
       "Bash(command -v pdftotext)",
       "Bash(aws sts *)",
-      "Bash(aws configure *)",
       "Bash(aws s3 *)",
       "Bash(aws route53 *)",
       "Bash(aws ec2 *)",
@@ -116,7 +115,7 @@
       "Bash(unset AWS_PROFILE)",
       "Bash(export AWS_PAGER=\"\")",
       "Bash(grep -v '/.git/')",
-      "Bash(echo \"CLEAN \u2014 no dangling links\")",
+      "Bash(echo \"CLEAN — no dangling links\")",
       "Bash(echo \"\")",
       "Bash(echo \"=== git status after cleanup ===\")",
       "Bash(echo \"=== ssh key check ===\")",
@@ -205,7 +204,6 @@
       "Bash(awk '/^=====/{s=$0; next} NF{print s\" | \"$0}' /tmp/postdestroy.txt)",
       "Bash(echo \"--- diff stat ---\")",
       "Bash(echo \"=== staged ===\")",
-      "Bash(CLAUDE_ALLOW_SECRETS=1 git commit -m ' *)",
       "Bash(echo \"\\(fmt exit: $?\\)\")",
       "Bash(awk '/^variable/{name=$2; hasdef=0} /default/{hasdef=1} /^}/{if\\(name && !hasdef\\) print name; name=\"\"}' variables.tf)",
       "WebFetch(domain:docs.timeplus.com)",
@@ -252,7 +250,7 @@
       "WebFetch(domain:instances.vantage.sh)",
       "Bash(echo \"--- dev validate exit $? ---\")",
       "Bash(sed -i 's/Aurora WAL/RDS Postgres WAL/g' docs/features/geofences.md docs/features/custom_alerts.md docs/features/overview.md docs/architecture/data_flow.md docs/hardening_audit.md)",
-      "Bash(sed -i 's/Postgres \u2192 Aurora WAL/Postgres \u2192 WAL/' docs/features/maintenance.md)",
+      "Bash(sed -i 's/Postgres → Aurora WAL/Postgres → WAL/' docs/features/maintenance.md)",
       "Bash(sed -i 's/Architecture version \\\\*\\\\*v10\\\\.1\\\\*\\\\* \\(single-AZ, HA-ready, ~\\\\$306\\\\/mo/Architecture version **v10.2** \\(single-AZ, HA-ready, ~$299\\\\/mo/' README.md)",
       "Bash(grep -rn '306\\\\.23\\\\|171\\\\.37\\\\|\\\\$306\\\\b\\\\|~\\\\$307\\\\|\\\\$281\\\\|0\\\\.5-ACU\\\\|reader_count' docs/ README.md)",
       "Bash(grep -rn '298\\\\.91\\\\|164\\\\.05\\\\|~\\\\$299\\\\|\\\\$36\\\\.18\\\\|\\\\$273' docs/ README.md)",
@@ -287,7 +285,7 @@
       "Bash(curl -s https://dl.google.com/android/repository/repository2-3.xml)",
       "Read(//dev/**)",
       "Read(//proc/**)",
-      "Bash(echo \"\\(grep exit $?  \u2014 exit 1 = clean\\)\")",
+      "Bash(echo \"\\(grep exit $?  — exit 1 = clean\\)\")",
       "Bash(cat >> *)",
       "Bash(echo \"\\(exit $?\\)\")",
       "Bash(export JAVA_HOME=\"/usr/lib/jvm/java-17-openjdk\")",
@@ -316,7 +314,7 @@
       "Bash(awk '/Future<void> updateMarkers/{f=1} f{print} f&&/^  }/{c++} c==1&&f{exit}' /home/archie/.pub-cache/hosted/pub.dev/google_maps_flutter_platform_interface-2.15.0/lib/src/method_channel/method_channel_google_maps_flutter.dart)",
       "Bash(curl -s --max-time 5 https://checkip.amazonaws.com)",
       "Bash(echo \"current public egress IP: $\\(curl -s --max-time 5 https://checkip.amazonaws.com 2>/dev/null || echo UNKNOWN\\)\")",
-      "Bash(grep -v \"\u2192 \\\\$60.42\\\\|\u2192 60.42\\\\|\\\\$85.58 \\(Nom\")",
+      "Bash(grep -v \"→ \\\\$60.42\\\\|→ 60.42\\\\|\\\\$85.58 \\(Nom\")",
       "Bash(echo \"your current public IP: $\\(curl -s --max-time 5 https://checkip.amazonaws.com\\)\")",
       "Bash(aws pricing *)",
       "Bash(echo \"init exit=$?\")",
@@ -342,33 +340,131 @@
       "Bash(python3 /tmp/cost.py)",
       "Bash(aws scheduler *)",
       "Bash(aws s3api *)",
-      "Bash(grep -rniE \"weekly rebuild|osrm.{0,15}rebuild|eventbridge.{0,20}\\(schedul|rebuild\\)|build box|transient build|osrm.{0,10}refresh\" docs/)"
+      "Bash(grep -rniE \"weekly rebuild|osrm.{0,15}rebuild|eventbridge.{0,20}\\(schedul|rebuild\\)|build box|transient build|osrm.{0,10}refresh\" docs/)",
+      "Bash(go list *)"
+    ],
+    "deny": [
+      "Bash(terraform apply:*)",
+      "Bash(terraform destroy:*)",
+      "Bash(terraform import:*)",
+      "Bash(terraform init:*)",
+      "Bash(terraform get:*)",
+      "Bash(terraform providers lock:*)",
+      "Bash(terraform providers mirror:*)",
+      "Bash(terraform taint:*)",
+      "Bash(terraform untaint:*)",
+      "Bash(terraform refresh:*)",
+      "Bash(terraform test:*)",
+      "Bash(terraform force-unlock:*)",
+      "Bash(terraform login:*)",
+      "Bash(terraform logout:*)",
+      "Bash(terraform state mv:*)",
+      "Bash(terraform state rm:*)",
+      "Bash(terraform state push:*)",
+      "Bash(terraform state replace-provider:*)",
+      "Bash(terraform workspace new:*)",
+      "Bash(terraform workspace delete:*)",
+      "Bash(tofu apply:*)",
+      "Bash(tofu destroy:*)",
+      "Bash(tofu import:*)",
+      "Bash(tofu init:*)",
+      "Bash(tofu get:*)",
+      "Bash(tofu taint:*)",
+      "Bash(tofu untaint:*)",
+      "Bash(tofu refresh:*)",
+      "Bash(tofu test:*)",
+      "Bash(tofu force-unlock:*)",
+      "Bash(tofu login:*)",
+      "Bash(tofu logout:*)",
+      "Bash(tofu state mv:*)",
+      "Bash(tofu state rm:*)",
+      "Bash(tofu state push:*)",
+      "Bash(tofu state replace-provider:*)",
+      "Bash(tofu workspace new:*)",
+      "Bash(tofu workspace delete:*)",
+      "Bash(opentofu apply:*)",
+      "Bash(opentofu destroy:*)",
+      "Bash(opentofu import:*)",
+      "Bash(opentofu init:*)",
+      "Bash(opentofu get:*)",
+      "Bash(opentofu taint:*)",
+      "Bash(opentofu untaint:*)",
+      "Bash(opentofu refresh:*)",
+      "Bash(opentofu test:*)",
+      "Bash(opentofu force-unlock:*)",
+      "Bash(opentofu login:*)",
+      "Bash(opentofu logout:*)",
+      "Bash(opentofu state mv:*)",
+      "Bash(opentofu state rm:*)",
+      "Bash(opentofu state push:*)",
+      "Bash(opentofu state replace-provider:*)",
+      "Bash(opentofu workspace new:*)",
+      "Bash(opentofu workspace delete:*)",
+      "Bash(terragrunt apply:*)",
+      "Bash(terragrunt destroy:*)",
+      "Bash(terragrunt import:*)",
+      "Bash(terragrunt init:*)",
+      "Bash(terragrunt get:*)",
+      "Bash(terragrunt taint:*)",
+      "Bash(terragrunt untaint:*)",
+      "Bash(terragrunt refresh:*)",
+      "Bash(terragrunt test:*)",
+      "Bash(terragrunt force-unlock:*)",
+      "Bash(terragrunt login:*)",
+      "Bash(terragrunt logout:*)",
+      "Bash(terragrunt state mv:*)",
+      "Bash(terragrunt state rm:*)",
+      "Bash(terragrunt state push:*)",
+      "Bash(terragrunt state replace-provider:*)",
+      "Bash(terragrunt workspace new:*)",
+      "Bash(terragrunt workspace delete:*)",
+      "Bash(terragrunt run-all apply:*)",
+      "Bash(terragrunt run-all destroy:*)",
+      "Bash(terragrunt run --all apply:*)",
+      "Bash(terragrunt run --all destroy:*)",
+      "Bash(aws configure:*)",
+      "Bash(aws s3 rb:*)",
+      "Bash(aws s3 rm:*)",
+      "Bash(aws s3 mb:*)",
+      "Bash(aws s3 cp:*)",
+      "Bash(aws s3 mv:*)",
+      "Bash(aws s3 sync:*)",
+      "Bash(aws organizations create-account:*)",
+      "Bash(aws organizations close-account:*)",
+      "Bash(aws organizations leave-organization:*)",
+      "Bash(aws organizations delete-organizational-unit:*)",
+      "Bash(aws organizations move-account:*)",
+      "Bash(aws organizations attach-policy:*)",
+      "Bash(aws organizations detach-policy:*)",
+      "Bash(aws organizations delete-policy:*)",
+      "Bash(aws organizations update-policy:*)",
+      "Bash(aws organizations disable-policy-type:*)",
+      "Bash(aws iam delete-:*)",
+      "Bash(aws iam put-:*)",
+      "Bash(aws iam attach-:*)",
+      "Bash(aws iam detach-:*)",
+      "Bash(aws iam create-access-key:*)",
+      "Bash(aws iam update-:*)",
+      "Bash(aws kms schedule-key-deletion:*)",
+      "Bash(aws kms disable-key:*)",
+      "Bash(aws cloudtrail stop-logging:*)",
+      "Bash(aws cloudtrail delete-trail:*)",
+      "Bash(aws cloudtrail update-trail:*)",
+      "Bash(aws sts assume-role:*)",
+      "Bash(aws sso login:*)",
+      "Bash(aws sso logout:*)",
+      "Bash(aws ecr get-login-password:*)",
+      "Bash(aws eks get-token:*)",
+      "Bash(aws sts get-session-token:*)",
+      "Bash(aws sts get-federation-token:*)"
     ],
     "additionalDirectories": [
       "/tmp/exporter",
       "/tmp",
       "/home/archie"
-    ],
-    "deny": [
-      "Bash(terraform apply:*)",
-      "Bash(terraform destroy:*)",
-      "Bash(terraform force-unlock:*)",
-      "Bash(terraform import:*)",
-      "Bash(terraform init:*)",
-      "Bash(terraform state mv:*)",
-      "Bash(terraform state push:*)",
-      "Bash(terraform state rm:*)",
-      "Bash(terraform taint:*)",
-      "Bash(terraform untaint:*)",
-      "Bash(terraform workspace delete:*)",
-      "Bash(terragrunt apply:*)",
-      "Bash(terragrunt destroy:*)",
-      "Bash(terragrunt run-all destroy:*)",
-      "Bash(tofu apply:*)",
-      "Bash(tofu destroy:*)"
     ]
   },
-  "model": "opus[1m]",
+  "model": "opus",
   "hooks": {
     "PreToolUse": [
       {
@@ -376,19 +472,19 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python3 /home/archie/.claude/hooks/terraform-guard.py"
-          },
-          {
-            "type": "command",
             "command": "python3 /home/archie/.claude/hooks/hyprpanel-guard.py"
           },
           {
             "type": "command",
-            "command": "bash -c 'ZSTACK_DIR=$(dirname $(dirname $(readlink -f ~/.claude/skills/z:build))) && $ZSTACK_DIR/bin/zstack-quality-gate'"
+            "command": "python3 /home/archie/.claude/hooks/terraform-guard.py"
           },
           {
             "type": "command",
-            "command": "bash /home/archie/.claude/hooks/require-commit-skill.sh"
+            "command": "python3 /home/archie/.claude/hooks/aws-guard.py"
+          },
+          {
+            "type": "command",
+            "command": "python3 /home/archie/.claude/hooks/require-commit-skill.py"
           },
           {
             "type": "command",
@@ -412,7 +508,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bash /home/archie/.claude/hooks/mark-commit-skill.sh"
+            "command": "python3 /home/archie/.claude/hooks/mark-commit-skill.py"
           }
         ]
       }
@@ -422,7 +518,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bash /home/archie/.claude/hooks/mark-commit-skill.sh"
+            "command": "python3 /home/archie/.claude/hooks/mark-commit-skill.py"
           }
         ]
       }

@@ -1,201 +1,228 @@
 #!/usr/bin/env python3
-"""PreToolUse guard: no AI session ever runs a state-changing terraform command.
+"""PreToolUse guard: no AI session runs a destructive terraform command.
 
-This exists because a single `terraform destroy` against a production profile
-wipes real infrastructure and there is no undo. The permission allowlist is not
-a sufficient control on its own — it is easy to widen by accident (a `terraform
-destroy *` wildcard once lived in settings.json), and `--dangerously-skip-
-permissions` ignores it entirely. PreToolUse hooks still run in that mode, so
-this file is the backstop that holds when everything else has been bypassed.
+One `terraform destroy` against a live profile deletes real infrastructure and
+there is no undo. The permission deny-list in settings.json states the same rule
+and is the layer that shows up in the permissions UI, but it matches on the
+start of the command string, so `cd infra && terraform destroy` slips past it —
+and `--dangerously-skip-permissions` ignores allow and deny entirely. PreToolUse
+hooks still run in that mode. This file is the layer that holds when the others
+have been bypassed.
 
-Policy is DEFAULT DENY. Every terraform/tofu/terragrunt invocation is blocked
-unless its subcommand is in READ_ONLY below. A subcommand nobody anticipated —
-or a new one added by a future terraform release — is therefore blocked, not
-waved through. Read-only calls that survive are still subject to the normal
-permission prompt; this hook never grants anything, it only takes away.
+WHAT IS BLOCKED
+---------------
+Commands that change infrastructure, rewrite state, or re-point where state
+lives: apply, destroy, import, init, get, taint, untaint, refresh, test,
+force-unlock, login, logout, the mutating halves of `state`, `workspace` and
+`providers`, and any command carrying a flag that removes a safety check
+(-auto-approve, -migrate-state, -force-copy, -reconfigure, -lock=false).
 
-Blocking is unconditional: there is deliberately no environment-variable escape
+`init` is blocked despite looking like setup. It binds the directory to a
+backend and rewrites `.terraform.lock.hcl`, and it is the only command that can
+silently change *which state file the directory is talking to*. With
+`-migrate-state` it copies state to a new backend; with `-reconfigure` it
+re-points without copying, so the next `plan` reads an empty state and offers to
+create everything that already exists. In a repository whose local state file is
+the only record of a live AWS organization, that is the worst outcome available,
+and it does not look destructive on the command line.
+
+WHAT IS ALLOWED
+---------------
+`plan`, `validate`, `fmt`, `show`, `output`, `graph`, `console`, `version`,
+`metadata`, `providers` and `providers schema`, `state list|show|pull`, and
+`workspace list|show|select`. `terraform plan -destroy` is allowed: it is a
+read-only preview and the safest way to see what a destroy would do.
+
+`fmt` is allowed although it rewrites .tf files. Formatting is part of writing
+terraform, it is idempotent, and it shows up in `git diff` like any other edit.
+
+This is deliberately narrower than the default-deny policy it replaces, which
+blocked every subcommand it had not heard of. The trade is stated plainly: a
+destructive subcommand added by a future terraform release would not be
+recognised here until this list is updated. The dangerous-flag rules below catch
+most shapes such a command could take.
+
+Blocking is unconditional. There is deliberately no environment-variable escape
 hatch, because an escape hatch is the thing an agent reaches for when a command
-fails. The user runs these commands themselves, in their own terminal.
+fails. The operator runs these commands themselves, in their own terminal.
 
-Exit 0 = allow, exit 2 = block (stderr goes back to Claude).
-Fails CLOSED for terraform: if the command mentions terraform and cannot be
-parsed, it is blocked. Unrelated tool calls always pass.
+Exit 0 = allow, exit 2 = block (stderr is returned to Claude).
 """
 import json
+import os
 import re
 import sys
 
-# Subcommands that only read. Everything else is denied.
-# `init` is absent on purpose: it writes .terraform/, can run provider code, and
-# with -migrate-state/-reconfigure it rewrites backend state.
-READ_ONLY = {
-    "validate", "fmt", "version", "providers", "graph",
-    "output", "show", "plan", "console", "test", "metadata",
+# Resolve siblings relative to this file, not to a fixed path, so the guard
+# works unchanged whether it lives in ~/.claude/hooks or inside a plugin
+# directory that moves on every update.
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from _cmdparse import invocations, subcommand  # noqa: E402
+
+BINARIES = {"terraform", "tofu", "opentofu", "terragrunt"}
+
+DESTRUCTIVE = {
+    "apply": "creates, changes and deletes real infrastructure",
+    "destroy": "deletes every resource recorded in the state",
+    "import": "binds a live resource into state and rewrites it",
+    "init": ("binds the directory to a backend and rewrites the provider lock "
+             "file — it can migrate state to a different backend, or with "
+             "-reconfigure re-point at an empty one and orphan what is there"),
+    "get": "downloads modules into .terraform/, which is the module half of init",
+    "taint": "marks a resource for destruction on the next apply",
+    "untaint": "rewrites state to clear a replacement mark",
+    "refresh": "rewrites state from live infrastructure",
+    "test": "creates and then destroys real infrastructure to run assertions",
+    "force-unlock": "removes a state lock another operation still holds",
+    "login": "writes a credentials token to disk",
+    "logout": "deletes a stored credentials token",
 }
 
-# state subcommands that only read; `state` alone is not enough to judge.
+STATE_DESTRUCTIVE = {
+    "mv": "moves a resource to a different address in state",
+    "rm": "removes a resource from state, orphaning the real infrastructure",
+    "push": "overwrites remote state wholesale",
+    "replace-provider": "rewrites every provider reference in state",
+}
 STATE_READ_ONLY = {"list", "show", "pull"}
 
-# Binaries this guard governs.
-BINARIES = {"terraform", "tofu", "opentofu", "terragrunt", "tf"}
+WORKSPACE_DESTRUCTIVE = {
+    "new": "creates a new state",
+    "delete": "deletes a workspace and its state",
+}
+WORKSPACE_READ_ONLY = {"list", "show", "select"}
 
-# Anything matching these is blocked regardless of subcommand parsing.
-HARD_PATTERNS = [
-    (r"-auto-approve", "-auto-approve removes the last human checkpoint"),
-    (r"-force\b", "-force overrides safety checks"),
-    (r"\bdestroy\b", "destroy deletes real infrastructure"),
+PROVIDERS_DESTRUCTIVE = {
+    "lock": "rewrites .terraform.lock.hcl, changing which provider builds are trusted",
+    "mirror": "writes a local provider mirror to disk",
+}
+PROVIDERS_READ_ONLY = {"", "schema"}
+
+# Flags that remove a safety check, whatever subcommand they are attached to.
+# `-destroy` is absent on purpose: `terraform plan -destroy` is a read-only
+# preview, and `terraform apply -destroy` is already caught by the subcommand.
+DANGEROUS_FLAGS = [
+    ("-auto-approve", "it removes the last human checkpoint"),
+    ("-migrate-state", "it moves state to a different backend"),
+    ("-force-copy", "it copies state between backends without confirmation"),
+    ("-reconfigure", "it re-points the backend without migrating, orphaning the state"),
+    ("-lock=false", "it disables state locking, which corrupts concurrent state"),
 ]
 
-try:
-    data = json.load(sys.stdin)
-except Exception:
-    sys.exit(0)
-
-if data.get("tool_name", "") != "Bash":
-    sys.exit(0)
-
-cmd = (data.get("tool_input", {}) or {}).get("command", "") or ""
-if not cmd:
-    sys.exit(0)
-
-# Cheap pre-filter: if no governed binary is named at all, this is not our business.
-if not re.search(r"\b(?:terraform|tofu|opentofu|terragrunt)\b", cmd, re.I):
-    sys.exit(0)
+# Applied only to inline code handed to a non-shell interpreter, where proper
+# tokenization is impossible. Confined there so it cannot fire on prose.
+CODE_PATTERN = re.compile(
+    r"\b(?:terraform|tofu|opentofu|terragrunt)\b[\s'\"\,\]\[)(]{0,8}"
+    r"(apply|destroy|import|taint|force-unlock)\b",
+    re.I,
+)
 
 
-def block(reason: str, detail: str = ""):
+def block(reason, detail=""):
     sys.stderr.write(
         "BLOCKED by terraform-guard: {}\n\n"
-        "No AI session may run state-changing terraform. This is a hard block "
-        "with no override flag — destroying or mutating live infrastructure is "
-        "not a risk that gets delegated to an agent.\n\n"
+        "No AI session may run a destructive terraform command. This is a hard "
+        "block with no override flag — mutating or deleting live infrastructure "
+        "is not a risk that gets delegated to an agent.\n\n"
         "{}"
-        "Run it yourself in your own terminal if you actually intend it. In this "
-        "session, prefer `terraform plan` and read the diff instead.\n".format(
+        "`plan`, `validate`, `fmt`, `show`, `output`, `graph` and the read-only "
+        "halves of `state`, `workspace` and `providers` are all allowed. Use "
+        "`terraform plan` (or `plan -destroy`) and read the diff.\n\n"
+        "`init` is blocked too: it re-points which state file this directory "
+        "talks to. If a directory needs initialising, the operator runs `init` "
+        "themselves, once, and then `plan` works here.\n".format(
             reason, (detail + "\n\n") if detail else ""
         )
     )
     sys.exit(2)
 
 
-# ---------------------------------------------------------------------------
-# Paranoid sweep, run BEFORE any structured parsing.
-#
-# The tokenizer below only inspects command position, so it cannot see through
-# `bash -c '...'`, `eval`, or quoting games. This sweep does not care about
-# structure at all: if a governed binary appears anywhere with a mutating
-# subcommand after it, the call dies here.
-#
-# It will occasionally block something harmless, like grepping the docs for the
-# literal string. That trade is intentional and not worth tuning away — a
-# false positive costs one reworded grep, a false negative costs the business.
-# ---------------------------------------------------------------------------
-MUTATING = (
-    r"destroy|apply|import|taint|untaint|force-unlock|init|refresh|"
-    r"state\s+(?:rm|mv|push|replace-provider)|"
-    r"workspace\s+(?:new|delete|select)"
-)
-SWEEP = re.compile(
-    r"\b(?:terraform|tofu|opentofu|terragrunt|tf)\b"
-    r"(?:\s+(?:run-all|--?\S+))*"      # -chdir=..., run-all, other flags
-    r"\s+(?:" + MUTATING + r")\b",
-    re.I,
-)
-m = SWEEP.search(cmd)
-if m:
-    block(
-        "the command contains `{}`.".format(" ".join(m.group(0).split())),
-        "Command: {}".format(cmd.strip()),
-    )
+def main():
+    try:
+        data = json.load(sys.stdin)
+    except Exception:
+        sys.exit(0)
 
-# Ignore text that is plainly not an invocation: a path, a comment, a grep
-# pattern. We only care about a governed binary appearing in command position.
-# Split on shell separators so `cd x && terraform destroy` and
-# `nohup timeout 90 terraform apply` are both reached.
-SEPARATORS = r"(?:\|\||&&|\||;|\n|\$\(|`|<\()"
-segments = re.split(SEPARATORS, cmd)
+    if data.get("tool_name", "") != "Bash":
+        sys.exit(0)
 
-# Command-position wrappers that precede the real binary.
-WRAPPERS = {
-    "nohup", "timeout", "sudo", "env", "time", "stdbuf", "nice", "ionice",
-    "xargs", "command", "exec", "doas", "setsid",
-}
+    command = (data.get("tool_input", {}) or {}).get("command", "") or ""
+    if not command:
+        sys.exit(0)
 
-for seg in segments:
-    tokens = seg.strip().split()
-    i = 0
-    # Step over `VAR=value` prefixes and wrapper commands to find the binary.
-    while i < len(tokens):
-        t = tokens[i]
-        if re.fullmatch(r"[A-Za-z_][A-Za-z0-9_]*=.*", t):
-            i += 1
+    # Cheap pre-filter: no governed binary named anywhere, not our business.
+    if not re.search(r"\b(?:terraform|tofu|opentofu|terragrunt)\b", command, re.I):
+        sys.exit(0)
+
+    found, code_blobs, _ = invocations(command)
+
+    for blob in code_blobs:
+        match = CODE_PATTERN.search(blob)
+        if match:
+            block(
+                "inline code passed to an interpreter runs `{}`.".format(
+                    " ".join(match.group(0).split())
+                ),
+                "Wrapping a terraform command in another language does not make "
+                "it a different command.",
+            )
+
+    for base, args in found:
+        if base not in BINARIES:
             continue
-        base = t.split("/")[-1]
-        if base in WRAPPERS:
-            i += 1
-            # skip a numeric arg to timeout, and flags to wrappers
-            while i < len(tokens) and (
-                re.fullmatch(r"[0-9]+[smhd]?", tokens[i]) or tokens[i].startswith("-")
-            ):
-                i += 1
-            continue
-        break
 
-    if i >= len(tokens):
-        continue
+        joined = " ".join(args).lower()
+        for flag, why in DANGEROUS_FLAGS:
+            if flag in joined:
+                block("`{}` — {}.".format(flag, why),
+                      "Command: {}".format(command.strip()))
 
-    base = tokens[i].split("/")[-1]
-    if base not in BINARIES:
-        continue
+        sub, rest = subcommand(args)
+        if sub is None:
+            continue  # bare `terraform`, or global flags only
 
-    args = tokens[i + 1:]
-    seg_l = seg.lower()
+        # terragrunt fans a subcommand out across every unit.
+        if base == "terragrunt" and sub in ("run-all", "run"):
+            sub = rest[0] if rest else None
+            rest = rest[1:]
+            if sub is None:
+                continue
 
-    # Unconditional patterns first — these never need subcommand context.
-    for pat, why in HARD_PATTERNS:
-        if re.search(pat, seg_l):
-            block("`{}` in a terraform command — {}.".format(pat.strip("\\b-"), why),
-                  "Command: {}".format(seg.strip()))
+        if sub in DESTRUCTIVE:
+            block("`{} {}` {}.".format(base, sub, DESTRUCTIVE[sub]),
+                  "Command: {}".format(command.strip()))
 
-    # Find the subcommand: first token that is not a global flag.
-    sub = None
-    rest = []
-    for j, a in enumerate(args):
-        if a.startswith("-"):
-            continue  # -chdir=..., -help, -version
-        sub = a.lower()
-        rest = [x.lower() for x in args[j + 1:] if not x.startswith("-")]
-        break
+        if sub == "state":
+            head = rest[0] if rest else None
+            if head in STATE_READ_ONLY:
+                continue
+            if head in STATE_DESTRUCTIVE:
+                block("`{} state {}` {}.".format(base, head, STATE_DESTRUCTIVE[head]),
+                      "Command: {}".format(command.strip()))
+            block("`{} state {}` is not a read-only state command.".format(
+                base, head or "<none>"),
+                "Read-only: {}.".format(", ".join(sorted(STATE_READ_ONLY))))
 
-    if sub is None:
-        # Bare `terraform` or only global flags — harmless, let it prompt.
-        continue
+        if sub == "workspace":
+            head = rest[0] if rest else None
+            if head in WORKSPACE_READ_ONLY:
+                continue
+            if head in WORKSPACE_DESTRUCTIVE:
+                block("`{} workspace {}` {}.".format(
+                    base, head, WORKSPACE_DESTRUCTIVE[head]),
+                    "Command: {}".format(command.strip()))
 
-    if sub == "state":
-        substate = rest[0] if rest else None
-        if substate in STATE_READ_ONLY:
-            continue
-        block(
-            "`terraform state {}` mutates or exports state.".format(substate or "<none>"),
-            "Command: {}".format(seg.strip()),
-        )
+        if sub == "providers":
+            head = rest[0] if rest else ""
+            if head in PROVIDERS_READ_ONLY:
+                continue
+            if head in PROVIDERS_DESTRUCTIVE:
+                block("`{} providers {}` {}.".format(
+                    base, head, PROVIDERS_DESTRUCTIVE[head]),
+                    "Command: {}".format(command.strip()))
 
-    if sub == "workspace":
-        if rest and rest[0] in ("list", "show"):
-            continue
-        block("`terraform workspace {}` changes which state is live.".format(
-            rest[0] if rest else "<none>"), "Command: {}".format(seg.strip()))
+    sys.exit(0)
 
-    if sub in READ_ONLY:
-        continue
 
-    block(
-        "`terraform {}` is not a read-only subcommand.".format(sub),
-        "Command: {}\n\nRead-only subcommands allowed through this guard "
-        "(they still require your approval): {}".format(
-            seg.strip(), ", ".join(sorted(READ_ONLY))
-        ),
-    )
-
-sys.exit(0)
+if __name__ == "__main__":
+    main()

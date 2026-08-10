@@ -35,7 +35,7 @@ This file defines the user's system. Load it before any task involving packages,
 
 ## Desktop Environment
 
-- **WM:** Hyprland — config at `~/.config/hypr/hyprland.conf`
+- **WM:** Hyprland — config at `~/.config/hypr/hyprland.lua` (Lua; hyprlang `.conf` is deprecated since 0.55)
 - **Bar:** hyprpanel
 - **Launcher:** wofi
 - **Notifications:** swaync (replaces HyprPanel's built-in; bar icon delegates to swaync-client)
@@ -59,7 +59,7 @@ Font config locations:
 
 | Purpose | Path |
 |---------|------|
-| Hyprland config | `~/.config/hypr/hyprland.conf` |
+| Hyprland config | `~/.config/hypr/hyprland.lua` |
 | zsh config | `~/.zshrc`, `~/.zprofile` |
 | zsh theme | `~/.zsh-themes/custom-z89.zsh-theme` |
 | custom scripts | `~/.local/bin/` |

@@ -7,6 +7,23 @@
 !settings.json
 !skills/
 !skills/**
-skills/z:*
+
+# Then default every skill back to ignored and whitelist only the ones that live
+# in this repo. Several skills are symlinks into private project checkouts, and
+# tracking one publishes its target — a path outside this repo. Default-deny means
+# a new skill is excluded until it is deliberately listed here.
+skills/*
+!skills/arch/
+!skills/commit/
+!skills/dotfiles/
+!skills/hyprpanel/
+!skills/terminal/
+
 !hooks/
 !hooks/**
+
+# Never publish: bytecode, and the guard tests/notes that name real
+# infrastructure (bucket names, private repo names, account counts).
+hooks/__pycache__/
+hooks/tests/
+hooks/README.md
