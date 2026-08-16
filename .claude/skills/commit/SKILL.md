@@ -95,12 +95,18 @@ fails. That is an installation question for the operator, not something to work 
 
 ```
 changelog:
+
 - short summary of atomic change 1
 - short summary of atomic change 2
 - ...
 ```
 
 - The title line is always exactly `changelog:` — no summary, no parentheses.
+- **A blank line follows it**, separating subject from body. This is git's own convention — without
+  it, git treats the whole message as one subject and `%s` returns every bullet run together on one
+  line. GitHub's commit API rejoins subject and body with that blank line regardless, so a message
+  written without it comes back changed on publication; written with it, local and published are
+  byte-identical.
 - Each bullet is a high-level summary of a meaningful change, not a detailed description. Think of it as a signpost for someone scanning commit history — they should understand what area changed, not every implementation detail.
 - Aim for 1-4 bullets total. Group related small changes under one bullet rather than listing each individually.
 - Write in plain, everyday language. Avoid technical jargon, internal identifiers, and implementation specifics unless essential to understanding what changed.
@@ -114,7 +120,7 @@ changelog:
 2. Run `git status` and `git diff` (staged + unstaged) to understand what changed.
 3. If nothing is staged, stage all modified/new tracked files with `git add -u`, then ask the user if they also want untracked files added. Staging and committing must use separate Bash tool calls.
 4. Draft the commit message following the format above based on the actual diff.
-5. Run `git commit` as its own Bash command with no chaining, pipes, redirections, command substitution, or backticks. Set the signing socket inline and pass the message as one safely quoted multiline argument, for example: `SSH_AUTH_SOCK=/run/user/1000/ssh-agent.socket git commit -S -m $'changelog:\n- summary'`.
+5. Run `git commit` as its own Bash command with no chaining, pipes, redirections, command substitution, or backticks. Set the signing socket inline and pass the message as one safely quoted multiline argument. Note the blank line — `\n\n` after the title, never `\n`: `SSH_AUTH_SOCK=/run/user/1000/ssh-agent.socket git commit -S -m $'changelog:\n\n- summary'`.
 6. Report the commit hash and title to the user.
 7. Use `AskUserQuestion` to ask if they want to push. If confirmed:
    - `AGENT_GH=1` → run `~/.claude/skills/commit/gh-signed-commit.sh` (see "Publishing as the bot").
@@ -124,5 +130,6 @@ changelog:
 
 ```
 changelog:
+
 - tweaked arch-assist and chromium window rules in hyprland
 ```

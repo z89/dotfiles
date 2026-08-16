@@ -90,12 +90,21 @@ for C in $COMMITS; do
   # by a bullet and got a blank line inserted between them.
   BODY="$(printf '%s\n' "$FULL" | tail -n +2 | sed '/./,$!d')"
 
-  # File modes do not survive this API. `fileChanges.additions` carries a path and its contents
-  # and nothing else, so a NEW executable or symlink would land as a plain 0644 regular file —
-  # silently, and in a repository full of shell scripts that is a broken tree rather than a
-  # cosmetic difference. Refuse instead, and say which paths need a human push.
+  # `fileChanges.additions` carries a path and its contents and nothing else, so the API cannot
+  # SET a mode. Measured on 17 August against a throwaway branch, rather than assumed:
+  #
+  #   modifying a file that is already 100755  ->  stays 100755
+  #   adding a new file, shebang and all       ->  lands 100644
+  #
+  # So the two cases it cannot express are a NEW executable or symlink, and a MODE CHANGE on an
+  # existing path — `chmod +x` would publish as a content-only commit and quietly not take
+  # effect. Ordinary edits to files that are already executable are fine, which is most of them;
+  # an earlier version refused those too and made this unusable on a repository full of scripts.
+  #
+  # $1 carries the source mode with a leading colon, $2 the destination mode.
   BADMODE="$(git diff-tree -r --raw --no-renames --no-commit-id "$C" |
-    awk '$5 ~ /^[AM]$/ && ($2 == "100755" || $2 == "120000") { print $NF }')"
+    awk '{ src = substr($1, 2); dst = $2 }
+         (dst == "100755" || dst == "120000") && ($5 == "A" || src != dst) { print $NF }')"
   if [ -n "$BADMODE" ]; then
     say "commit $C changes files whose mode this API cannot carry:"
     printf '  %s\n' $BADMODE >&2
