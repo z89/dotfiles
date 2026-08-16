@@ -1,0 +1,108 @@
+#!/usr/bin/env bash
+# ---------------------------------------------------------------------------
+# Print a short-lived GitHub token for a GitHub App installation.
+#
+#   GH_TOKEN=$(mint-agent-token) claude
+#
+# WHY AN APP RATHER THAN A TOKEN ON DISK
+# The org is on a Team plan with every seat filled, so adding a machine user -
+# as a member OR as an outside collaborator - needs a paid seat. A GitHub App is
+# not a seat: it is installed on a repository rather than joining the org.
+#
+# It is also the better answer regardless. The token this prints expires in ONE
+# HOUR and is minted on demand, so there is no long-lived credential sitting in a
+# dotfile for an agent to leak or for someone to find months later.
+#
+# WHAT IT IS FOR
+# Agents authenticate as the app, NOT as you. That is what lets AWS
+# tell the two apart: an IAM trust policy can pin the privileged apply
+# roles to the operator's GitHub actor id, so a run started by the app is refused
+# by AWS rather than by a rule in a workflow.
+#
+# WHAT IT DOES NOT FIX
+# A process running as your Unix user can still read ~/.config/gh/hosts.yml and
+# act as you. Identity separation on GitHub is necessary for the pin to mean
+# anything; it is not sufficient on its own.
+#
+# THE PRIVATE KEY IS THE REAL CREDENTIAL. Tokens it mints expire; it does not.
+# Anyone holding it can mint tokens indefinitely. If it leaks, revoke it on the
+# app's settings page - rotating anything downstream achieves nothing.
+# ---------------------------------------------------------------------------
+set -euo pipefail
+
+# Identifiers come from a config file OUTSIDE this repository. None of them is a
+# secret, but this script is tracked in a public dotfiles repo whose rule is that
+# identifiers which are not already public are not committed.
+CONF="${AGENT_GH_CONF:-$HOME/.config/agent-gh/config}"
+[ -r "${CONF}" ] && . "${CONF}"
+
+APP_ID="${AGENT_GH_APP_ID:-${APP_ID:-}}"
+INSTALL_ID="${AGENT_GH_INSTALL_ID:-${INSTALL_ID:-}}"
+KEY="${AGENT_GH_KEY:-$HOME/.config/agent-gh/agent.pem}"
+
+if [ -z "${APP_ID}" ] || [ -z "${INSTALL_ID}" ]; then
+  cat >&2 <<EOF
+mint-agent-token: no app configured.
+
+Create ${CONF} with:
+
+  APP_ID=<the App ID, on the app's General settings page>
+  INSTALL_ID=<from: gh api orgs/<org>/installations --jq '.installations[] | {app_slug, app_id, id}'>
+
+Neither is secret. They live outside the dotfiles repo because it is public.
+EOF
+  exit 1
+fi
+
+if [ ! -r "${KEY}" ]; then
+  cat >&2 <<EOF
+mint-agent-token: cannot read private key at ${KEY}
+
+Generate one on the app's settings page under "Private keys", then:
+
+  mkdir -p ~/.config/agent-gh
+  mv ~/Downloads/*.private-key.pem ~/.config/agent-gh/agent.pem
+  chmod 600 ~/.config/agent-gh/agent.pem
+
+Or point AGENT_GH_KEY at it.
+EOF
+  exit 1
+fi
+
+command -v openssl >/dev/null || { echo "mint-agent-token: openssl not found" >&2; exit 1; }
+
+# base64url: standard base64, then the two substitutions and no padding. Getting
+# this wrong produces a JWT GitHub rejects as malformed rather than as unsigned,
+# which reads like a key problem and is not.
+b64url() { openssl base64 -A | tr '+/' '-_' | tr -d '='; }
+
+now=$(date +%s)
+# iat is backdated 60s because GitHub rejects a token whose iat is in the future,
+# and a small clock skew between here and GitHub is normal. exp is 9 minutes; the
+# documented ceiling is 10, and sitting exactly on a limit is how you get
+# intermittent failures.
+header='{"alg":"RS256","typ":"JWT"}'
+payload=$(printf '{"iat":%d,"exp":%d,"iss":"%s"}' "$((now - 60))" "$((now + 540))" "${APP_ID}")
+
+signing_input="$(printf '%s' "${header}"  | b64url).$(printf '%s' "${payload}" | b64url)"
+signature=$(printf '%s' "${signing_input}" | openssl dgst -sha256 -sign "${KEY}" -binary | b64url)
+jwt="${signing_input}.${signature}"
+
+# The JWT authenticates the APP. It cannot touch a repository - it is only good
+# for exchanging into an INSTALLATION token, which is what carries the
+# repository-scoped permissions and the one-hour expiry.
+response=$(curl -sS -X POST \
+  -H "Authorization: Bearer ${jwt}" \
+  -H "Accept: application/vnd.github+json" \
+  -H "X-GitHub-Api-Version: 2022-11-28" \
+  "https://api.github.com/app/installations/${INSTALL_ID}/access_tokens")
+
+token=$(printf '%s' "${response}" | python3 -c 'import json,sys; print(json.load(sys.stdin).get("token",""))' 2>/dev/null || true)
+
+if [ -z "${token}" ]; then
+  echo "mint-agent-token: no token returned. GitHub said:" >&2
+  printf '%s\n' "${response}" >&2
+  exit 1
+fi
+
+printf '%s\n' "${token}"

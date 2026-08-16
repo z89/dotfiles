@@ -36,6 +36,8 @@
 !.local/bin/setup-spicetify
 !.local/bin/setup-betterdiscord
 !.local/bin/claude-prune-settings
+!.local/bin/mint-agent-token
+!.local/bin/agent-run
 !.local/bin/hyprsunset-auto
 !.local/bin/hyprsunset-detect
 !.local/share/

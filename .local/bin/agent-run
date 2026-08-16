@@ -1,0 +1,67 @@
+#!/usr/bin/env bash
+# ---------------------------------------------------------------------------
+# Run any coding agent with a GitHub App identity instead of yours.
+#
+#   agent-run claude
+#   agent-run codex
+#   agent-run gh pr list          # works for one-off commands too
+#
+# WHAT IT SWAPS
+#   GH_TOKEN            a fresh App token, one hour, scoped to the installed repository
+#   GIT_CONFIG_GLOBAL   an agent-only git config: ssh remotes rewritten to https,
+#                       credentials taken from GH_TOKEN, commits attributed to the
+#                       bot, signing off
+#   SSH_AUTH_SOCK       REMOVED, so nothing can sign or push with your key
+#   GITHUB_TOKEN        removed, so a stale one cannot win over GH_TOKEN
+#
+# THREE THINGS EACH CLOSE A DIFFERENT HOLE, and all three are needed:
+#
+#   - GH_TOKEN alone covers the `gh` CLI and nothing else. `git push` would still
+#     authenticate over ssh, as you, and the commit would carry your signature.
+#   - The git config alone would have no token to authenticate with.
+#   - Leaving SSH_AUTH_SOCK in place would leave a working path back to your
+#     identity for any tool that prefers ssh.
+#
+# WHAT THIS IS NOT
+# It is not a sandbox. It sets the DEFAULT correctly for every agent launched
+# through it, on this operating system, whatever the agent is written in - but it
+# runs as your Unix user, and a process running as you can read
+# ~/.config/gh/hosts.yml and reach /run/user/1000 no matter what its environment
+# says. Making that impossible needs a separate Unix user or a namespace; this
+# makes the correct thing automatic, not compulsory.
+#
+# The agent cannot reach any repository the App is not installed on - every other
+# one returns 404. That is deliberate where one repository holds the controls
+# for another: the thing being controlled should not be able to edit them.
+#
+# ---------------------------------------------------------------------------
+set -euo pipefail
+
+if [ $# -eq 0 ]; then
+  echo "usage: agent-run <command> [args...]     e.g. agent-run claude" >&2
+  exit 64
+fi
+
+MINT="${AGENT_GH_MINT:-$HOME/.local/bin/mint-agent-token}"
+AGENT_GITCONFIG="${AGENT_GH_GITCONFIG:-$HOME/.config/agent-gh/gitconfig}"
+
+[ -x "${MINT}" ]           || { echo "agent-run: ${MINT} not found or not executable" >&2; exit 1; }
+[ -r "${AGENT_GITCONFIG}" ] || { echo "agent-run: ${AGENT_GITCONFIG} not readable" >&2; exit 1; }
+
+# Fail here rather than launching an agent that silently falls back to your
+# credentials. A missing token must stop the run, not degrade it.
+if ! TOKEN="$("${MINT}")" || [ -z "${TOKEN}" ]; then
+  echo "agent-run: could not mint an App token; refusing to start with your credentials" >&2
+  exit 1
+fi
+
+# `env -u` rather than `unset`, so the child cannot inherit them however it is
+# spawned. GIT_CONFIG_GLOBAL replaces ~/.gitconfig for git; GIT_CONFIG_SYSTEM is
+# emptied too, since a system-wide url rewrite or credential helper would
+# otherwise still apply.
+exec env -u SSH_AUTH_SOCK -u GITHUB_TOKEN -u GIT_SSH_COMMAND \
+  GH_TOKEN="${TOKEN}" \
+  GIT_CONFIG_GLOBAL="${AGENT_GITCONFIG}" \
+  GIT_CONFIG_SYSTEM=/dev/null \
+  AGENT_GH=1 \
+  "$@"
