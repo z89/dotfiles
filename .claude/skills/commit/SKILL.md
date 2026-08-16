@@ -40,7 +40,39 @@ file.** They apply only to the operator's own sessions.
   `~/.ssh/allowed_signers`, which is where the value is.
 
 Everything else in this file — the message format, the push rule, the staging process — applies
-unchanged.
+unchanged, except for how the commit reaches the remote. See "Publishing as the bot" below.
+
+### Publishing as the bot — AGENT_GH=1
+
+**Do not run `git push`.** Run `~/.claude/skills/commit/gh-signed-commit.sh` instead, after the
+local commit and only with the user's approval in this session, exactly as the push rule requires.
+
+Why. The bot signs with its own key, and GitHub cannot verify that key — signing keys attach to
+user ACCOUNTS and an App bot has none. On a repository whose ruleset requires verified signatures
+every bot commit therefore trips the rule and needs an operator bypass, and bypassing a rule on
+every commit is how the rule stops meaning anything. Commits created through GitHub's
+`createCommitOnBranch` API are signed by GitHub itself and satisfy the rule honestly.
+
+The script commits nothing. It republishes commits already made locally, which is deliberate: an
+API call runs no git hooks, and one of those hooks is the secret scanner. Committing locally first
+keeps the scanner in the path. Never invert that order to "save a step".
+
+Three things it will refuse or warn about, all of them real:
+
+- **New executables and symlinks.** The API carries a path and its contents and no file mode, so a
+  new `100755` script would land as a plain `0644` file. The script refuses and names the paths;
+  those need a human `git push`.
+- **A remote that has moved.** It sends `expectedHeadOid`, so a concurrent push fails the mutation
+  rather than overwriting it.
+- **A message that changed on publication.** The API takes headline and body separately and
+  rejoins them itself. The script reads back what GitHub stored and reports any difference.
+
+The published commits have DIFFERENT SHAs from the local ones — same trees and messages, rebuilt
+and signed by GitHub. The script resets the local branch onto them at the end. That is expected,
+not a fault.
+
+If the App is not installed on the repository, the API returns 404 for the repo and the script
+fails. That is an installation question for the operator, not something to work around.
 
 ## Rules
 
@@ -84,7 +116,9 @@ changelog:
 4. Draft the commit message following the format above based on the actual diff.
 5. Run `git commit` as its own Bash command with no chaining, pipes, redirections, command substitution, or backticks. Set the signing socket inline and pass the message as one safely quoted multiline argument, for example: `SSH_AUTH_SOCK=/run/user/1000/ssh-agent.socket git commit -S -m $'changelog:\n- summary'`.
 6. Report the commit hash and title to the user.
-7. Use `AskUserQuestion` to ask if they want to push. If confirmed, run `export SSH_AUTH_SOCK="/run/user/1000/ssh-agent.socket" && git push`.
+7. Use `AskUserQuestion` to ask if they want to push. If confirmed:
+   - `AGENT_GH=1` → run `~/.claude/skills/commit/gh-signed-commit.sh` (see "Publishing as the bot").
+   - otherwise → run `export SSH_AUTH_SOCK="/run/user/1000/ssh-agent.socket" && git push`.
 
 ## Example
 
