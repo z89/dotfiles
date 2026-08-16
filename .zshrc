@@ -80,3 +80,22 @@ export ANDROID_SDK_ROOT="$ANDROID_HOME"
 export PATH="$PATH:$ANDROID_HOME/cmdline-tools/latest/bin:$ANDROID_HOME/platform-tools:$ANDROID_HOME/emulator"
 # Android tooling (sdkmanager/avdmanager) + Gradle need JDK 17, not the system default 26
 export JAVA_HOME="/usr/lib/jvm/java-17-openjdk"
+
+# ── Coding agents run as the GitHub App, never as me ──────────────────────────
+# APPENDED, not prepended: ~/.local/bin also holds `flask`, `golangci-lint` and
+# `hyprpanel`, all of which exist in /usr/bin too. Putting it first would silently
+# switch those three — and the local `hyprpanel` execs the STOCK hyprpanel-app,
+# which skips every JS patch and breaks the theme switcher.
+export PATH="$PATH:$HOME/.local/bin"
+
+# agent-run takes the command directly. It cannot take `command`, which is a shell
+# builtin with no binary on this system — agent-run ends in `exec env … "$@"`, and
+# env only resolves real executables.
+#
+# No recursion: agent-run is a separate process, zsh functions are not exported to
+# it, so `claude` inside it resolves to /usr/bin/claude.
+#
+# To run one as YOURSELF, bypass the function:  command claude
+claude() { agent-run claude "$@"; }
+codex()  { agent-run codex  "$@"; }
+
