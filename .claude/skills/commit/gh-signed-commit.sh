@@ -65,7 +65,9 @@ BEHIND="$(git rev-list --count "$BRANCH..$REMOTE/$BRANCH")"
 [ "$BEHIND" -eq 0 ] || die "$REMOTE/$BRANCH has $BEHIND commit(s) not in $BRANCH; rebase first"
 
 HEAD_OID="$(git rev-parse "$REMOTE/$BRANCH")"
-say "publishing $(printf '%s' "$COMMITS" | wc -l | tr -d ' ') commit(s) to $SLUG on $BRANCH"
+# `printf '%s'` emits no trailing newline, so wc -l undercounts by one and a single commit
+# reported as "0 commit(s)". Count the lines that are actually there instead.
+say "publishing $(printf '%s\n' "$COMMITS" | grep -c .) commit(s) to $SLUG on $BRANCH"
 
 WORK="$(mktemp -d)"
 trap 'rm -rf "$WORK"' EXIT
@@ -79,7 +81,14 @@ for C in $COMMITS; do
   # that would flatten every commit in the repository to a single line.
   FULL="$(git log -1 --format=%B "$C")"
   SUBJECT="$(printf '%s\n' "$FULL" | head -1)"
-  BODY="$(printf '%s\n' "$FULL" | tail -n +2)"
+  # Leading blank lines are stripped from the body because the API puts one back: it rejoins
+  # headline and body as `headline\n\nbody`, which is the git convention. Without the strip, a
+  # message already written in that convention gains a SECOND blank line on every publication,
+  # and a message republished twice would grow one each time.
+  #
+  # Measured, not assumed — the 17 August smoke test published `changelog:` immediately followed
+  # by a bullet and got a blank line inserted between them.
+  BODY="$(printf '%s\n' "$FULL" | tail -n +2 | sed '/./,$!d')"
 
   # File modes do not survive this API. `fileChanges.additions` carries a path and its contents
   # and nothing else, so a NEW executable or symlink would land as a plain 0644 regular file —
