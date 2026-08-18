@@ -29,6 +29,50 @@
   "menus.volume.raiseMaximumVolume": true,
   "theme.bar.layer": "top",
   "bar.layouts": {
+    "0": {
+      "left": [
+        "dashboard",
+        "workspaces",
+        "windowtitle"
+      ],
+      "middle": [],
+      "right": [
+        "media",
+        "cpu",
+        "ram",
+        "cputemp",
+        "storage",
+        "network",
+        "bluetooth",
+        "clock",
+        "volume",
+        "hyprsunset",
+        "systray",
+        "notifications"
+      ]
+    },
+    "1": {
+      "left": [
+        "dashboard",
+        "workspaces",
+        "windowtitle"
+      ],
+      "middle": [],
+      "right": [
+        "media",
+        "cpu",
+        "ram",
+        "cputemp",
+        "storage",
+        "network",
+        "bluetooth",
+        "clock",
+        "volume",
+        "hyprsunset",
+        "systray",
+        "notifications"
+      ]
+    },
     "*": {
       "left": [
         "dashboard",

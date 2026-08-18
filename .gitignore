@@ -40,6 +40,7 @@
 !.local/bin/agent-run
 !.local/bin/hyprsunset-auto
 !.local/bin/hyprsunset-detect
+!.local/bin/remote-display
 !.local/share/
 .local/share/*
 !.local/share/nautilus-python/

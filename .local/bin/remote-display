@@ -1,0 +1,125 @@
+#!/usr/bin/env bash
+# Manage the headless Hyprland output used for remote streaming to the MacBook.
+#
+# Hyprland names virtual outputs HEADLESS-<n>, incrementing per Hyprland process,
+# and `hyprctl output create` gives no way to pick the name. So the name is only
+# predictable when this runs first after a Hyprland start. Everything downstream
+# (the monitor rule, the workspace pin, Sunshine's output_name) is applied from
+# the name read back after creation rather than assumed, and sunshine.conf is
+# rewritten if the name has drifted.
+#
+# Geometry matches the MacBook Pro 13.5" panel: 3024x1964 native pixels at scale
+# 2, giving the 1512x982 logical space macOS uses, so text lands at the right
+# size instead of being scaled twice.
+
+set -euo pipefail
+
+MODE="1512x982@120"
+POSITION="5120x0"   # right of DP-2 (5120px wide) in the global layout
+SCALE=1
+WORKSPACE=10        # SUPER+0 — the remote workspace
+SUNSHINE_CONF="$HOME/.config/sunshine/sunshine.conf"
+
+die() { echo "remote-display: $*" >&2; exit 1; }
+
+command -v hyprctl >/dev/null || die "hyprctl not found"
+hyprctl monitors >/dev/null 2>&1 || die "Hyprland is not running"
+
+# Names of all current headless outputs, in creation order.
+headless_outputs() {
+    hyprctl monitors all -j | python3 -c '
+import sys, json
+for m in json.load(sys.stdin):
+    if m["name"].startswith("HEADLESS-"):
+        print(m["name"])
+'
+}
+
+apply_geometry() {
+    local name="$1"
+    # Lua config: hyprctl keyword is rejected, eval is the supported path.
+    hyprctl eval "hl.monitor({ output = \"$name\", mode = \"$MODE\", position = \"$POSITION\", scale = $SCALE })" >/dev/null
+    hyprctl eval "hl.workspace_rule({ workspace = \"$WORKSPACE\", monitor = \"$name\", default = true, persistent = true })" >/dev/null
+}
+
+# Sunshine reads output_name once at startup; keep it honest about the real name.
+sync_sunshine() {
+    local name="$1"
+    [[ -f "$SUNSHINE_CONF" ]] || return 0
+    local current
+    current=$(sed -n 's/^output_name[[:space:]]*=[[:space:]]*//p' "$SUNSHINE_CONF" | tail -1)
+    [[ "$current" == "$name" ]] && return 0
+    if grep -q '^output_name' "$SUNSHINE_CONF"; then
+        sed -i "s|^output_name.*|output_name = $name|" "$SUNSHINE_CONF"
+    else
+        printf 'output_name = %s\n' "$name" >> "$SUNSHINE_CONF"
+    fi
+    echo "remote-display: sunshine output_name -> $name (was ${current:-unset})"
+    systemctl --user is-active --quiet sunshine && systemctl --user restart sunshine || true
+}
+
+cmd_up() {
+    local existing name
+    existing=$(headless_outputs | head -1 || true)
+
+    if [[ -n "$existing" ]]; then
+        name="$existing"
+    else
+        hyprctl output create headless >/dev/null
+        # Creation is asynchronous; wait for the output to register.
+        for _ in {1..20}; do
+            name=$(headless_outputs | head -1 || true)
+            [[ -n "$name" ]] && break
+            sleep 0.25
+        done
+        [[ -n "${name:-}" ]] || die "headless output did not appear"
+    fi
+
+    apply_geometry "$name"
+    sync_sunshine "$name"
+    echo "$name"
+}
+
+cmd_down() {
+    local found=0
+    while read -r name; do
+        [[ -z "$name" ]] && continue
+        hyprctl output remove "$name" >/dev/null
+        found=1
+    done < <(headless_outputs)
+    [[ "$found" == 1 ]] || echo "remote-display: no headless output to remove"
+}
+
+cmd_name() {
+    local name
+    name=$(headless_outputs | head -1 || true)
+    [[ -n "$name" ]] || die "no headless output"
+    echo "$name"
+}
+
+cmd_status() {
+    hyprctl monitors all -j | python3 -c '
+import sys, json
+mons = json.load(sys.stdin)
+hl = [m for m in mons if m["name"].startswith("HEADLESS-")]
+if not hl:
+    print("no headless output")
+    raise SystemExit(0)
+for m in hl:
+    name, w, h = m["name"], m["width"], m["height"]
+    scale, hz = m["scale"], m["refreshRate"]
+    ws = m["activeWorkspace"]["id"]
+    log_w, log_h = int(w / scale), int(h / scale)
+    print("%s: %dx%d@%.0f scale %g -> %dx%d logical, at %d,%d, workspace %s"
+          % (name, w, h, hz, scale, log_w, log_h, m["x"], m["y"], ws))
+'
+}
+
+case "${1:-up}" in
+    up)      cmd_up ;;
+    down)    cmd_down ;;
+    restart) cmd_down; sleep 1; cmd_up ;;
+    name)    cmd_name ;;
+    status)  cmd_status ;;
+    *)       die "usage: remote-display [up|down|restart|name|status]" ;;
+esac
