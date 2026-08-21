@@ -44,6 +44,11 @@ local menu        = "rofi -show drun -theme ~/.config/rofi/launchers/type-1/styl
 
 hl.on("hyprland.start", function()
     hl.exec_cmd("systemctl --user start hyprland-session.target")
+
+    -- Polkit authentication agent. Without one, anything needing elevation
+    -- (nemo mounting a disk, gparted, etc.) fails silently: polkitd is running
+    -- but has no agent to raise a password prompt through.
+    hl.exec_cmd("/usr/lib/polkit-gnome/polkit-gnome-authentication-agent-1")
     hl.exec_cmd("awww-daemon")
 
     -- Headless output for remote streaming. Fires once per Hyprland start (not
