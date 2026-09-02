@@ -464,12 +464,24 @@
       "/home/archie"
     ]
   },
-  "model": "opus",
+  "model": "opus[1m]",
   "hooks": {
     "PreToolUse": [
       {
         "matcher": "Bash",
         "hooks": [
+          {
+            "type": "command",
+            "command": "~/.claude/hooks/desktop-guard.sh",
+            "timeout": 10,
+            "statusMessage": "Checking desktop-safety guard..."
+          },
+          {
+            "type": "command",
+            "command": "~/.claude/hooks/subagent-commit-guard.sh",
+            "timeout": 10,
+            "statusMessage": "Checking subagent commit guard..."
+          },
           {
             "type": "command",
             "command": "python3 /home/archie/.claude/hooks/hyprpanel-guard.py"
@@ -527,7 +539,11 @@
   "enabledPlugins": {
     "clangd-lsp@claude-plugins-official": true
   },
-  "effortLevel": "high",
+  "modelSettings": {
+    "claude-fable-5": {
+      "effortLevel": "high"
+    }
+  },
   "tui": "fullscreen",
   "skipDangerousModePermissionPrompt": true,
   "skipWorkflowUsageWarning": true,
