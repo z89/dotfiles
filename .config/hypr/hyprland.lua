@@ -62,7 +62,7 @@ hl.on("hyprland.start", function()
     -- the watchdog is the sole parent.
     hl.exec_cmd("~/.config/hyprpanel/bin/hyprpanel-watchdog")
 
-    hl.exec_cmd("spotify --remote-debugging-port=9222")
+    hl.exec_cmd("spotify --remote-debugging-port=9332")
     hl.exec_cmd("discord")
     hl.exec_cmd("notion-app")
     hl.exec_cmd("mullvad-vpn")
