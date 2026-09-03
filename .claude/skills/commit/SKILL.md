@@ -1,6 +1,6 @@
 ---
 name: commit
-description: Stage and commit changes using the project changelog format, signed only by the z89 GitHub account
+description: Stage and commit changes with separated operator and GitHub App identities, signed and published through the correct trusted path
 argument-hint: [optional description or scope hint]
 allowed-tools: Bash, Read, Glob, Grep
 ---
@@ -32,12 +32,12 @@ file.** They apply only to the operator's own sessions.
   substitution this whole setup exists to prevent. There is no situation in which an agent needs it.
 - **Do not run `ssh-add`.** Nothing to check, and a failure is not a reason to stop.
 - **Do not pass `-S`, and do not disable signing either.** `GIT_CONFIG_GLOBAL` already sets
-  `commit.gpgsign = true` with the bot's own key at `~/.config/agent-gh/bot_ed25519`. Plain
-  `git commit -m …` signs correctly.
+  `commit.gpgsign = true` with the selected profile's own signing key. Plain `git commit -m …`
+  signs correctly.
 - **Do not alter `user.name` or `user.email`.** They are the bot's, deliberately.
-- GitHub shows these commits as **Unverified**, and that is expected rather than a fault: signing keys
-  attach to user accounts and an App bot has none. `git log --show-signature` verifies locally against
-  `~/.ssh/allowed_signers`, which is where the value is.
+- The transient local commit verifies against the selected bot profile's `allowed_signers` file.
+  GitHub cannot attach that key to an App bot account, so the publisher replaces the transient commit
+  with a GitHub-server-signed commit before it reaches the default branch.
 
 Everything else in this file — the message format, the push rule, the staging process — applies
 unchanged, except for how the commit reaches the remote. See "Publishing as the bot" below.
@@ -57,6 +57,11 @@ The script commits nothing. It republishes commits already made locally, which i
 API call runs no git hooks, and one of those hooks is the secret scanner. Committing locally first
 keeps the scanner in the path. Never invert that order to "save a step".
 
+The publisher preserves the App bot as the primary author and adds exactly one canonical trailer:
+`Co-authored-by: z89 <30657227+z89@users.noreply.github.com>`. This lets GitHub associate
+the contribution with z89 while truthfully recording that automation authored the commit. Never add,
+remove, or substitute that trailer manually; the publisher rejects pre-existing attribution trailers.
+
 Three things it will refuse or warn about, all of them real:
 
 - **New executables and symlinks.** The API carries a path and its contents and no file mode, so a
@@ -64,8 +69,8 @@ Three things it will refuse or warn about, all of them real:
   those need a human `git push`.
 - **A remote that has moved.** It sends `expectedHeadOid`, so a concurrent push fails the mutation
   rather than overwriting it.
-- **A message that changed on publication.** The API takes headline and body separately and
-  rejoins them itself. The script reads back what GitHub stored and reports any difference.
+- **A message, tree, author, co-author, or signature that changed unexpectedly.** Every published
+  commit is read back and must match before the local branch is reset onto it.
 
 The published commits have DIFFERENT SHAs from the local ones — same trees and messages, rebuilt
 and signed by GitHub. The script resets the local branch onto them at the end. That is expected,
@@ -76,8 +81,10 @@ fails. That is an installation question for the operator, not something to work 
 
 ## Rules
 
-- NEVER add "Co-authored-by", "Co-signed-by", or any Claude attribution trailer to the commit message.
-- The commit must be authored solely by the git user already configured in the repo or globally (z89 GitHub account). Do not alter git user config.
+- NEVER add "Co-authored-by", "Co-signed-by", or any Claude attribution trailer manually. In agent
+  mode only, the publishing helper adds the single canonical z89 co-author trailer.
+- Do not alter git user config. Operator sessions use z89; agent sessions use the App identity selected
+  from the repository owner by `agent-run`.
 - Do NOT use `--no-verify` unless the user explicitly asks.
 - Do NOT force-push unless the user explicitly asks.
 - NEVER push to a remote (`git push`, `gh repo`, etc.) without explicit user approval in the current session — even if the user previously said "push it" in a prior session.
@@ -111,7 +118,8 @@ changelog:
 - Aim for 1-4 bullets total. Group related small changes under one bullet rather than listing each individually.
 - Write in plain, everyday language. Avoid technical jargon, internal identifiers, and implementation specifics unless essential to understanding what changed.
 - No period at the end of bullet points.
-- Do not include boilerplate, metadata, or attribution lines of any kind.
+- Do not include boilerplate, metadata, or attribution lines. In agent mode, the publishing helper
+  adds the canonical co-author trailer after local hooks have passed.
 
 ## Process
 

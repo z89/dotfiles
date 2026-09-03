@@ -8,9 +8,9 @@
 #
 # WHAT IT SWAPS
 #   GH_TOKEN            a fresh App token, one hour, scoped to the installed repository
-#   GIT_CONFIG_GLOBAL   an agent-only git config: ssh remotes rewritten to https,
-#                       credentials taken from GH_TOKEN, commits attributed to the
-#                       bot, signing off
+#   GIT_CONFIG_GLOBAL   an owner-specific agent git config: ssh remotes rewritten
+#                       to https, credentials taken from GH_TOKEN, commits
+#                       attributed to the matching App bot and locally signed
 #   SSH_AUTH_SOCK       REMOVED, so nothing can sign or push with your key
 #   GITHUB_TOKEN        removed, so a stale one cannot win over GH_TOKEN
 #
@@ -43,14 +43,68 @@ if [ $# -eq 0 ]; then
 fi
 
 MINT="${AGENT_GH_MINT:-$HOME/.local/bin/mint-agent-token}"
-AGENT_GITCONFIG="${AGENT_GH_GITCONFIG:-$HOME/.config/agent-gh/gitconfig}"
+
+# Select the App from the repository owner. This prevents an agent launched in a
+# personal repository from silently receiving the organisation identity (or vice
+# versa). An explicit profile is useful only when launching outside a repository.
+PROFILE="${AGENT_GH_PROFILE:-}"
+if [ -z "${PROFILE}" ]; then
+  if ! git rev-parse --git-dir >/dev/null 2>&1; then
+    echo "agent-run: not in a Git repository; set AGENT_GH_PROFILE=z89 or matixau" >&2
+    exit 1
+  fi
+  URL="$(git config --get remote.origin.url || true)"
+  REPO_OWNER="$(printf '%s' "${URL}" |
+    sed -nE 's#^(git@github\.com:|ssh://git@github\.com/|https://github\.com/)([^/]+)/.*#\2#p')"
+  [ -n "${REPO_OWNER}" ] || {
+    echo "agent-run: cannot determine a GitHub owner from origin: ${URL:-<unset>}" >&2
+    exit 1
+  }
+  PROFILE="${REPO_OWNER}"
+fi
+
+case "${PROFILE}" in
+  z89)
+    PROFILE_DIR="$HOME/.config/agent-gh-z89"
+    ;;
+  matixau)
+    PROFILE_DIR="$HOME/.config/agent-gh"
+    ;;
+  *)
+    echo "agent-run: unsupported profile '${PROFILE}'; expected z89 or matixau" >&2
+    exit 1
+    ;;
+esac
+
+CONF="${AGENT_GH_CONF:-$PROFILE_DIR/config}"
+KEY="${AGENT_GH_KEY:-$PROFILE_DIR/agent.pem}"
+AGENT_GITCONFIG="${AGENT_GH_GITCONFIG:-$PROFILE_DIR/gitconfig}"
 
 [ -x "${MINT}" ]           || { echo "agent-run: ${MINT} not found or not executable" >&2; exit 1; }
+[ -r "${CONF}" ]            || { echo "agent-run: ${CONF} not readable" >&2; exit 1; }
+[ -r "${KEY}" ]             || { echo "agent-run: ${KEY} not readable" >&2; exit 1; }
 [ -r "${AGENT_GITCONFIG}" ] || { echo "agent-run: ${AGENT_GITCONFIG} not readable" >&2; exit 1; }
+
+# Do not let unrelated caller variables impersonate values from the selected
+# profile. The supported overrides are the explicit AGENT_GH_* variables above.
+unset ORG OWNER BOT_LOGIN BOT_EMAIL
+# shellcheck disable=SC1090
+. "${CONF}"
+BOT_LOGIN="${BOT_LOGIN:-}"
+BOT_EMAIL="${BOT_EMAIL:-}"
+PROFILE_OWNER="${OWNER:-${ORG:-}}"
+[ -n "${BOT_LOGIN}" ] && [ -n "${BOT_EMAIL}" ] && [ -n "${PROFILE_OWNER}" ] || {
+  echo "agent-run: ${CONF} must define BOT_LOGIN and BOT_EMAIL plus OWNER or ORG" >&2
+  exit 1
+}
+[ -z "${REPO_OWNER:-}" ] || [ "${REPO_OWNER}" = "${PROFILE_OWNER}" ] || {
+  echo "agent-run: repository owner '${REPO_OWNER}' does not match profile owner '${PROFILE_OWNER}'" >&2
+  exit 1
+}
 
 # Fail here rather than launching an agent that silently falls back to your
 # credentials. A missing token must stop the run, not degrade it.
-if ! TOKEN="$("${MINT}")" || [ -z "${TOKEN}" ]; then
+if ! TOKEN="$(AGENT_GH_CONF="${CONF}" AGENT_GH_KEY="${KEY}" "${MINT}")" || [ -z "${TOKEN}" ]; then
   echo "agent-run: could not mint an App token; refusing to start with your credentials" >&2
   exit 1
 fi
@@ -64,4 +118,8 @@ exec env -u SSH_AUTH_SOCK -u GITHUB_TOKEN -u GIT_SSH_COMMAND \
   GIT_CONFIG_GLOBAL="${AGENT_GITCONFIG}" \
   GIT_CONFIG_SYSTEM=/dev/null \
   AGENT_GH=1 \
+  AGENT_GH_PROFILE="${PROFILE}" \
+  AGENT_GH_OWNER="${PROFILE_OWNER}" \
+  AGENT_GH_BOT_LOGIN="${BOT_LOGIN}" \
+  AGENT_GH_BOT_EMAIL="${BOT_EMAIL}" \
   "$@"
