@@ -61,7 +61,6 @@
       "Bash(npx tsx *)",
       "Bash(npx tailwindcss *)",
       "Bash(npx -v)",
-      "Bash(node -e ' *)",
       "Bash(docker --version)",
       "Bash(docker version *)",
       "Bash(docker info *)",
@@ -155,7 +154,6 @@
       "Bash(pnpm --filter @fill/core --filter @fill/server typecheck)",
       "Bash(echo \"pid $!\")",
       "Bash(curl -s \"http://localhost:5173/api/profile?user=z89&years=3\")",
-      "Bash(python3 -c ' *)",
       "Bash(rm -f fill-paint.png)",
       "Bash(chromium --headless --no-sandbox --disable-gpu --hide-scrollbars --window-size=1000,820 --virtual-time-budget=7000 --screenshot=/tmp/fill-paint.png \"http://localhost:5173/paint\")",
       "Bash(pnpm --filter @fill/web typecheck)",
@@ -221,8 +219,6 @@
       "Bash(/tmp/pqenv/bin/python -c ' *)",
       "Bash(file /tmp/rctest/out_bug/*)",
       "Bash(file /tmp/rctest/out_fix/*)",
-      "Bash(chmod 777 /tmp/rctest/out_bug /tmp/rctest/out_fix)",
-      "Bash(rm -f /tmp/rctest/out_bug/* /tmp/rctest/out_fix/*)",
       "Bash(awk '/variable \"\\(cpu|memory\\)\"/{print NR\": \"$0; for\\(i=0;i<5;i++\\){getline; print \"   \"$0; if\\($0 ~ /^}/\\)break}}' terraform/modules/rc-service/variables.tf)",
       "Bash(tee /tmp/apply-v9.log)",
       "Bash(tee /tmp/ladder-10k-v2.log)",
@@ -254,7 +250,6 @@
       "Bash(sed -i 's/Architecture version \\\\*\\\\*v10\\\\.1\\\\*\\\\* \\(single-AZ, HA-ready, ~\\\\$306\\\\/mo/Architecture version **v10.2** \\(single-AZ, HA-ready, ~$299\\\\/mo/' README.md)",
       "Bash(grep -rn '306\\\\.23\\\\|171\\\\.37\\\\|\\\\$306\\\\b\\\\|~\\\\$307\\\\|\\\\$281\\\\|0\\\\.5-ACU\\\\|reader_count' docs/ README.md)",
       "Bash(grep -rn '298\\\\.91\\\\|164\\\\.05\\\\|~\\\\$299\\\\|\\\\$36\\\\.18\\\\|\\\\$273' docs/ README.md)",
-      "Bash(env)",
       "Bash(tee /tmp/rds-apply.log)",
       "Bash(tee /tmp/rds-apply2.log)",
       "Bash(grep -n '273\\\\|299 base\\\\|~\\\\$299' docs/hardening_audit.md)",
@@ -464,7 +459,22 @@
       "/home/archie"
     ]
   },
-  "model": "opus[1m]",
+  "model": "claude-opus-5[1m]",
+  "disableClaudeAiConnectors": true,
+  "skillOverrides": {
+    "design": "user-invocable-only",
+    "dataviz": "user-invocable-only",
+    "keybindings-help": "user-invocable-only",
+    "fewer-permission-prompts": "user-invocable-only",
+    "init": "user-invocable-only",
+    "schedule": "user-invocable-only",
+    "loop": "user-invocable-only",
+    "code-review": "user-invocable-only",
+    "simplify": "user-invocable-only",
+    "security-review": "user-invocable-only",
+    "run": "user-invocable-only",
+    "claude-in-chrome": "user-invocable-only"
+  },
   "hooks": {
     "PreToolUse": [
       {
@@ -533,18 +543,27 @@
   "enabledPlugins": {
     "clangd-lsp@claude-plugins-official": true
   },
+  "feedbackDrafts": "off",
   "modelSettings": {
     "claude-fable-5": {
       "effortLevel": "high"
     },
     "claude-fable-5-1": {
-      "effortLevel": "high"
+      "effortLevel": "low"
     }
   },
+  "autoCompactWindow": 200000,
   "tui": "fullscreen",
   "skipDangerousModePermissionPrompt": true,
   "skipWorkflowUsageWarning": true,
-  "autoCompactEnabled": false,
+  "autoCompactEnabled": true,
+  "precomputeCompactionEnabled": true,
+  "autoContinueAtUsageLimit": true,
   "inputNeededNotifEnabled": true,
-  "agentPushNotifEnabled": true
+  "agentPushNotifEnabled": true,
+  "statusLine": {
+    "type": "command",
+    "command": "bash ~/.claude/statusline.sh",
+    "padding": 0
+  }
 }
