@@ -27,3 +27,6 @@ skills/*
 hooks/__pycache__/
 hooks/tests/
 hooks/README.md
+!agents/
+!agents/**
+!statusline.sh

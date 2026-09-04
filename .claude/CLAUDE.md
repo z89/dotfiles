@@ -97,6 +97,19 @@ interference — the point is to skip needless takeover, not to sacrifice the re
 When a run does change something the user can see, say so plainly afterwards: what is left
 changed, and anything that failed.
 
+## Context discipline
+
+Every turn re-sends the whole conversation, so keep tool output small and the transcript lean:
+- Read with `sed -n`, `grep -n`, `head`, `tail`; never `cat` a large file or dump a directory tree.
+- Pipe build and test output through `grep -E 'error|FAIL|warning'` and `tail -40`; report the summary, not the log.
+- Delegate long research, log reading, and test runs to a subagent and bring back only the conclusion.
+- Every spawned agent gets an explicit `model` (`sonnet` for mechanical work, `opus` for judgment) and a prompt of at most ~2,000 words. Never let a worker inherit Fable.
+- Do not re-read a file already in context unless it changed.
+
+## Compact instructions
+
+When compacting, keep: the task statement and acceptance criteria, every file path touched with a one-line note of what changed, decisions made and why, the last verification command and its result, and anything still unfinished. Drop tool output, exploration that led nowhere, and file contents that can be re-read.
+
 ## Key combinations
 
 Never present a keyboard shortcut using only symbols. The user reads modifier glyphs
