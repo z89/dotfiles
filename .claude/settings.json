@@ -472,12 +472,6 @@
         "hooks": [
           {
             "type": "command",
-            "command": "~/.claude/hooks/desktop-guard.sh",
-            "timeout": 10,
-            "statusMessage": "Checking desktop-safety guard..."
-          },
-          {
-            "type": "command",
             "command": "~/.claude/hooks/subagent-commit-guard.sh",
             "timeout": 10,
             "statusMessage": "Checking subagent commit guard..."
@@ -541,6 +535,9 @@
   },
   "modelSettings": {
     "claude-fable-5": {
+      "effortLevel": "high"
+    },
+    "claude-fable-5-1": {
       "effortLevel": "high"
     }
   },
