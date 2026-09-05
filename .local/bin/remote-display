@@ -14,7 +14,9 @@
 
 set -euo pipefail
 
-MODE="1512x982@120"
+# 120 Hz on this headless output doubled wallpaper/layer redraw work on every shell start;
+# 60 Hz is plenty for a streaming/remote-display target.
+MODE="1512x982@60"
 POSITION="5120x0"   # right of DP-2 (5120px wide) in the global layout
 SCALE=1
 WORKSPACE=10        # SUPER+0 — the remote workspace
