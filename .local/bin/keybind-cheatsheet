@@ -1,0 +1,100 @@
+#!/usr/bin/env bash
+# Display Hyprland keybindings in rofi as a cheat sheet
+#
+# Two sources, because the two config managers expose binds differently:
+#   lua      -> descriptions live on the bind (`desc = "..."` in hyprland.lua)
+#               and come back through `hyprctl binds -j`. Adding a bind needs
+#               no change here.
+#   hyprlang -> descriptions don't exist; fall back to parsing hyprland.conf
+#               and mapping commands to friendly names.
+# Which config manager is live is fixed at compositor startup, so probe rather
+# than assume — this has to work either side of a .conf -> .lua migration.
+
+render() { awk -F'\t' '{ printf "%-30s  %s\n", $1, $2 }' | sort | rofi -dmenu -i -p " Keybinds" -no-custom \
+    -theme-str 'window {width: 45%;} listview {lines: 25;}'; }
+
+from_lua() {
+    hyprctl binds -j | jq -r '
+        # modmask bits -> readable names (SHIFT 1, CTRL 4, ALT 8, SUPER 64)
+        def mods:
+            [ if (. / 64 | floor) % 2 == 1 then "Super" else empty end,
+              if (. / 8  | floor) % 2 == 1 then "Alt"   else empty end,
+              if (. / 4  | floor) % 2 == 1 then "Ctrl"  else empty end,
+              if            .     % 2 == 1 then "Shift" else empty end ]
+            | join(" + ");
+        .[]
+        | select(.has_description and .description != "")
+        | select(.key | test("^mouse"; "i") | not)
+        | select(.key | test("^XF86")       | not)
+        | (if .modmask == 0 then .key else (.modmask | mods) + " + " + .key end)
+          + "\t" + .description
+    '
+}
+
+from_conf() {
+    awk '
+    /^bind[lme]* =/ {
+        sub(/^bind[lme]* *= */, "")
+        n = split($0, parts, / *, */)
+        if (n < 3) next
+        mods = parts[1]; key = parts[2]; action = parts[3]
+        for (i = 4; i <= n; i++) action = action ", " parts[i]
+        gsub(/[, ]+$/, "", action)
+        if (mods == "" || mods == " ") { combo = key }
+        else {
+            gsub(/\$mainMod/, "Super", mods); gsub(/SUPER/, "Super", mods)
+            gsub(/SHIFT/, "Shift", mods); gsub(/CTRL/, "Ctrl", mods); gsub(/ALT/, "Alt", mods)
+            combo = mods " + " key
+        }
+        if (key ~ /^[0-9]$/ && action ~ /workspace/) next
+        if (key ~ /^mouse/) next
+        if (key ~ /^XF86/) next
+        desc = action; gsub(/^ */, "", desc)
+        if (desc ~ /^exec,/) {
+            sub(/^exec, */, "", desc)
+            if (desc ~ /\$terminal/)         desc = "Terminal"
+            else if (desc ~ /\$fileManager/) desc = "File Manager"
+            else if (desc ~ /\$menu/)        desc = "App Launcher"
+            else if (desc ~ /hyprpanel toggleWindow dashboardmenu/) desc = "Dashboard"
+            else if (desc ~ /hyprpanel clearNotifications/)         desc = "Clear Notifications"
+            else if (desc ~ /hyprctl reload/)   desc = "Reload Config"
+            else if (desc ~ /theme-switch/)     desc = "Switch Theme/Wallpaper"
+            else if (desc ~ /hyprlock/)         desc = "Lock Screen"
+            else if (desc ~ /playerctl.*next/)  desc = "Spotify Next"
+            else if (desc ~ /playerctl.*prev/)  desc = "Spotify Previous"
+            else if (desc ~ /playerctl.*play/)  desc = "Spotify Play/Pause"
+            else if (desc ~ /snapshot.*area/)   desc = "Screenshot (Area)"
+            else if (desc ~ /ycombo-refresh/)   desc = "YCombo Refresh"
+            else if (desc ~ /ycombo-toggle/)    desc = "YCombo Toggle"
+            else if (desc ~ /ycombo-resize.*\+h/) desc = "YCombo Taller"
+            else if (desc ~ /ycombo-resize.*-h/)  desc = "YCombo Shorter"
+            else if (desc ~ /ycombo-resize.*\+w/) desc = "YCombo Wider"
+            else if (desc ~ /ycombo-resize.*-w/)  desc = "YCombo Narrower"
+        } else {
+            if (desc ~ /killactive/)     desc = "Close Window"
+            else if (desc ~ /togglefloating/) desc = "Toggle Floating"
+            else if (desc ~ /togglesplit/)    desc = "Toggle Split"
+            else if (desc ~ /pseudo/)         desc = "Pseudo-tile"
+            else if (desc ~ /movefocus, *l/)  desc = "Focus Left"
+            else if (desc ~ /movefocus, *r/)  desc = "Focus Right"
+            else if (desc ~ /movefocus, *u/)  desc = "Focus Up"
+            else if (desc ~ /movefocus, *d/)  desc = "Focus Down"
+            else if (desc ~ /movewindow, *l/) desc = "Move Window Left"
+            else if (desc ~ /movewindow, *r/) desc = "Move Window Right"
+            else if (desc ~ /movewindow, *u/) desc = "Move Window Up"
+            else if (desc ~ /movewindow, *d/) desc = "Move Window Down"
+            else if (desc ~ /workspace, *e\+1/) desc = "Next Workspace"
+            else if (desc ~ /workspace, *e-1/)  desc = "Prev Workspace"
+            else if (desc ~ /workspace, *8/)    desc = "Go to Spotify (WS 8)"
+        }
+        printf "%s\t%s\n", combo, desc
+    }
+    ' "$HOME/.config/hypr/hyprland.conf"
+}
+
+out=$(from_lua)
+# No described binds means the legacy parser is live (or hyprland.lua predates
+# the desc annotations) — fall back to the config file.
+[ -z "$out" ] && out=$(from_conf)
+
+printf '%s\n' "$out" | render

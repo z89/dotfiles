@@ -1,0 +1,24 @@
+#!/usr/bin/env bash
+# systemd ExecStart for dms.service: run DMS with the patched shell UI when it
+# matches the installed dms binary, otherwise run stock and rebuild the patch
+# in the background, then restart once so the patched UI takes over.
+PATCHED=${DMS_SHELL_PATCHED:-$HOME/.local/share/dms-shell-patched}
+BIN_SHA=$(sha256sum "$(command -v dms)" | cut -d' ' -f1)
+
+if [[ -f "$PATCHED/shell.qml" && "$(cat "$PATCHED/.dms-binary-sha256" 2>/dev/null)" == "$BIN_SHA" ]]; then
+    export DMS_SHELL_DIR=$PATCHED
+else
+    echo "dms-run-patched: patched shell missing or stale for this dms binary; starting stock and rebuilding" >&2
+    (
+        for _ in $(seq 1 30); do
+            sleep 2
+            if "$HOME/.local/bin/dms-shell-patch" >/dev/null 2>&1; then
+                echo "dms-run-patched: patch rebuilt, restarting dms.service" >&2
+                exec systemctl --user restart dms.service
+            fi
+        done
+        echo "dms-run-patched: could not rebuild patched shell; running stock" >&2
+    ) &
+fi
+
+exec /usr/bin/dms run --session

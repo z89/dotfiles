@@ -1,0 +1,14 @@
+#!/usr/bin/env bash
+# theme-switch: wallpaper + colour switch, delegated to DankMaterialShell.
+# DMS sets the wallpaper, runs matugen (bundled + ~/.config/matugen/config.toml
+# templates), then theme-apply.path reloads running apps.
+#   theme-switch <image>   set a wallpaper
+#   theme-switch --next    cycle to the next wallpaper in the DMS folder
+#   theme-switch --prev    previous wallpaper
+#   theme-switch           open the wallpaper picker
+case "${1:-}" in
+    --next) exec dms ipc call wallpaper next ;;
+    --prev) exec dms ipc call wallpaper prev ;;
+    "")     exec dms ipc call dash open wallpaper ;;
+    *)      exec dms ipc call wallpaper set "$(realpath "$1")" ;;
+esac

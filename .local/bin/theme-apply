@@ -1,0 +1,922 @@
+#!/usr/bin/env python3
+"""theme-apply - post-theme-generation hook.
+
+DankMaterialShell runs matugen on every wallpaper change and writes the colour
+files, but has no user hook. This reloads the running apps that cannot notice a
+file change on their own. Every step is independent: a failure in one is logged
+and never blocks the rest. Stdlib only.
+
+Usage: theme-apply [--dry-run]
+"""
+
+import base64
+import colorsys
+import glob
+import json
+import os
+import re
+import signal
+import socket
+import struct
+import subprocess
+import sys
+import threading
+import time
+import urllib.request
+
+HOME = os.path.expanduser("~")
+STATE_DIR = os.path.join(HOME, ".local/state/theme-apply")
+LOG_FILE = os.path.join(STATE_DIR, "log")
+HYPR_STAMP = os.path.join(STATE_DIR, "hypr.stamp")
+LOG_MAX = 200 * 1024
+
+NOTION_PORT = 9333
+SPOTIFY_PORT = 9332
+NET_TIMEOUT = 2.0
+
+NOTION_CSS = os.path.join(HOME, ".cache/matugen/notion-colors.css")
+SPICETIFY_INI = os.path.join(HOME, ".config/spicetify/Themes/matugen/color.ini")
+GTK4_COLORS = os.path.join(HOME, ".config/gtk-4.0/dank-colors.css")
+HYPR_COLORS = os.path.join(HOME, ".config/hypr/dms/colors.lua")
+GTK3_COLORS = os.path.join(HOME, ".config/gtk-3.0/dank-colors.css")
+GTK3_BASE_THEME = "/usr/share/themes/adw-gtk3-dark/gtk-3.0/gtk.css"
+# A theme's gtk-4.0/gtk.css REPLACES GTK4's built-in stylesheet rather than
+# overlaying it, so it must import the stock Default theme first or plain
+# GTK4 apps (pavucontrol etc.) render with no backgrounds or widget styling.
+GTK4_BASE_THEME = "resource:///org/gtk/libgtk/theme/Default/Default-dark.css"
+# Written by palette-gen (step_palette) from the kitty palette; appended after
+# the DMS colours so GTK windows share the terminal's background exactly.
+GTK_PALETTE_CSS = os.path.join(HOME, ".config/gtk-3.0/palette-colors.css")
+
+# ---------------------------------------------------------------- fade engine
+# One duration and one curve shared by everything that can animate: GTK does
+# it itself through CSS transitions (they fire on a theme swap), kitty is fed
+# interpolated palettes over its control socket, Hyprland eases its border
+# colours with its own "border" animation once given the target.
+FADE_MS = 500
+FADE_FPS = 30
+FADE_BEZIER = "cubic-bezier(0.33, 1, 0.68, 1)"   # easeOutCubic, same as _ease()
+GTK_FADE_CSS = (
+    "\n/* fade engine: colour changes ease over the same curve and duration as kitty */\n"
+    "* { transition: background-color %(d)dms %(b)s, color %(d)dms %(b)s, "
+    "border-color %(d)dms %(b)s, outline-color %(d)dms %(b)s; }\n"
+    "/* interactive widgets keep snappy state changes */\n"
+    "button, button *, .titlebutton, check, radio, switch, slider, scale, entry, "
+    "menuitem, modelbutton, tab, scrollbar *, spinbutton *, row:hover, row:selected, "
+    "*:hover, *:active, *:checked { transition-duration: 120ms; }\n"
+    % {"d": FADE_MS, "b": FADE_BEZIER})
+KITTY_PALETTE = os.path.join(HOME, ".config/kitty/matugen-theme.conf")        # live include
+KITTY_PALETTE_NEXT = os.path.join(HOME, ".config/kitty/matugen-theme.next.conf")  # from palette-gen
+HYPR_BORDERS = os.path.join(HOME, ".config/hypr/borders.lua")
+THEMES_DIR = os.path.join(HOME, ".themes")
+THEME_NAMES = ("Matugen-A", "Matugen-B")
+
+DRY_RUN = "--dry-run" in sys.argv[1:]
+_log_lock = threading.Lock()
+
+
+# ---------------------------------------------------------------- logging
+
+def log(step, msg):
+    line = "%s %-9s %s" % (time.strftime("%Y-%m-%d %H:%M:%S"), step, msg)
+    if DRY_RUN:
+        print(line)
+        return
+    with _log_lock:
+        try:
+            os.makedirs(STATE_DIR, exist_ok=True)
+            # rotate before it grows past the cap
+            if os.path.exists(LOG_FILE) and os.path.getsize(LOG_FILE) > LOG_MAX:
+                os.replace(LOG_FILE, LOG_FILE + ".1")
+            with open(LOG_FILE, "a") as f:
+                f.write(line + "\n")
+        except OSError:
+            pass
+
+
+def guard(step, fn):
+    """Run fn, swallowing and logging anything it raises."""
+    try:
+        fn()
+    except Exception as exc:  # one broken step must not stop the others
+        log(step, "error: %s: %s" % (type(exc).__name__, exc))
+
+
+# ------------------------------------------------------------ CDP / websocket
+
+def _ws_frame(payload: bytes) -> bytes:
+    """Masked client text frame."""
+    frame = bytearray([0x81])
+    mask = os.urandom(4)
+    n = len(payload)
+    if n < 126:
+        frame.append(0x80 | n)
+    elif n < 65536:
+        frame.append(0x80 | 126)
+        frame.extend(struct.pack(">H", n))
+    else:
+        frame.append(0x80 | 127)
+        frame.extend(struct.pack(">Q", n))
+    frame.extend(mask)
+    frame.extend(bytes(b ^ mask[i % 4] for i, b in enumerate(payload)))
+    return bytes(frame)
+
+
+def cdp_tabs(port):
+    """Tab list from a CDP endpoint, or None when the port does not answer."""
+    try:
+        raw = urllib.request.urlopen(
+            "http://localhost:%d/json" % port, timeout=NET_TIMEOUT).read()
+        return json.loads(raw)
+    except Exception:
+        return None
+
+
+def cdp_eval(ws_url, expression):
+    """Runtime.evaluate over a raw websocket, one shot."""
+    _, _, hostport, path = ws_url.split("/", 3)
+    host, port = hostport.split(":")
+    key = base64.b64encode(os.urandom(16)).decode()
+    sock = socket.create_connection((host, int(port)), timeout=NET_TIMEOUT)
+    try:
+        sock.settimeout(NET_TIMEOUT)
+        sock.sendall((
+            "GET /%s HTTP/1.1\r\nHost: %s\r\nUpgrade: websocket\r\n"
+            "Connection: Upgrade\r\nSec-WebSocket-Key: %s\r\n"
+            "Sec-WebSocket-Version: 13\r\n\r\n" % (path, hostport, key)
+        ).encode())
+        resp = b""
+        while b"\r\n\r\n" not in resp:
+            chunk = sock.recv(4096)
+            if not chunk:
+                raise OSError("websocket handshake closed")
+            resp += chunk
+        msg = json.dumps({"id": 1, "method": "Runtime.evaluate",
+                          "params": {"expression": expression}}).encode()
+        sock.sendall(_ws_frame(msg))
+        try:
+            sock.recv(4096)  # drain the reply; failure here is harmless
+        except OSError:
+            pass
+    finally:
+        try:
+            sock.close()
+        except OSError:
+            pass
+
+
+# ------------------------------------------------------------------ a. kitty
+
+def step_palette():
+    """Build the OKLCH terminal palette from the current accent."""
+    if DRY_RUN:
+        log("palette", "would run palette-gen")
+        return
+    subprocess.run([os.path.join(HOME, ".local/bin/palette-gen")],
+                   stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=10)
+    log("palette", "kitty palette regenerated")
+
+
+ICON_THEMES = ("Papirus-Dank", "Papirus-Dank-B")   # B is an alias inheriting A
+FOLDER_COLOR = os.path.join(STATE_DIR, "folder-color")
+FOLDER_APPLIED = os.path.join(STATE_DIR, "folder-color.applied")
+
+
+def _gset(key, val=None):
+    if val is None:
+        return subprocess.run(["gsettings", "get", "org.gnome.desktop.interface", key],
+                              capture_output=True, text=True, timeout=2).stdout.strip().strip("'")
+    subprocess.run(["gsettings", "set", "org.gnome.desktop.interface", key, val],
+                   stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=2)
+
+
+def _flip_icon_theme():
+    """GtkIconTheme only re-reads the theme on an icon-theme-name change, so
+    alternate between the real theme and its alias.  Same trick as the GTK3
+    A/B theme flip; every running GTK3/GTK4 app reloads its icons in <1s."""
+    cur = _gset("icon-theme")
+    nxt = ICON_THEMES[1] if cur == ICON_THEMES[0] else ICON_THEMES[0]
+    _gset("icon-theme", nxt)
+    return nxt
+
+
+def step_icons():
+    """Recolour the Papirus-Dank folder icons to the palette's choice
+    (papirus-folders, ~0.3s), then flip the icon theme name so open apps
+    reload.  Skipped entirely when the colour is already applied."""
+    try:
+        want = open(FOLDER_COLOR).read().strip()
+    except OSError:
+        return
+    try:
+        have = open(FOLDER_APPLIED).read().strip()
+    except OSError:
+        have = ""
+    if not os.path.isdir(os.path.expanduser("~/.local/share/icons/%s" % ICON_THEMES[1])):
+        log("icons", "icon theme overlay missing; run papirus-dank-build")
+        return
+    if _gset("icon-theme") not in ICON_THEMES:
+        if not DRY_RUN:
+            _gset("icon-theme", ICON_THEMES[0])
+        log("icons", "icon-theme repointed to %s" % ICON_THEMES[0])
+    if want == have:
+        log("icons", "folders already %s" % want)
+        return
+    if DRY_RUN:
+        log("icons", "would recolour folders %s -> %s" % (have or "?", want))
+        return
+    r = subprocess.run(["papirus-folders", "-C", want, "-t", ICON_THEMES[0]],
+                       stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=20)
+    if r.returncode != 0:
+        log("icons", "papirus-folders failed (%d)" % r.returncode)
+        return
+    with open(FOLDER_APPLIED, "w") as f:
+        f.write(want + "\n")
+    log("icons", "folders %s -> %s, icon-theme now %s" % (have or "?", want, _flip_icon_theme()))
+
+
+def _srgb_to_lin(c):
+    return c / 12.92 if c <= 0.04045 else ((c + 0.055) / 1.055) ** 2.4
+
+
+def _lin_to_srgb(c):
+    c = min(1.0, max(0.0, c))
+    return 12.92 * c if c <= 0.0031308 else 1.055 * c ** (1 / 2.4) - 0.055
+
+
+def _hex_to_oklab(h):
+    r, g, b = (_srgb_to_lin(int(h[i:i + 2], 16) / 255.0) for i in (1, 3, 5))
+    l = (0.4122214708 * r + 0.5363325363 * g + 0.0514459929 * b) ** (1 / 3)
+    m = (0.2119034982 * r + 0.6806995451 * g + 0.1073969566 * b) ** (1 / 3)
+    s_ = (0.0883024619 * r + 0.2817188376 * g + 0.6299787005 * b) ** (1 / 3)
+    return (0.2104542553 * l + 0.7936177850 * m - 0.0040720468 * s_,
+            1.9779984951 * l - 2.4285922050 * m + 0.4505937099 * s_,
+            0.0259040371 * l + 0.7827717662 * m - 0.8086757660 * s_)
+
+
+def _oklab_to_hex(L, a, b):
+    l = (L + 0.3963377774 * a + 0.2158037573 * b) ** 3
+    m = (L - 0.1055613458 * a - 0.0638541728 * b) ** 3
+    s_ = (L - 0.0894841775 * a - 1.2914855480 * b) ** 3
+    r = 4.0767416621 * l - 3.3077115913 * m + 0.2309699292 * s_
+    g = -1.2684380046 * l + 2.6097574011 * m - 0.3413193965 * s_
+    bb = -0.0041960863 * l - 0.7034186147 * m + 1.7076147010 * s_
+    return "#%02x%02x%02x" % tuple(int(round(_lin_to_srgb(c) * 255)) for c in (r, g, bb))
+
+
+def _ease(t):
+    return 1 - (1 - t) ** 3
+
+
+def _mix(h1, h2, t):
+    a, b = _hex_to_oklab(h1), _hex_to_oklab(h2)
+    return _oklab_to_hex(*(x + (y - x) * t for x, y in zip(a, b)))
+
+
+_HEX = re.compile(r"^([a-z_0-9]+)\s+(#[0-9a-fA-F]{6})\s*$")
+
+
+def _kitty_palette(path):
+    pal = {}
+    try:
+        with open(path) as f:
+            for line in f:
+                m = _HEX.match(line.strip())
+                if m:
+                    pal[m.group(1)] = m.group(2).lower()
+    except OSError:
+        pass
+    return pal
+
+
+_kitty_version = None
+
+
+def _kitty_proto_version():
+    global _kitty_version
+    if _kitty_version is None:
+        _kitty_version = [0, 40, 0]
+        try:
+            out = subprocess.run(["kitty", "--version"], capture_output=True, text=True,
+                                 timeout=2).stdout
+            _kitty_version = [int(x) for x in out.split()[1].split(".")[:3]]
+        except Exception:
+            pass
+    return _kitty_version
+
+
+def _kitty_sockets():
+    """{pid: connected socket} for every reachable kitty instance."""
+    socks = {}
+    for path in glob.glob("/tmp/kitty-*"):
+        try:
+            pid = int(path.rsplit("-", 1)[1])
+            sk = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+            sk.settimeout(0.3)
+            sk.connect(path)
+            socks[pid] = sk
+        except (OSError, ValueError):
+            pass
+    return socks
+
+
+def _kitty_live_colors(sk):
+    """The instance's current configured colours, so a fade always starts
+    exactly where the terminal is now (never a first-frame jump)."""
+    msg = json.dumps({"cmd": "get-colors", "version": _kitty_proto_version(),
+                      "payload": {"configured": True}})
+    try:
+        sk.sendall(b"\x1bP@kitty-cmd" + msg.encode() + b"\x1b\\")
+        buf = b""
+        while not buf.endswith(b"\x1b\\"):
+            chunk = sk.recv(65536)
+            if not chunk:
+                break
+            buf += chunk
+        body = json.loads(buf[len(b"\x1bP@kitty-cmd"):-2])
+        if not body.get("ok"):
+            return {}
+        out = {}
+        for line in body["data"].splitlines():
+            parts = line.split()
+            if len(parts) == 2 and re.match(r"^#[0-9a-fA-F]{6}$", parts[1]):
+                out[parts[0]] = parts[1].lower()
+        return out
+    except (OSError, ValueError, KeyError):
+        return {}
+
+
+def _kitty_send(socks, colors_by_pid):
+    """One set-colors frame per instance; drops instances whose socket died."""
+    alive = {}
+    for pid, sk in socks.items():
+        colors = colors_by_pid.get(pid)
+        if not colors:
+            continue
+        msg = json.dumps({"cmd": "set-colors", "version": _kitty_proto_version(),
+                          "no_response": True,
+                          "payload": {"all": True, "configured": True,
+                                      # kitty wants packed 0xRRGGBB ints, not hex strings
+                                      "colors": {k: int(v[1:], 16) for k, v in colors.items()}}})
+        try:
+            sk.sendall(b"\x1bP@kitty-cmd" + msg.encode() + b"\x1b\\")
+            alive[pid] = sk
+        except OSError:
+            sk.close()
+    return alive
+
+
+def _hypr_request(req):
+    base = os.path.join(os.environ.get("XDG_RUNTIME_DIR", "/run/user/%d" % os.getuid()), "hypr")
+    sig = os.environ.get("HYPRLAND_INSTANCE_SIGNATURE")
+    cands = [os.path.join(base, sig, ".socket.sock")] if sig else []
+    cands += sorted(glob.glob(os.path.join(base, "*", ".socket.sock")), key=os.path.getmtime,
+                    reverse=True)
+    for path in cands:
+        try:
+            sk = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+            sk.settimeout(0.5)
+            sk.connect(path)
+            sk.sendall(req.encode())
+            out = b""
+            while True:
+                chunk = sk.recv(65536)
+                if not chunk:
+                    break
+                out += chunk
+            sk.close()
+            return out.decode(errors="replace")
+        except OSError:
+            continue
+    return ""
+
+
+def _hypr_border_targets():
+    """active/inactive border hex from the matugen-rendered borders.lua."""
+    out = {}
+    try:
+        with open(HYPR_BORDERS) as f:
+            for m in re.finditer(r"(active_border|inactive_border)\s*=\s*\"rgb\(([0-9a-fA-F]{6})\)\"", f.read()):
+                out[m.group(1)] = "#" + m.group(2).lower()
+    except OSError:
+        pass
+    return out
+
+
+def _hypr_border_current(which):
+    m = re.search(r'"gradient":\s*"(?:[0-9a-fA-F]{2})([0-9a-fA-F]{6})',
+                  _hypr_request("j/getoption general:col.%s" % which))
+    return "#" + m.group(1).lower() if m else None
+
+
+FADE_HANDLED_PIDS = set()   # kitty instances the fade brought fully up to date
+
+
+def _kitty_file_frame(text, colors):
+    """The staged palette file with the given keys replaced by frame colours."""
+    return re.sub(r"(?m)^([a-z_0-9]+\s+)(#[0-9a-fA-F]{6})\s*$",
+               lambda m: m.group(1) + colors.get(m.group(1).split()[0], m.group(2)), text)
+
+
+def step_fade():
+    """Ease every consumer from what it shows now to the new palette.  Runs
+    right after the GTK theme flip so GTK's own CSS transition, kitty and the
+    Hyprland borders all start on the same tick.
+
+    kitty: each instance is asked for its live colours first, so the fade
+    starts from exactly what is on screen.  The live include file is rewritten
+    with every frame too, and only reaches the final palette on the last one:
+    DMS sends every kitty a config reload after matugen, and whenever that
+    lands (before, during or after) kitty re-reads exactly what it is already
+    showing, so nothing can jump."""
+    try:
+        with open(KITTY_PALETTE_NEXT) as f:
+            next_text = f.read()
+    except OSError:
+        next_text = ""
+    new = _kitty_palette(KITTY_PALETTE_NEXT)
+    file_old = _kitty_palette(KITTY_PALETTE)
+    borders = _hypr_border_targets()
+    border_changes = {w: h for w, h in borders.items()
+                      if _hypr_border_current(w) not in (None, h)}
+    if DRY_RUN:
+        log("fade", "would fade kitty to %d key(s), borders %s" % (len(new), border_changes or "unchanged"))
+        return
+    if border_changes:
+        # one push; Hyprland's "border" animation eases the change itself
+        _hypr_request("[[BATCH]]" + ";".join(
+            "keyword general:col.%s rgb(%s)" % (w, h[1:]) for w, h in border_changes.items()))
+    socks = _kitty_sockets() if new else {}
+    old = {pid: _kitty_live_colors(sk) for pid, sk in socks.items()}
+    keys = {pid: sorted(k for k in new if k in o and o[k] != new[k]) for pid, o in old.items()}
+    fading = {pid: sk for pid, sk in socks.items() if old[pid] and keys[pid]}
+    for pid, sk in socks.items():
+        if not old[pid]:
+            sk.close()          # unreadable instance: step_kitty will SIGUSR1 it
+    in_sync = [pid for pid in socks if old[pid] and not keys[pid]]
+    FADE_HANDLED_PIDS.update(in_sync)
+    file_keys = sorted(k for k in new if k in file_old and file_old[k] != new[k])
+    if fading or file_keys:
+        frames = max(1, int(FADE_MS * FADE_FPS / 1000))
+        t0 = time.time()
+        for i in range(1, frames + 1):
+            t = _ease(i / frames)
+            last = i == frames
+            if file_keys and next_text:
+                _atomic_write(KITTY_PALETTE, next_text if last else _kitty_file_frame(
+                    next_text, {k: _mix(file_old[k], new[k], t) for k in file_keys}))
+            if fading:
+                frame = {pid: ({k: new[k] for k in keys[pid]} if last else
+                               {k: _mix(old[pid][k], new[k], t) for k in keys[pid]})
+                         for pid in fading}
+                fading = _kitty_send(fading, frame)
+            time.sleep(max(0.0, t0 + i / FADE_FPS - time.time()))
+        FADE_HANDLED_PIDS.update(fading)
+        for sk in fading.values():
+            sk.close()
+    if next_text:
+        try:
+            with open(KITTY_PALETTE) as f:
+                current = f.read()
+        except OSError:
+            current = ""
+        if current != next_text:
+            _atomic_write(KITTY_PALETTE, next_text)   # nothing faded; promote outright
+    nkeys = max([len(keys[p]) for p in fading] or [0])
+    log("fade", "kitty: %d instance(s) faded over %dms (%d key(s)), %d already in sync, "
+        "%d unreachable; live file %s; borders %s"
+        % (len(fading), FADE_MS, nkeys, len(in_sync), len(socks) - len(fading) - len(in_sync),
+           "stepped %d key(s)" % len(file_keys) if file_keys else "unchanged",
+           ", ".join("%s->%s" % (w, h) for w, h in border_changes.items()) or "unchanged"))
+
+
+def step_kitty():
+    """kitty re-reads kitty.conf (and its includes) on SIGUSR1."""
+    pids = []
+    try:
+        out = subprocess.run(["pgrep", "-x", "kitty"], capture_output=True,
+                             text=True, timeout=2).stdout
+        pids = [int(p) for p in out.split()]
+    except Exception:
+        pass
+    if not pids:  # /proc fallback if pgrep is missing
+        for entry in os.listdir("/proc"):
+            if not entry.isdigit():
+                continue
+            try:
+                with open("/proc/%s/comm" % entry) as f:
+                    if f.read().strip() == "kitty":
+                        pids.append(int(entry))
+            except OSError:
+                pass
+    if not pids:
+        log("kitty", "no running instances")
+        return
+    skipped = [p for p in pids if p in FADE_HANDLED_PIDS]
+    pids = [p for p in pids if p not in FADE_HANDLED_PIDS]
+    if not pids:
+        log("kitty", "all %d instance(s) updated live by the fade; no reload" % len(skipped))
+        return
+    if DRY_RUN:
+        log("kitty", "would SIGUSR1 pids %s" % pids)
+        return
+    sent = 0
+    for pid in pids:
+        try:
+            os.kill(pid, signal.SIGUSR1)
+            sent += 1
+        except OSError:
+            pass
+    log("kitty", "SIGUSR1 -> %d process(es) (%d handled by the fade)" % (sent, len(skipped)))
+
+
+# ----------------------------------------------------------------- b. Notion
+
+def step_notion():
+    if not os.path.exists(NOTION_CSS):
+        log("notion", "no %s" % NOTION_CSS)
+        return
+    tabs = cdp_tabs(NOTION_PORT)
+    if tabs is None:
+        log("notion", "port %d closed" % NOTION_PORT)
+        return
+
+    with open(NOTION_CSS) as f:
+        css = f.read().replace("\\", "\\\\").replace("`", "\\`").replace("${", "\\${")
+    m = re.search(r"--c-bacPri:\s*(#[0-9a-fA-F]+)", css)
+    bac_pri = m.group(1) if m else "#191919"
+    m = re.search(r"--c-bacSec:\s*(#[0-9a-fA-F]+)", css)
+    bac_sec = m.group(1) if m else "#202020"
+
+    # Notion pages take the whole stylesheet as CSS variables.
+    page_js = """
+(function() {
+    let el = document.getElementById('matugen-theme');
+    if (!el) { el = document.createElement('style'); el.id = 'matugen-theme'; document.head.appendChild(el); }
+    el.textContent = `""" + css + """`;
+})();
+"""
+    # The tab bar ignores CSS vars, so its inline background styles get patched.
+    tab_js = """
+(function() {
+    let el = document.getElementById('matugen-theme');
+    if (!el) { el = document.createElement('style'); el.id = 'matugen-theme'; document.head.appendChild(el); }
+    el.textContent = `.notion-dark-theme.root { background-color: """ + bac_pri + """ !important; } .hide-scrollbar { background: """ + bac_sec + """ !important; }`;
+    var root = document.querySelector('.notion-dark-theme.root');
+    if (root) root.style.backgroundColor = '""" + bac_pri + """';
+    document.querySelectorAll('*').forEach(function(e) {
+        var s = e.getAttribute('style') || '';
+        if (s.includes('background-color:') && !s.includes('transparent'))
+            e.style.backgroundColor = '""" + bac_pri + """';
+        else if (s.includes('background:') && !s.includes('transparent') && !s.includes('linear-gradient'))
+            e.style.background = '""" + bac_sec + """';
+    });
+})();
+"""
+    hit = 0
+    for tab in tabs:
+        if tab.get("type") != "page":
+            continue
+        js = None
+        if "notion.so" in tab.get("url", ""):
+            js = page_js
+        elif tab.get("title") == "Tab Bar":
+            js = tab_js
+        if js is None:
+            continue
+        if DRY_RUN:
+            hit += 1
+            continue
+        try:
+            cdp_eval(tab["webSocketDebuggerUrl"], js)
+            hit += 1
+        except Exception:
+            pass
+    log("notion", "%sinjected into %d target(s)" % ("would have " if DRY_RUN else "", hit))
+
+
+# ---------------------------------------------------------------- c. Spotify
+
+_INI_RE = re.compile(r"^([A-Za-z0-9_-]+)\s*=\s*#?([0-9a-fA-F]{6})\s*$")
+
+
+def spicetify_colors():
+    colors = {}
+    with open(SPICETIFY_INI) as f:
+        for line in f:
+            m = _INI_RE.match(line.strip())
+            if m:
+                colors[m.group(1)] = m.group(2)
+    return colors
+
+
+def step_spotify():
+    if not os.path.exists(SPICETIFY_INI):
+        log("spotify", "no %s" % SPICETIFY_INI)
+        return
+    tabs = cdp_tabs(SPOTIFY_PORT)
+    if tabs is None:
+        log("spotify", "port %d closed" % SPOTIFY_PORT)
+        return
+    colors = spicetify_colors()
+    if not colors:
+        log("spotify", "no colours parsed from color.ini")
+        return
+
+    # Live update: set --spice-* and --spice-rgb-* on the document element.
+    parts = ["var s=document.documentElement.style"]
+    for key, hx in colors.items():
+        r, g, b = int(hx[0:2], 16), int(hx[2:4], 16), int(hx[4:6], 16)
+        parts.append("s.setProperty('--spice-%s','#%s')" % (key, hx))
+        parts.append("s.setProperty('--spice-rgb-%s','%d,%d,%d')" % (key, r, g, b))
+    js = ";".join(parts)
+
+    if DRY_RUN:
+        log("spotify", "would set %d colour vars on tab 0" % len(colors))
+    else:
+        ws_url = tabs[0].get("webSocketDebuggerUrl") if tabs else None
+        if not ws_url:
+            log("spotify", "no debuggable target")
+            return
+        cdp_eval(ws_url, js)
+        log("spotify", "set %d colour vars" % len(colors))
+
+    # Persist to the patched xpui so a cold start has the colours too.
+    # spicetify 2.44 documents "-n, --no-restart"; verified from its help text.
+    if not _spicetify_has_no_restart():
+        log("spicetify", "no --no-restart flag; skipping apply (would restart Spotify)")
+        return
+    if DRY_RUN:
+        log("spicetify", "would run: spicetify -n apply")
+        return
+    subprocess.Popen(["spicetify", "-n", "apply"],
+                     stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+                     start_new_session=True)
+    log("spicetify", "spawned: spicetify -n apply")
+
+
+def _spicetify_has_no_restart():
+    try:
+        out = subprocess.run(["spicetify", "-h"], capture_output=True,
+                             text=True, timeout=2)
+        return "--no-restart" in (out.stdout + out.stderr)
+    except Exception:
+        return False
+
+
+# ----------------------------------------------------------- d. GNOME accent
+
+ACCENT_KEYS = ("accent_color", "--accent-color", "accent_bg_color")
+
+
+def read_primary_hex():
+    """First accent-ish colour out of the DMS GTK4 colour file."""
+    if not os.path.exists(GTK4_COLORS):
+        return None
+    with open(GTK4_COLORS) as f:
+        text = f.read()
+    for key in ACCENT_KEYS:
+        m = re.search(re.escape(key) + r"\s*:?\s*(#[0-9a-fA-F]{6})", text)
+        if m:
+            return m.group(1)
+    return None
+
+
+def nearest_accent(hex_str):
+    """Hue/saturation -> nearest GNOME accent-color name."""
+    h = hex_str.lstrip("#")
+    r, g, b = int(h[0:2], 16) / 255, int(h[2:4], 16) / 255, int(h[4:6], 16) / 255
+    hue, sat, _ = colorsys.rgb_to_hsv(r, g, b)
+    deg = hue * 360
+    if sat < 0.15:
+        return "slate"
+    if deg < 15 or deg >= 345:
+        return "red"
+    if deg < 45:
+        return "orange"
+    if deg < 70:
+        return "yellow"
+    if deg < 160:
+        return "green"
+    if deg < 200:
+        return "teal"
+    if deg < 260:
+        return "blue"
+    if deg < 290:
+        return "purple"
+    return "pink"
+
+
+def step_gnome():
+    hex_str = read_primary_hex()
+    if not hex_str:
+        log("gnome", "no accent colour in %s" % GTK4_COLORS)
+        return
+    accent = nearest_accent(hex_str)
+    if DRY_RUN:
+        log("gnome", "would set accent-color=%s (from %s), color-scheme=prefer-dark"
+            % (accent, hex_str))
+        return
+    for key, val in (("accent-color", accent), ("color-scheme", "prefer-dark")):
+        subprocess.run(["gsettings", "set", "org.gnome.desktop.interface", key, val],
+                       stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=2)
+    log("gnome", "accent-color=%s (from %s), color-scheme=prefer-dark" % (accent, hex_str))
+
+
+# ------------------------------------------------- d2. live GTK3 theme swap
+#
+# GTK never re-reads ~/.config/gtk-3.0/gtk.css in a running process, but it
+# does reload the *theme* whenever gtk-theme-name changes.  So the palette is
+# baked into two identical generated themes and every run flips between them,
+# which restyles every open GTK3 window (Nemo, etc.) instantly.
+
+GTK3_HASH = os.path.join(STATE_DIR, "gtk3.hash")
+
+
+def _read_stable(path, tries=8):
+    """Read a file the generator may still be writing: wait until two reads
+    50 ms apart agree and the content looks complete."""
+    last = None
+    for _ in range(tries):
+        try:
+            with open(path) as f:
+                data = f.read()
+        except OSError:
+            data = None
+        if data and data == last and "@define-color" in data and data.endswith("\n"):
+            return data
+        last = data
+        time.sleep(0.05)
+    return last or ""
+
+
+def _atomic_write(path, data):
+    tmp = path + ".tmp"
+    with open(tmp, "w") as f:
+        f.write(data)
+    os.replace(tmp, path)
+
+
+def _theme_css(colors_css):
+    try:
+        with open(GTK_PALETTE_CSS) as f:
+            palette = f.read()
+    except OSError:
+        palette = ""
+    body = colors_css + palette + GTK_FADE_CSS
+    css3 = '@import url("%s");\n%s' % (GTK3_BASE_THEME, body)
+    css4 = '@import url("%s");\n%s' % (GTK4_BASE_THEME, body)
+    return (css3, css4)
+
+
+def _write_theme(name, colors_css):
+    root = os.path.join(THEMES_DIR, name)
+    os.makedirs(os.path.join(root, "gtk-3.0"), exist_ok=True)
+    os.makedirs(os.path.join(root, "gtk-4.0"), exist_ok=True)
+    _atomic_write(os.path.join(root, "index.theme"),
+                  "[Desktop Entry]\nType=X-GNOME-Metatheme\nName=%s\n"
+                  "[X-GNOME-Metatheme]\nGtkTheme=%s\n" % (name, name))
+    css3, css4 = _theme_css(colors_css)
+    _atomic_write(os.path.join(root, "gtk-3.0", "gtk.css"), css3)
+    _atomic_write(os.path.join(root, "gtk-4.0", "gtk.css"), css4)
+
+
+def _current_gtk_theme():
+    return subprocess.run(["gsettings", "get", "org.gnome.desktop.interface", "gtk-theme"],
+                          capture_output=True, text=True, timeout=2).stdout.strip().strip("'")
+
+
+def gtk3_in_sync():
+    """True only if both generated themes hold exactly the current palette and
+    gsettings points at one of them."""
+    colors_css = _read_stable(GTK3_COLORS)
+    if not colors_css:
+        return True  # nothing to sync from
+    css3, css4 = _theme_css(colors_css)
+    for name in THEME_NAMES:
+        root = os.path.join(THEMES_DIR, name)
+        try:
+            with open(os.path.join(root, "gtk-3.0", "gtk.css")) as f:
+                if f.read() != css3:
+                    return False
+            with open(os.path.join(root, "gtk-4.0", "gtk.css")) as f:
+                if f.read() != css4:
+                    return False
+        except OSError:
+            return False
+    return _current_gtk_theme() in THEME_NAMES
+
+
+def step_gtk3():
+    colors_css = _read_stable(GTK3_COLORS)
+    if not colors_css:
+        log("gtk3", "no usable %s" % GTK3_COLORS)
+        return
+    for name in THEME_NAMES:
+        _write_theme(name, colors_css)
+    cur = _current_gtk_theme()
+    nxt = THEME_NAMES[1] if cur == THEME_NAMES[0] else THEME_NAMES[0]
+    if DRY_RUN:
+        log("gtk3", "would flip gtk-theme %s -> %s" % (cur, nxt))
+        return
+    subprocess.run(["gsettings", "set", "org.gnome.desktop.interface", "gtk-theme", nxt],
+                   stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=2)
+    log("gtk3", "gtk-theme %s -> %s (live restyle)" % (cur, nxt))
+
+
+# -------------------------------------------------------------- e. Hyprland
+
+def step_hypr():
+    """Reload only when DMS actually rewrote colors.lua since the last run."""
+    if not os.path.exists(HYPR_COLORS):
+        log("hypr", "no %s" % HYPR_COLORS)
+        return
+    src = os.path.getmtime(HYPR_COLORS)
+    stamp = os.path.getmtime(HYPR_STAMP) if os.path.exists(HYPR_STAMP) else 0
+    if src <= stamp:
+        log("hypr", "colors.lua unchanged; no reload")
+        return
+    if DRY_RUN:
+        log("hypr", "would run hyprctl reload and touch stamp")
+        return
+    subprocess.run(["hyprctl", "reload"], stdout=subprocess.DEVNULL,
+                   stderr=subprocess.DEVNULL, timeout=2)
+    os.makedirs(STATE_DIR, exist_ok=True)
+    with open(HYPR_STAMP, "a"):
+        os.utime(HYPR_STAMP, None)
+    log("hypr", "hyprctl reload")
+
+
+# ----------------------------------------------------------------- f. portal
+
+def step_portal():
+    """Fire and forget: the GTK file chooser only picks up colours on restart."""
+    if DRY_RUN:
+        log("portal", "would restart xdg-desktop-portal-gtk")
+        return
+    subprocess.Popen(["systemctl", "--user", "restart", "xdg-desktop-portal-gtk"],
+                     stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+                     start_new_session=True)
+    log("portal", "restart xdg-desktop-portal-gtk (async)")
+
+
+# -------------------------------------------------------------------- driver
+
+# Deliberately excludes the kitty palette: theme-apply writes that file itself,
+# so watching it would retrigger this run forever.
+SOURCES = (GTK3_COLORS, GTK4_COLORS, HYPR_COLORS)
+
+
+def _newest_source():
+    return max((os.stat(p).st_mtime for p in SOURCES if os.path.exists(p)), default=0.0)
+
+
+def check():
+    """Cheap guard (theme-sync.timer, and theme-sync-dconf.path on every
+    gsettings write): repair the GTK theme and icon theme if anything drifted.
+    DMS itself points gtk-theme back at stock adw-gtk3-dark after every colour
+    change, so this must be fast and must stay quiet when nothing is wrong."""
+    if _gset("icon-theme") not in ICON_THEMES and os.path.isdir(
+            os.path.expanduser("~/.local/share/icons/%s" % ICON_THEMES[1])):
+        log("check", "icon-theme drifted, repointing")
+        _gset("icon-theme", ICON_THEMES[0])
+    if gtk3_in_sync():
+        return
+    log("check", "gtk3 out of sync, repairing")
+    guard("gtk3", step_gtk3)
+
+
+def main():
+    if "--check" in sys.argv[1:]:
+        check()
+        return
+    for _ in range(3):
+        start = time.time()
+        run_once(start)
+        # A wallpaper change that landed while we were running would otherwise
+        # be swallowed by the path unit: go again until the sources are quiet.
+        time.sleep(0.15)
+        if _newest_source() <= start:
+            break
+        log("rerun", "sources changed during run")
+
+
+def run_once(start):
+    # The two CDP steps are the only ones that can block on the network, so
+    # they run in parallel with the cheap local ones.
+    threads = [threading.Thread(target=guard, args=(name, fn), daemon=True)
+               for name, fn in (("notion", step_notion), ("spotify", step_spotify))]
+    for t in threads:
+        t.start()
+    for name, fn in (("palette", step_palette), ("icons", step_icons), ("gnome", step_gnome), ("gtk3", step_gtk3),
+                     ("fade", step_fade), ("kitty", step_kitty),
+                     ("hypr", step_hypr), ("portal", step_portal)):
+        guard(name, fn)
+    deadline = start + 2.8
+    for t in threads:
+        t.join(max(0.05, deadline - time.time()))
+    log("done", "%.2fs" % (time.time() - start))
+
+
+if __name__ == "__main__":
+    main()

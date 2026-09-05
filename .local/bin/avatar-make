@@ -1,0 +1,151 @@
+#!/usr/bin/env python3
+"""avatar-make - build a profile picture and register it with DMS.
+
+Turns a photo into a square PNG framed for a round avatar, writes it to
+~/.face and hands it to DMS (AccountsService), so the bar (persona plugin),
+the lock screen, the control centre and the greeter all pick it up.
+
+With rembg installed (yay -S python-rembg) the background is removed, so
+the theme colour shows behind the portrait wherever it is drawn. Without it
+the photo is cropped as-is.
+
+Usage:
+  avatar-make PHOTO [--keep-bg] [--zoom 1.0] [--shift-y 0] [--size 512]
+                    [--out PATH] [--no-register]
+
+  --keep-bg     skip background removal even if rembg is available
+  --zoom Z      enlarge the subject (1.0 = fit, 1.3 = tighter on the face)
+  --shift-y PX  move the subject down (negative) or up (positive) in pixels
+  --size N      output edge length in pixels (default 512)
+  --out PATH    write here instead of ~/.face
+  --no-register write the file only, do not tell DMS about it
+"""
+
+import argparse
+import os
+import shutil
+import subprocess
+import sys
+import tempfile
+
+HOME = os.path.expanduser("~")
+DEFAULT_OUT = os.path.join(HOME, ".face")
+MAX_BYTES = 1000 * 1000  # AccountsService rejects icon files over ~1 MB
+
+
+def die(msg):
+    print(f"avatar-make: {msg}", file=sys.stderr)
+    sys.exit(1)
+
+
+def run(cmd, **kw):
+    r = subprocess.run(cmd, capture_output=True, text=True, **kw)
+    if r.returncode != 0:
+        die(f"{cmd[0]} failed: {r.stderr.strip() or r.stdout.strip()}")
+    return r.stdout
+
+
+def magick():
+    for name in ("magick", "convert"):
+        if shutil.which(name):
+            return name
+    die("ImageMagick not found (pacman -S imagemagick)")
+
+
+def cutout(src, dst):
+    """Remove the background with rembg. Returns False if rembg is missing."""
+    if not shutil.which("rembg"):
+        return False
+    print("removing background with rembg (first run downloads the model) ...")
+    run(["rembg", "i", "-m", "isnet-general-use", src, dst])
+    return True
+
+
+def frame_cutout(im, src, dst, size, zoom, shift):
+    # Subject bottom-anchored on a transparent square: shoulders leave through
+    # the bottom of the circle, head sits near the top. Width is capped at 84%
+    # so the ring never touches the hair.
+    w = int(size * 0.84 * zoom)
+    h = int(size * zoom)
+    run([im, "-size", f"{size}x{size}", "xc:none",
+         "(", src, "-trim", "+repage", "-resize", f"{w}x{h}", ")",
+         "-gravity", "South", "-geometry", f"+0+{shift}", "-composite",
+         "-strip", dst])
+
+
+def frame_photo(im, src, dst, size, zoom, shift):
+    # Plain photo: fill the square from the top, where the face usually is.
+    edge = int(size * zoom)
+    run([im, src, "-auto-orient", "-resize", f"{edge}x{edge}^",
+         "-gravity", "North", "-crop", f"{size}x{size}+0+{max(0, -shift)}",
+         "+repage", "-strip", dst])
+
+
+def register(path):
+    if shutil.which("dms"):
+        r = subprocess.run(["dms", "ipc", "call", "profile", "setImage", path],
+                           capture_output=True, text=True)
+        if r.returncode == 0:
+            print(f"registered with DMS: {r.stdout.strip()}")
+            subprocess.run(["dms", "ipc", "call", "plugin-scan", "reload", "persona"],
+                           capture_output=True, text=True)
+            return
+        print(f"dms ipc failed ({r.stderr.strip() or r.stdout.strip()}), trying AccountsService directly")
+    uid = os.getuid()
+    r = subprocess.run(["busctl", "call", "org.freedesktop.Accounts",
+                        f"/org/freedesktop/Accounts/User{uid}",
+                        "org.freedesktop.Accounts.User", "SetIconFile", "s", path],
+                       capture_output=True, text=True)
+    if r.returncode != 0:
+        die(f"could not register the picture: {r.stderr.strip()}")
+    print("registered with AccountsService")
+
+
+def main():
+    ap = argparse.ArgumentParser(description=__doc__.split("\n\n")[0],
+                                 formatter_class=argparse.RawDescriptionHelpFormatter)
+    ap.add_argument("photo")
+    ap.add_argument("--keep-bg", action="store_true")
+    ap.add_argument("--zoom", type=float, default=1.0)
+    ap.add_argument("--shift-y", type=int, default=0)
+    ap.add_argument("--size", type=int, default=512)
+    ap.add_argument("--out", default=DEFAULT_OUT)
+    ap.add_argument("--no-register", action="store_true")
+    a = ap.parse_args()
+
+    src = os.path.abspath(os.path.expanduser(a.photo))
+    if not os.path.isfile(src):
+        die(f"no such file: {src}")
+    if a.zoom < 0.5 or a.zoom > 3:
+        die("--zoom must be between 0.5 and 3")
+    im = magick()
+    out = os.path.abspath(os.path.expanduser(a.out))
+
+    with tempfile.TemporaryDirectory(prefix="avatar-make.") as tmp:
+        cut = os.path.join(tmp, "cutout.png")
+        result = os.path.join(tmp, "avatar.png")
+        if not a.keep_bg and cutout(src, cut):
+            frame_cutout(im, cut, result, a.size, a.zoom, a.shift_y)
+            print("framed transparent cutout (theme colour fills the background)")
+        else:
+            if not a.keep_bg:
+                print("rembg not installed, keeping the photo background "
+                      "(yay -S python-rembg to get the cutout look)")
+            frame_photo(im, src, result, a.size, a.zoom, a.shift_y)
+            print("framed photo")
+
+        if os.path.getsize(result) > MAX_BYTES:
+            run([im, result, "-resize", "384x384", "-strip", result])
+            if os.path.getsize(result) > MAX_BYTES:
+                die("result is over 1 MB even at 384px; try a simpler photo")
+
+        shutil.copyfile(result, out)
+        os.chmod(out, 0o644)
+    print(f"wrote {out}")
+
+    if not a.no_register:
+        register(out)
+
+
+if __name__ == "__main__":
+    main()

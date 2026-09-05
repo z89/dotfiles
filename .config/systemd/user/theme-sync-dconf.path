@@ -1,0 +1,12 @@
+[Unit]
+Description=Repair the GTK/icon theme pointer whenever any gsettings key is written
+
+[Path]
+# DMS resets gtk-theme to stock adw-gtk3-dark after every colour change; every
+# gsettings write lands in this file, so a --check runs ~100ms later and
+# repoints at the generated theme. It writes nothing when already in sync.
+PathChanged=%h/.config/dconf/user
+Unit=theme-sync.service
+
+[Install]
+WantedBy=graphical-session.target

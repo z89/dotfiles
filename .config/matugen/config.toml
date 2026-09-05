@@ -1,29 +1,9 @@
 [config]
 color_scheme = "dark"
 
-[templates.hyprland-colors]
-input_path = "~/.config/matugen/templates/hyprland-colors"
-output_path = "~/.cache/matugen/hyprland-colors.lua"
-
-[templates.kitty-colors]
-input_path = "~/.config/matugen/templates/kitty-colors"
-output_path = "~/.config/kitty/colors.conf"
-
-[templates.gtk3-colors]
-input_path = "~/.config/matugen/templates/gtk3-colors"
-output_path = "~/.cache/matugen/gtk3-colors.css"
-
-[templates.gtk4-colors]
-input_path = "~/.config/matugen/templates/gtk4-colors"
-output_path = "~/.cache/matugen/gtk4-colors.css"
-
 [templates.spicetify-colors]
 input_path = "~/.config/matugen/templates/spicetify-colors"
 output_path = "~/.config/spicetify/Themes/matugen/color.ini"
-
-[templates.vscode-colors]
-input_path = "~/.config/matugen/templates/vscode-colors"
-output_path = "~/.vscode/extensions/matugen-theme/themes/matugen.json"
 
 [templates.discord-colors]
 input_path = "~/.config/matugen/templates/discord-colors"
@@ -33,26 +13,24 @@ output_path = "~/.config/BetterDiscord/themes/matugen.theme.css"
 input_path = "~/.config/matugen/templates/notion-colors"
 output_path = "~/.cache/matugen/notion-colors.css"
 
-[templates.hyprpanel-colors]
-input_path = "~/.config/matugen/templates/hyprpanel-colors"
-output_path = "~/.config/hyprpanel/matugen-colors.scss"
 
-[templates.hyprpanel-modules]
-input_path = "~/.config/matugen/templates/hyprpanel-modules"
-output_path = "~/.config/hyprpanel/modules.scss"
+[templates.gtk4-vars]
+input_path = "~/.config/matugen/templates/gtk4-vars"
+output_path = "~/.config/gtk-4.0/dank-vars.css"
 
-[templates.wofi-colors]
-input_path = "~/.config/matugen/templates/wofi-colors"
-output_path = "~/.cache/matugen/wofi-colors.css"
+[templates.vscode-colors]
+input_path = "~/.config/matugen/templates/vscode-colors"
+output_path = "~/.vscode/extensions/matugen-theme/themes/matugen.json"
 
-[templates.rofi-colors]
-input_path = "~/.config/matugen/templates/rofi-colors"
-output_path = "~/.config/rofi/colors/matugen.rasi"
+[templates.nvim-colors]
+input_path = "~/.config/matugen/templates/nvim-colors"
+output_path = "~/.config/nvim/colors/matugen.lua"
 
-[templates.swaync-colors]
-input_path = "~/.config/matugen/templates/swaync-colors"
-output_path = "~/.config/swaync/style.css"
+[templates.satty-config]
+input_path = "~/.config/matugen/templates/satty-config"
+output_path = "~/.config/satty/config.toml"
 
-[templates.starship-colors]
-input_path = "~/.config/matugen/templates/starship-colors"
-output_path = "~/.config/starship.toml"
+
+[templates.hypr-borders]
+input_path = "~/.config/matugen/templates/hypr-borders"
+output_path = "~/.config/hypr/borders.lua"

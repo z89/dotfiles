@@ -1,0 +1,211 @@
+#!/bin/bash
+# HyprPanel freeze watchdog.
+#
+# Monitors the heartbeat file (/tmp/hyprpanel-heartbeat, updated every 2s by a
+# GLib timer inside the patched gjs bundle). On freeze (heartbeat goes stale) or
+# death (no gjs process), it restarts hyprpanel.
+#
+# IMPORTANT: this watchdog NEVER starts hyprpanel itself and NEVER touches the
+# stock binary. Every start/restart is delegated to the one canonical entry
+# point — ~/.config/hyprpanel/bin/hyprpanel-launch — which is the only
+# theme-switcher-aware path: it persists colors-new.json into config.json,
+# two-stage-kills any running instance, cleans the stale Astal socket, rotates
+# logs, captures stderr, and execs hyprpanel-patched (the JS-patched launcher).
+# Keeping a single start path means the theme switcher and the watchdog can
+# never drift apart.
+#
+# On freeze it captures diagnostics and triggers a coredump (SIGABRT ->
+# systemd-coredump) for postmortem BEFORE handing off to the launcher, since
+# the launcher's pkill would otherwise destroy the frozen state.
+#
+# Started from hyprland.lua's hl.on("hyprland.start", ...) handler.
+
+LAUNCH="$HOME/.config/hyprpanel/bin/hyprpanel-launch"
+HEARTBEAT=/tmp/hyprpanel-heartbeat
+# Freeze reports live in persistent XDG state, NOT /tmp — /tmp is tmpfs and is
+# wiped on reboot, which would lose the evidence before it can be investigated.
+DIAG_DIR="${XDG_STATE_HOME:-$HOME/.local/state}/hyprpanel-freezes"
+GJS_PATTERN="gjs.*dmFyIF-ags.js"
+
+# Signature of the Hyprland compositor this watchdog belongs to (inherited from
+# the exec-once environment). The death-guard below uses it so the watchdog can
+# never outlive its compositor and turn into an orphan that restart-loops the
+# panel against a dead IPC socket. Empty when started outside Hyprland.
+MY_HYPR_SIG="${HYPRLAND_INSTANCE_SIGNATURE:-}"
+
+FREEZE_THRESHOLD=8               # seconds of stale heartbeat before declaring a freeze
+POLL_INTERVAL=3                  # seconds between checks
+GRACE_AFTER_START=20             # seconds to wait after a (re)start before arming
+MAX_FAST_FAILS=3                 # this many restarts within the window trips the breaker
+FAST_FAIL_WINDOW=180
+CIRCUIT_COOLDOWN=900             # seconds to pause restarts once the breaker trips
+KEEP_REPORTS=100                 # prune freeze artifacts beyond this many most-recent sets
+
+mkdir -p "$DIAG_DIR"
+
+WD_LOCK=/tmp/hyprpanel-watchdog.pid
+if [[ -f "$WD_LOCK" ]] && kill -0 "$(cat "$WD_LOCK")" 2>/dev/null; then
+    echo "watchdog already running pid=$(cat "$WD_LOCK"), exiting" >&2
+    exit 0
+fi
+echo $$ > "$WD_LOCK"
+trap 'rm -f "$WD_LOCK"' EXIT
+
+gjs_pid() { pgrep -f "$GJS_PATTERN" | head -1; }
+
+# True while our compositor is still answering on its IPC socket. A force-killed
+# or crashed Hyprland leaves a stale socket dir behind, so probe for a live
+# response rather than testing mere file existence. If we were started outside
+# Hyprland (no signature), there is nothing to track — treat as always-alive.
+compositor_alive() {
+    [[ -z "$MY_HYPR_SIG" ]] && return 0
+    hyprctl --instance "$MY_HYPR_SIG" version >/dev/null 2>&1
+}
+
+# Drop a coredump for postmortem analysis. SIGABRT runs the default abort
+# handler (terminate + dump); systemd-coredump captures it to the journal where
+# it is inspectable with `coredumpctl gdb <pid>`. Works even when live ptrace
+# attach is blocked by Yama (ptrace_scope=1), because the dump happens from
+# inside the process's own death sequence rather than via an external attach.
+dump_core() {
+    local pid=$1
+    [[ -n "$pid" ]] || return 0
+    kill -ABRT "$pid" 2>/dev/null
+    sleep 1
+}
+
+capture_diagnostics() {
+    local pid=$1
+    local ts
+    ts=$(date +%Y%m%d-%H%M%S)
+    local out="$DIAG_DIR/freeze-$ts.log"
+    {
+        echo "=== FREEZE detected at $(date -Iseconds) ==="
+        echo "pid=$pid"
+        echo "heartbeat_file_mtime=$(stat -c %Y "$HEARTBEAT" 2>/dev/null) (now=$(date +%s))"
+        echo
+
+        echo "=== /proc/$pid/status ==="
+        grep -E "State|Threads|VmRSS|VmSize|voluntary_ctxt|nonvoluntary_ctxt" "/proc/$pid/status" 2>/dev/null
+        echo
+
+        echo "=== per-thread wchan (kernel syscall) ==="
+        for t in /proc/$pid/task/*/; do
+            tid=$(basename "$t")
+            tname=$(cat "$t/comm" 2>/dev/null)
+            wchan=$(cat "$t/wchan" 2>/dev/null)
+            sysc=$(awk '{print $1}' "$t/syscall" 2>/dev/null)
+            echo "  tid=$tid comm=$tname wchan=$wchan syscall=$sysc"
+        done
+        echo
+
+        echo "=== gdb thread backtraces (top 30 frames each) ==="
+        # ptrace_scope=1 usually blocks live attach here ('Operation not
+        # permitted'); the SIGABRT coredump (taken next) is the authoritative
+        # source. This is best-effort in case attach happens to be allowed.
+        timeout 10 gdb -batch -nx -p "$pid" \
+            -ex 'set pagination off' \
+            -ex 'thread apply all bt 30' \
+            -ex 'detach' \
+            -ex 'quit' 2>&1 | head -800
+        echo
+
+        echo "=== last 80 lines of /tmp/hyprpanel-diag.log ==="
+        tail -80 /tmp/hyprpanel-diag.log 2>/dev/null
+        echo
+
+        echo "=== last 80 lines of /tmp/hyprpanel-stderr.log ==="
+        tail -80 /tmp/hyprpanel-stderr.log 2>/dev/null
+    } > "$out" 2>&1
+
+    # Persist a compact event history alongside the report: every non-HEARTBEAT
+    # diag line (BOOT, CMD_*, applyCss/_compileSass/_applyCss stages, errors).
+    # This is the signal without the 2s heartbeat noise, so days-later analysis
+    # can spot a command/stage that recurs before freezes. The live diag log is
+    # on tmpfs and gone after a reboot; this snapshot is not.
+    grep -avE "HEARTBEAT$" /tmp/hyprpanel-diag.log 2>/dev/null > "$DIAG_DIR/freeze-$ts.events.log"
+    # Full stderr snapshot (small — GJS warnings/criticals), also reboot-safe.
+    cp -f /tmp/hyprpanel-stderr.log "$DIAG_DIR/freeze-$ts.stderr.log" 2>/dev/null
+
+    # Prune to the most recent KEEP_REPORTS freeze sets (by the freeze-<ts>.log
+    # anchor) so the persistent dir stays bounded.
+    ls -1t "$DIAG_DIR"/freeze-*.log 2>/dev/null | grep -vE '\.(events|stderr)\.log$' | tail -n +$((KEEP_REPORTS + 1)) | while read -r old; do
+        base="${old%.log}"
+        rm -f "$old" "$base.events.log" "$base.stderr.log"
+    done
+
+    echo "captured freeze diagnostics to $out (+ .events.log, .stderr.log)" >&2
+}
+
+notify_circuit_open() {
+    notify-send -u critical -t 0 \
+        "HyprPanel watchdog circuit open" \
+        "$MAX_FAST_FAILS restarts within ${FAST_FAIL_WINDOW}s. Pausing for $((CIRCUIT_COOLDOWN/60))min. See $DIAG_DIR." \
+        2>/dev/null
+}
+
+# Circuit breaker state: timestamps of recent restarts.
+declare -a FAIL_TIMES=()
+trip_breaker_if_needed() {
+    local now=$1
+    FAIL_TIMES+=("$now")
+    local cutoff=$((now - FAST_FAIL_WINDOW))
+    local recent=()
+    local t
+    for t in "${FAIL_TIMES[@]}"; do
+        (( t >= cutoff )) && recent+=("$t")
+    done
+    FAIL_TIMES=("${recent[@]}")
+    if (( ${#FAIL_TIMES[@]} >= MAX_FAST_FAILS )); then
+        notify_circuit_open
+        sleep "$CIRCUIT_COOLDOWN"
+        FAIL_TIMES=()
+    fi
+}
+
+# Single restart path: delegate entirely to the canonical patched launcher.
+restart() { "$LAUNCH"; }
+
+# Don't even start if our compositor is already gone (e.g. raced a session exit).
+compositor_alive || { echo "no live compositor at startup; watchdog exiting" >&2; exit 0; }
+
+# Initial start.
+restart
+sleep "$GRACE_AFTER_START"
+
+while true; do
+    sleep "$POLL_INTERVAL"
+    now=$(date +%s)
+
+    # Death-guard: if our compositor is gone, exit instead of restarting. This
+    # stops the watchdog from outliving its session as an orphan that relaunches
+    # the panel against a dead IPC socket — the exact failure that turns a clean
+    # session restart into a freeze loop. The EXIT trap frees the singleton lock
+    # so the next session's exec-once watchdog takes over cleanly.
+    if ! compositor_alive; then
+        echo "compositor $MY_HYPR_SIG is gone; watchdog exiting" >&2
+        exit 0
+    fi
+
+    pid=$(gjs_pid)
+
+    # Death case: process gone entirely.
+    if [[ -z "$pid" ]]; then
+        restart
+        trip_breaker_if_needed "$now"
+        sleep "$GRACE_AFTER_START"
+        continue
+    fi
+
+    # Freeze case: process alive but heartbeat stale.
+    [[ -f "$HEARTBEAT" ]] || continue
+    mtime=$(stat -c %Y "$HEARTBEAT" 2>/dev/null || echo "$now")
+    age=$((now - mtime))
+    if (( age > FREEZE_THRESHOLD )); then
+        capture_diagnostics "$pid"
+        dump_core "$pid"
+        restart
+        trip_breaker_if_needed "$now"
+        sleep "$GRACE_AFTER_START"
+    fi
+done

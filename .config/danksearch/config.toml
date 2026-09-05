@@ -1,0 +1,28 @@
+# DankSearch (dsearch) — file index behind the "/" prefix in the DMS launcher.
+index_path = "/home/archie/.cache/danksearch/index"
+listen_addr = "127.0.0.1:43654"
+max_file_bytes = 2097152
+worker_count = 4
+index_all_files = true
+merge_default_exclude_dirs = true
+text_extensions = [
+    ".txt", ".md", ".go", ".py", ".js", ".ts", ".jsx", ".tsx", ".json",
+    ".yaml", ".yml", ".toml", ".html", ".css", ".scss", ".rs", ".c", ".cpp",
+    ".h", ".java", ".kt", ".rb", ".php", ".sh", ".zsh", ".lua", ".qml", ".conf",
+]
+
+[[index_paths]]
+path = "/home/archie"
+max_depth = 8
+exclude_hidden = true
+exclude_dirs = [
+    "node_modules", "__pycache__", "venv", ".venv", "target", "dist", "build",
+    ".cache", "go", "Android", "MEGA", "MEGA downloads", "tmp", "yay",
+    "/^core\\.\\d+$/",
+]
+
+[[index_paths]]
+path = "/home/archie/.config"
+max_depth = 3
+exclude_hidden = false
+exclude_dirs = ["chromium", "Code", "Claude", "Notion", "discord", "spotify", "BraveSoftware", "mozilla", "Google"]
