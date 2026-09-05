@@ -104,7 +104,7 @@ backup_header() {
   chmod 600 "$f"
   echo "  header backed up to $f"
 }
-if (( ! dry )); then
+if (( EUID == 0 )); then
   meta=$(cryptsetup luksDump --dump-json-metadata "$dev")
   read -r pass_slot fido_slot <<<"$(python3 - "$meta" <<'PY'
 import json, sys
@@ -121,12 +121,14 @@ PY
     prio=$(python3 -c "import json,sys;print(json.loads(sys.argv[1])['keyslots']['$pass_slot'].get('priority','normal'))" "$meta")
     if [[ $prio != prefer ]]; then
       note "keyslot $pass_slot: priority normal -> prefer (tried first on passphrase entry)"
-      backup_header
-      cryptsetup config --key-slot "$pass_slot" --priority prefer "$dev"
+      if (( ! dry )); then
+        backup_header
+        cryptsetup config --key-slot "$pass_slot" --priority prefer "$dev"
+      fi
     else
       note "keyslot $pass_slot already 'prefer'"
     fi
-    if (( retune )); then
+    if (( retune && ! dry )); then
       note "re-tuning argon2id on keyslot $pass_slot to ~1 s / 512 MiB (enter the passphrase when asked)"
       backup_header
       cryptsetup luksConvertKey --key-slot "$pass_slot" --pbkdf argon2id --iter-time 1000 \
@@ -136,7 +138,7 @@ PY
     echo "  no passphrase-only keyslot found; skipping priority/retune"
   fi
 else
-  note "keyslot priority/retune: needs root, skipped in dry-run"
+  note "keyslot priority/retune: needs root, skipped"
 fi
 
 # 4. Plymouth theme ----------------------------------------------------------------------
@@ -167,7 +169,7 @@ if (( grub_changed )); then
 fi
 if (( changed )); then
   note "mkinitcpio -P"
-  run mkinitcpio -P 2>&1 | grep -E 'error|warning|Image generation' || true
+  if (( dry )); then echo "  would: mkinitcpio -P"; else mkinitcpio -P 2>&1 | grep -E 'error|warning|Image generation' || true; fi
 fi
 
 echo
