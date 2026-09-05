@@ -1,0 +1,177 @@
+#!/usr/bin/env bash
+# luks-boot-setup — make the boot-time LUKS unlock fast, stable and DMS-styled.
+#
+#   sudo ~/.local/bin/luks-boot-setup            apply config + theme, rebuild initramfs
+#   sudo ~/.local/bin/luks-boot-setup --retune   also re-tune the passphrase keyslot (asks for it)
+#   sudo ~/.local/bin/luks-boot-setup --dry-run  show what would change, touch nothing
+#
+# What it fixes (see journalctl -b -o short-monotonic | grep systemd-cryptsetup):
+#   1. crypttab.initramfs: fido2-device=auto,token-timeout=10 made systemd-cryptsetup wait
+#      the full 10 s for a YubiKey that is not plugged in before the Plymouth passphrase
+#      prompt could appear. systemd tries FIDO2 exactly once, strictly before the passphrase,
+#      so the wait is cut to 2 s (long enough for a key plugged in at power-on to enumerate).
+#      tries=5 stops the burnt FIDO2 attempt eating the three passphrase attempts.
+#   2. Root device job timeout: dev-archvg-root.device has a 90 s JobRunningTimeoutSec. Typing
+#      the passphrase slower than that dropped the initrd into emergency mode ("Timed out
+#      waiting for device /dev/archvg/root"). rootflags=x-systemd.device-timeout=infinity on
+#      the kernel command line removes that timer; GRUB's own rootflags=subvol=@ is kept
+#      because systemd concatenates repeated rootflags= values.
+#   3. Passphrase slot priority: cryptsetup tries keyslots in order, each costing a full
+#      argon2id derivation (~1 GiB, ~1 s). Marking the passphrase slot "prefer" makes it the
+#      first one tried. --retune additionally rebenchmarks that slot to ~1 s / 512 MiB.
+#   4. Plymouth theme "dank-unlock", generated from the live DMS palette and wallpaper by
+#      plymouth-dank-theme, replaces the stock spinner theme.
+#
+# Idempotent: every step checks before it writes. Header changes are preceded by a LUKS
+# header backup in /root/luks-header-backup/. Nothing here touches the running session.
+set -euo pipefail
+
+LUKS_UUID=a986161b-b027-4f59-aead-83e06d88eb55
+MAPPER=cryptlvm
+THEME=dank-unlock
+CRYPTTAB_OPTS="fido2-device=auto,token-timeout=2,tries=5,timeout=0"
+ROOTFLAG="rootflags=x-systemd.device-timeout=infinity"
+
+dry=0 retune=0
+for a in "$@"; do
+  case $a in
+    --dry-run) dry=1 ;;
+    --retune) retune=1 ;;
+    *) echo "unknown option: $a"; exit 1 ;;
+  esac
+done
+[[ $EUID -eq 0 || $dry -eq 1 ]] || { echo "run with sudo (or --dry-run)"; exit 1; }
+user=${SUDO_USER:-archie}
+home=$(getent passwd "$user" | cut -d: -f6)
+dev=/dev/disk/by-uuid/$LUKS_UUID
+[[ -e $dev ]] || { echo "LUKS device $dev not found"; exit 1; }
+
+changed=0
+run() { if (( dry )); then echo "  would: $*"; else "$@"; fi; }
+note() { echo "-> $*"; }
+
+# 1. crypttab.initramfs -----------------------------------------------------------------
+want="$MAPPER    UUID=$LUKS_UUID    -    $CRYPTTAB_OPTS"
+if [[ "$(grep -vE '^\s*(#|$)' /etc/crypttab.initramfs 2>/dev/null || true)" != "$want" ]]; then
+  note "crypttab.initramfs: $CRYPTTAB_OPTS"
+  if (( ! dry )); then
+    printf '# Managed by luks-boot-setup (dotfiles). FIDO2 is tried once, before the passphrase;\n# token-timeout bounds that wait. Root job timeout is lifted via rootflags= in GRUB.\n%s\n' "$want" > /etc/crypttab.initramfs
+  fi
+  changed=1
+else
+  note "crypttab.initramfs already correct"
+fi
+
+# 2. GRUB kernel command line ------------------------------------------------------------
+grub=/etc/default/grub
+if ! grep -qF "$ROOTFLAG" "$grub"; then
+  note "GRUB_CMDLINE_LINUX += $ROOTFLAG (and drop the duplicate 'splash')"
+  if (( ! dry )); then
+    cp -a "$grub" "$grub.bak-$(date +%Y%m%d%H%M%S)"
+    sed -i -E "s|^GRUB_CMDLINE_LINUX=\"(.*)\"|GRUB_CMDLINE_LINUX=\"\1 $ROOTFLAG\"|" "$grub"
+    # GRUB_CMDLINE_LINUX_DEFAULT already carries 'quiet splash'; the copy in GRUB_CMDLINE_LINUX
+    # only produced 'splash quiet splash' on the real command line.
+    sed -i -E '/^GRUB_CMDLINE_LINUX=/{s/ splash( |")/\1/;s/"splash /"/}' "$grub"
+    sed -i -E '/^GRUB_CMDLINE_LINUX=/s/  +/ /g' "$grub"
+    grep -E '^GRUB_CMDLINE_LINUX' "$grub"
+  fi
+  grub_changed=1
+else
+  note "GRUB cmdline already has $ROOTFLAG"
+  grub_changed=0
+fi
+
+# 2b. mkinitcpio HOOKS: Arch wiki asks for plymouth before sd-encrypt ------------------
+mk=/etc/mkinitcpio.conf
+if grep -qE '^HOOKS=.*sd-encrypt.* plymouth' "$mk"; then
+  note "mkinitcpio.conf: move plymouth hook before sd-encrypt"
+  if (( ! dry )); then
+    cp -a "$mk" "$mk.bak-$(date +%Y%m%d%H%M%S)"
+    sed -i -E '/^HOOKS=/{s/ plymouth//;s/ sd-encrypt/ plymouth sd-encrypt/}' "$mk"
+    grep -E '^HOOKS=' "$mk"
+  fi
+  changed=1
+else
+  note "mkinitcpio HOOKS order already fine"
+fi
+
+# 3. Keyslot priority (and optional retune) ---------------------------------------------
+backup_header() {
+  local dir=/root/luks-header-backup f
+  f="$dir/luks-$LUKS_UUID-$(date +%Y%m%d%H%M%S).img"
+  mkdir -p "$dir"; chmod 700 "$dir"
+  cryptsetup luksHeaderBackup "$dev" --header-backup-file "$f"
+  chmod 600 "$f"
+  echo "  header backed up to $f"
+}
+if (( ! dry )); then
+  meta=$(cryptsetup luksDump --dump-json-metadata "$dev")
+  read -r pass_slot fido_slot <<<"$(python3 - "$meta" <<'PY'
+import json, sys
+m = json.loads(sys.argv[1])
+token_slots = {s for t in m.get("tokens", {}).values() for s in t.get("keyslots", [])}
+slots = sorted(m["keyslots"], key=int)
+passw = [s for s in slots if s not in token_slots]
+fido = [s for t in m.get("tokens", {}).values() if t.get("type") == "systemd-fido2" for s in t.get("keyslots", [])]
+print(passw[0] if passw else "-", fido[0] if fido else "-")
+PY
+)"
+  echo "  keyslots: passphrase=$pass_slot fido2=$fido_slot"
+  if [[ $pass_slot != - ]]; then
+    prio=$(python3 -c "import json,sys;print(json.loads(sys.argv[1])['keyslots']['$pass_slot'].get('priority','normal'))" "$meta")
+    if [[ $prio != prefer ]]; then
+      note "keyslot $pass_slot: priority normal -> prefer (tried first on passphrase entry)"
+      backup_header
+      cryptsetup config --key-slot "$pass_slot" --priority prefer "$dev"
+    else
+      note "keyslot $pass_slot already 'prefer'"
+    fi
+    if (( retune )); then
+      note "re-tuning argon2id on keyslot $pass_slot to ~1 s / 512 MiB (enter the passphrase when asked)"
+      backup_header
+      cryptsetup luksConvertKey --key-slot "$pass_slot" --pbkdf argon2id --iter-time 1000 \
+        --pbkdf-memory 524288 --pbkdf-parallel 4 "$dev"
+    fi
+  else
+    echo "  no passphrase-only keyslot found; skipping priority/retune"
+  fi
+else
+  note "keyslot priority/retune: needs root, skipped in dry-run"
+fi
+
+# 4. Plymouth theme ----------------------------------------------------------------------
+gen="$home/.local/bin/plymouth-dank-theme"
+build="$home/.cache/plymouth-dank-theme"
+if [[ -x $gen ]]; then
+  note "generating $THEME from the current DMS palette + wallpaper"
+  run sudo -H -u "$user" "$gen" --out "$build"
+  if (( ! dry )); then
+    rm -rf "/usr/share/plymouth/themes/$THEME"
+    cp -r "$build" "/usr/share/plymouth/themes/$THEME"
+    chown -R root:root "/usr/share/plymouth/themes/$THEME"
+    chmod -R u=rwX,go=rX "/usr/share/plymouth/themes/$THEME"
+  fi
+  if [[ "$(plymouth-set-default-theme 2>/dev/null)" != "$THEME" ]]; then
+    note "plymouthd.conf: Theme=$THEME"
+    run plymouth-set-default-theme "$THEME"
+  fi
+  changed=1
+else
+  note "$gen missing; leaving the plymouth theme alone"
+fi
+
+# 5. Regenerate -------------------------------------------------------------------------
+if (( grub_changed )); then
+  note "grub-mkconfig -o /boot/grub/grub.cfg"
+  run grub-mkconfig -o /boot/grub/grub.cfg
+fi
+if (( changed )); then
+  note "mkinitcpio -P"
+  run mkinitcpio -P 2>&1 | grep -E 'error|warning|Image generation' || true
+fi
+
+echo
+echo "Done. Next boot: the passphrase prompt appears ~2 s after the initrd starts."
+echo "Plug the YubiKey in BEFORE powering on to unlock with it (touch when it blinks)."
+echo "Check the timeline after a boot with:"
+echo "  journalctl -b -o short-monotonic | grep -E 'systemd-cryptsetup\\[|Cryptography Setup'"

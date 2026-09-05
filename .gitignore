@@ -24,6 +24,7 @@
 .config/DankMaterialShell/plugins/*
 !.config/DankMaterialShell/plugins/persona/
 !.config/DankMaterialShell/settings.json
+!.config/DankMaterialShell/patches/
 !.config/Code/User/settings.json
 !.config/Code/User/keybindings.json
 !.zprofile
@@ -109,6 +110,8 @@
 !/.config/hypr/borders.lua
 !/.local/bin/app-relaunch
 !/.local/bin/greeter-setup
+!/.local/bin/luks-boot-setup
+!/.local/bin/plymouth-dank-theme
 !/.local/bin/palette-gen
 !/.local/bin/papirus-dank-build
 !/.config/danksearch/
