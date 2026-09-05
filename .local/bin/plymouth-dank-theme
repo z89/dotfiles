@@ -1,0 +1,381 @@
+#!/usr/bin/env python3
+"""plymouth-dank-theme — render the "dank-unlock" Plymouth theme from the live DMS look.
+
+Reads the DankMaterialShell matugen palette (~/.cache/DankMaterialShell/dms-colors.json),
+the current wallpaper (~/.local/state/DankMaterialShell/session.json) and ~/.face, and
+writes a complete two-step theme directory:
+
+    background.png   blurred, dimmed wallpaper cropped to the focused monitor's aspect
+    watermark.png    avatar ring + user name + host name (always visible, centred at 40 %)
+    throbber-NNNN.png  30-frame Material arc spinner shown while booting / unlocking
+    lock.png + entry.png  one seamless pill: lock glyph in the left cap, bullets on the right
+    bullet.png       dot for typed passphrase characters
+    dank-unlock.plymouth
+
+Plymouth's two-step plugin composes PNGs only (no vector primitives), so every rounded
+corner, ring and shadow is pre-rendered here with cairo. Fonts come from Font= in the
+.plymouth file; mkinitcpio's plymouth hook copies the matching TTF into the initramfs.
+
+Usage:  plymouth-dank-theme [--out DIR] [--mode dark|light]
+Run as the desktop user (it reads your caches). luks-boot-setup calls it and installs the
+result into /usr/share/plymouth/themes/dank-unlock.
+"""
+import argparse
+import json
+import math
+import os
+import pwd
+import shutil
+import subprocess
+import sys
+import tempfile
+from pathlib import Path
+
+import cairo
+
+HOME = Path.home()
+THEME = "dank-unlock"
+FONT = "Inter"
+
+# Geometry (pixels at device scale 1; the desk monitor is 5120x1440 @1x)
+ENTRY_H = 60
+LOCK_W = 72          # left pill cap + lock glyph
+ENTRY_W = 388        # right part of the pill (bullets start 11 px in)
+RADIUS = ENTRY_H / 2
+BULLET = 22          # bullet cell size; spacing == cell size in two-step
+AVATAR = 112
+THROB = 44
+THROB_FRAMES = 30
+
+
+def rgb(hexstr):
+    h = hexstr.lstrip("#")
+    return tuple(int(h[i:i + 2], 16) / 255 for i in (0, 2, 4))
+
+
+def rounded_rect(cr, x, y, w, h, r, corners=(True, True, True, True)):
+    """corners = (top-left, top-right, bottom-right, bottom-left)"""
+    tl, tr, br, bl = corners
+    cr.new_sub_path()
+    if tr:
+        cr.arc(x + w - r, y + r, r, -math.pi / 2, 0)
+    else:
+        cr.move_to(x + w, y)
+    if br:
+        cr.arc(x + w - r, y + h - r, r, 0, math.pi / 2)
+    else:
+        cr.line_to(x + w, y + h)
+    if bl:
+        cr.arc(x + r, y + h - r, r, math.pi / 2, math.pi)
+    else:
+        cr.line_to(x, y + h)
+    if tl:
+        cr.arc(x + r, y + r, r, math.pi, 3 * math.pi / 2)
+    else:
+        cr.line_to(x, y)
+    cr.close_path()
+
+
+def surface(w, h):
+    s = cairo.ImageSurface(cairo.FORMAT_ARGB32, int(w), int(h))
+    return s, cairo.Context(s)
+
+
+def load_palette(mode):
+    p = HOME / ".cache/DankMaterialShell/dms-colors.json"
+    d = json.loads(p.read_text())
+    mode = mode or d.get("mode", "dark")
+    return d["colors"][mode], mode
+
+
+def monitor_aspect():
+    """Aspect of the largest connected display. Reads the DRM preferred mode from sysfs so it
+    works under sudo (no compositor env) and matches what Plymouth's DRM renderer will use."""
+    best = None
+    for status in Path("/sys/class/drm").glob("card*-*/status"):
+        try:
+            if status.read_text().strip() != "connected":
+                continue
+            first = (status.parent / "modes").read_text().split("\n", 1)[0]
+            w, h = (int(v) for v in first.split("x")[:2])
+        except Exception:
+            continue
+        if not best or w * h > best[0] * best[1]:
+            best = (w, h)
+    if best:
+        return best[0] / best[1]
+    try:
+        mons = json.loads(subprocess.check_output(["hyprctl", "monitors", "-j"], timeout=3))
+        m = next((m for m in mons if m.get("focused")), mons[0])
+        return m["width"] / m["height"]
+    except Exception:
+        return 16 / 9
+
+
+def wallpaper_path():
+    try:
+        s = json.loads((HOME / ".local/state/DankMaterialShell/session.json").read_text())
+        p = Path(s.get("wallpaperPath", ""))
+        return p if p.is_file() else None
+    except Exception:
+        return None
+
+
+def render_background(out, pal):
+    wp = wallpaper_path()
+    if not wp:
+        print("no wallpaper set; flat background colour only")
+        return
+    aspect = monitor_aspect()
+    width = 2560
+    height = int(round(width / aspect))
+    # crop to monitor aspect, downscale (blur hides the detail), blur, then dim with the
+    # surface colour so the pill and label stay legible.
+    subprocess.check_call([
+        "magick", str(wp), "-auto-orient", "-gravity", "center",
+        "-crop", f"{aspect:.6f}:1", "+repage",
+        "-resize", f"{width}x{height}^", "-extent", f"{width}x{height}",
+        "-blur", "0x18",
+        "-fill", pal["surface"], "-colorize", "58%",
+        "-strip", "-define", "png:compression-level=9",
+        str(out / "background.png"),
+    ])
+
+
+def render_pill(out, pal):
+    fill = rgb(pal["surface_container_high"])
+    border = rgb(pal["outline_variant"])
+    accent = rgb(pal["primary"])
+    # entry.png: right portion, rounded on the right only
+    s, cr = surface(ENTRY_W, ENTRY_H)
+    rounded_rect(cr, 0.5, 0.5, ENTRY_W - 1, ENTRY_H - 1, RADIUS, corners=(False, True, True, False))
+    cr.set_source_rgba(*fill, 0.96)
+    cr.fill_preserve()
+    cr.set_source_rgba(*border, 0.9)
+    cr.set_line_width(1)
+    cr.stroke()
+    # hide the left edge stroke so the seam with lock.png is invisible
+    cr.set_operator(cairo.OPERATOR_SOURCE)
+    cr.set_source_rgba(*fill, 0.96)
+    cr.rectangle(0, 1, 1, ENTRY_H - 2)
+    cr.fill()
+    s.write_to_png(str(out / "entry.png"))
+
+    # lock.png: left cap with the glyph
+    s, cr = surface(LOCK_W, ENTRY_H)
+    rounded_rect(cr, 0.5, 0.5, LOCK_W + RADIUS, ENTRY_H - 1, RADIUS, corners=(True, False, False, True))
+    cr.set_source_rgba(*fill, 0.96)
+    cr.fill_preserve()
+    cr.set_source_rgba(*border, 0.9)
+    cr.set_line_width(1)
+    cr.stroke()
+    cr.set_operator(cairo.OPERATOR_SOURCE)
+    cr.set_source_rgba(*fill, 0.96)
+    cr.rectangle(LOCK_W - 1, 1, 1, ENTRY_H - 2)
+    cr.fill()
+    cr.set_operator(cairo.OPERATOR_OVER)
+    # Material "lock" glyph: body + shackle, 20x22, centred at x=40
+    cx, cy = 40, ENTRY_H / 2
+    cr.set_source_rgb(*accent)
+    rounded_rect(cr, cx - 9, cy - 2, 18, 13, 3)
+    cr.fill()
+    cr.set_line_width(2.6)
+    cr.set_line_cap(cairo.LINE_CAP_ROUND)
+    cr.arc(cx, cy - 4, 5.5, math.pi, 2 * math.pi)
+    cr.move_to(cx - 5.5, cy - 4)
+    cr.line_to(cx - 5.5, cy - 1)
+    cr.move_to(cx + 5.5, cy - 4)
+    cr.line_to(cx + 5.5, cy - 1)
+    cr.stroke()
+    cr.set_source_rgb(*fill)
+    cr.arc(cx, cy + 4.5, 1.8, 0, 2 * math.pi)
+    cr.fill()
+    s.write_to_png(str(out / "lock.png"))
+
+    # bullet.png
+    s, cr = surface(BULLET, BULLET)
+    cr.set_source_rgb(*rgb(pal["on_surface"]))
+    cr.arc(BULLET / 2, BULLET / 2, 4.5, 0, 2 * math.pi)
+    cr.fill()
+    s.write_to_png(str(out / "bullet.png"))
+
+
+def render_throbber(out, pal):
+    accent = rgb(pal["primary"])
+    track = rgb(pal["surface_container_highest"]) if "surface_container_highest" in pal else rgb(pal["surface_bright"])
+    for i in range(THROB_FRAMES):
+        s, cr = surface(THROB, THROB)
+        c = THROB / 2
+        r = c - 4
+        cr.set_line_width(4)
+        cr.set_line_cap(cairo.LINE_CAP_ROUND)
+        cr.set_source_rgba(*track, 0.5)
+        cr.arc(c, c, r, 0, 2 * math.pi)
+        cr.stroke()
+        t = i / THROB_FRAMES
+        start = 2 * math.pi * t
+        # Material indeterminate feel: arc length breathes between 60° and 250°
+        sweep = math.radians(60 + 190 * (0.5 - 0.5 * math.cos(2 * math.pi * t)))
+        cr.set_source_rgb(*accent)
+        cr.arc(c, c, r, start, start + sweep)
+        cr.stroke()
+        s.write_to_png(str(out / f"throbber-{i:04d}.png"))
+
+
+def text_extents(cr, text):
+    e = cr.text_extents(text)
+    return e.width, e.height, e.x_bearing
+
+
+def render_watermark(out, pal, tmp):
+    user = pwd.getpwuid(os.getuid())
+    name = (user.pw_gecos.split(",")[0] or user.pw_name).strip()
+    host = Path("/etc/hostname").read_text().strip() if Path("/etc/hostname").exists() else os.uname().nodename
+    accent = rgb(pal["primary"])
+    fg = rgb(pal["on_surface"])
+    fg2 = rgb(pal["on_surface_variant"])
+
+    face = HOME / ".face"
+    avatar_png = None
+    if face.is_file():
+        avatar_png = tmp / "avatar.png"
+        subprocess.check_call([
+            "magick", str(face), "-auto-orient", "-gravity", "center",
+            "-resize", f"{AVATAR}x{AVATAR}^", "-extent", f"{AVATAR}x{AVATAR}", str(avatar_png),
+        ])
+
+    W, H = 480, AVATAR + 8 + 14 + 30 + 22
+    s, cr = surface(W, H)
+    cx = W / 2
+    # ring
+    cr.set_source_rgb(*accent)
+    cr.arc(cx, 4 + AVATAR / 2, AVATAR / 2 + 4, 0, 2 * math.pi)
+    cr.fill()
+    cr.set_source_rgb(*rgb(pal["surface"]))
+    cr.arc(cx, 4 + AVATAR / 2, AVATAR / 2 + 1.5, 0, 2 * math.pi)
+    cr.fill()
+    if avatar_png:
+        img = cairo.ImageSurface.create_from_png(str(avatar_png))
+        cr.save()
+        cr.arc(cx, 4 + AVATAR / 2, AVATAR / 2, 0, 2 * math.pi)
+        cr.clip()
+        cr.set_source_surface(img, cx - AVATAR / 2, 4)
+        cr.paint()
+        cr.restore()
+    else:
+        cr.set_source_rgb(*rgb(pal["primary_container"]))
+        cr.arc(cx, 4 + AVATAR / 2, AVATAR / 2, 0, 2 * math.pi)
+        cr.fill()
+        cr.select_font_face(FONT, cairo.FONT_SLANT_NORMAL, cairo.FONT_WEIGHT_BOLD)
+        cr.set_font_size(44)
+        w, h, xb = text_extents(cr, name[:1].upper())
+        cr.set_source_rgb(*rgb(pal["on_primary_container"]))
+        cr.move_to(cx - w / 2 - xb, 4 + AVATAR / 2 + h / 2)
+        cr.show_text(name[:1].upper())
+    # name
+    y = 4 + AVATAR + 14
+    cr.select_font_face(FONT, cairo.FONT_SLANT_NORMAL, cairo.FONT_WEIGHT_BOLD)
+    cr.set_font_size(24)
+    w, h, xb = text_extents(cr, name)
+    cr.set_source_rgb(*fg)
+    cr.move_to(cx - w / 2 - xb, y + 22)
+    cr.show_text(name)
+    # host
+    cr.select_font_face(FONT, cairo.FONT_SLANT_NORMAL, cairo.FONT_WEIGHT_NORMAL)
+    cr.set_font_size(14)
+    w, h, xb = text_extents(cr, host)
+    cr.set_source_rgba(*fg2, 0.9)
+    cr.move_to(cx - w / 2 - xb, y + 22 + 24)
+    cr.show_text(host)
+    s.write_to_png(str(out / "watermark.png"))
+
+
+def write_plymouth(out, pal):
+    bg = pal["surface"].lstrip("#")
+    (out / f"{THEME}.plymouth").write_text(f"""[Plymouth Theme]
+Name=Dank Unlock
+Description=DankMaterialShell-styled boot splash and LUKS unlock (generated by plymouth-dank-theme)
+ModuleName=two-step
+
+[two-step]
+Font={FONT} 13
+TitleFont={FONT} 30
+MonospaceFont=JetBrainsMono Nerd Font 12
+ImageDir=/usr/share/plymouth/themes/{THEME}
+ScaleBackgroundImage=true
+BackgroundStartColor=0x{bg}
+BackgroundEndColor=0x{bg}
+# avatar block (watermark) sits above the spinner / passphrase pill
+WatermarkHorizontalAlignment=.5
+WatermarkVerticalAlignment=.40
+# spinner while booting or unlocking; the pill replaces it at the same spot
+HorizontalAlignment=.5
+VerticalAlignment=.52
+DialogHorizontalAlignment=.5
+DialogVerticalAlignment=.52
+TitleHorizontalAlignment=.5
+TitleVerticalAlignment=.70
+ProgressBarBackgroundColor=0x{pal['surface_container_high'].lstrip('#')}
+ProgressBarForegroundColor=0x{pal['primary'].lstrip('#')}
+ProgressBarHorizontalAlignment=.5
+ProgressBarVerticalAlignment=.62
+ProgressBarWidth=320
+ProgressBarHeight=6
+Transition=none
+TransitionDuration=0.0
+MessageBelowAnimation=true
+
+[boot-up]
+UseEndAnimation=false
+
+[shutdown]
+UseEndAnimation=false
+
+[reboot]
+UseEndAnimation=false
+
+[updates]
+UseProgressBar=true
+UseEndAnimation=false
+Title=Installing updates
+SubTitle=Do not turn off your computer
+
+[system-upgrade]
+UseProgressBar=true
+UseEndAnimation=false
+Title=Upgrading system
+SubTitle=Do not turn off your computer
+
+[firmware-upgrade]
+UseProgressBar=true
+UseEndAnimation=false
+Title=Upgrading firmware
+SubTitle=Do not turn off your computer
+""")
+
+
+def main():
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--out", default=str(HOME / ".cache/plymouth-dank-theme"))
+    ap.add_argument("--mode", choices=["dark", "light"])
+    a = ap.parse_args()
+    for tool in ("magick",):
+        if not shutil.which(tool):
+            sys.exit(f"{tool} not found (pacman -S imagemagick)")
+    pal, mode = load_palette(a.mode)
+    out = Path(a.out)
+    if out.exists():
+        shutil.rmtree(out)
+    out.mkdir(parents=True)
+    with tempfile.TemporaryDirectory() as tmp:
+        tmp = Path(tmp)
+        render_background(out, pal)
+        render_pill(out, pal)
+        render_throbber(out, pal)
+        render_watermark(out, pal, tmp)
+        write_plymouth(out, pal)
+    print(f"{THEME} ({mode}, primary {pal['primary']}) rendered to {out}")
+
+
+if __name__ == "__main__":
+    main()
