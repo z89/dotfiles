@@ -1,4 +1,7 @@
 [Unit]
+# A theme switch writes several gsettings keys in a row (gtk-theme A/B, icon theme,
+# accent); without this the dconf path unit trips unit-start-limit-hit and stays failed.
+StartLimitIntervalSec=0
 Description=Repair GTK3 theme if it drifted from the generated palette
 
 [Service]

@@ -4,8 +4,10 @@
   "matugenSourceMode": "darkness",
   "matugenContrast": 0.2,
   "clockFormat": "12h",
+  "showBatteryPercent": false,
   "controlCenterShowMicPercent": true,
   "appIdSubstitutions": [],
+  "greeterAutoLogin": true,
   "spotlightModalViewMode": "grid",
   "appLauncherGridColumns": 8,
   "appDrawerSectionViewModes": {
@@ -31,6 +33,7 @@
   "monoFontFamily": "JetBrainsMono Nerd Font",
   "acMonitorTimeout": 1200,
   "acLockTimeout": 900,
+  "batteryNotifyCritical": false,
   "lockBeforeSuspend": true,
   "terminalsAlwaysDark": true,
   "matugenTemplateKitty": false,
@@ -39,7 +42,6 @@
   "dankIslandReserveHeight": 44,
   "dankIslandCompactHeight": 40,
   "dankIslandOuterGap": 6,
-  "osdPowerProfileEnabled": true,
   "barConfigs": [
     {
       "id": "default",
@@ -54,21 +56,22 @@
         "workspaceSwitcher",
         "focusedWindow"
       ],
-      "centerWidgets": [
-        "music",
-        "clock",
-        "weather"
-      ],
+      "centerWidgets": [],
       "rightWidgets": [
-        "systemTray",
         "clipboard",
-        "cpuUsage",
-        "memUsage",
-        "notificationButton",
         "auris",
-        "battery",
         "ember",
+        "music",
+        "weather",
+        "clock",
+        {
+          "id": "cpuUsage",
+          "minimumWidth": false
+        },
+        "memUsage",
+        "systemTray",
         "controlCenterButton",
+        "notificationButton",
         "persona"
       ],
       "spacing": 6,
