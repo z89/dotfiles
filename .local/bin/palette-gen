@@ -1,0 +1,266 @@
+#!/usr/bin/env python3
+"""palette-gen — build the terminal palette from the wallpaper accent in OKLCH.
+
+matugen's own filters work in HSL, which is not perceptually uniform: equal
+numbers mean very different apparent lightness per hue, so a "60% saturation"
+green reads sickly next to a "60%" pink that screams.  This builds the sixteen
+ANSI colours in OKLCH instead, holding lightness and chroma constant across all
+hues and rotating every hue a fixed fraction toward the wallpaper accent.  The
+result is one flat, low-chroma family that still keeps red/green/yellow where
+software expects them, with contrast set by lightness alone.
+"""
+import os, re, sys
+
+HOME = os.path.expanduser("~")
+SRC = os.path.join(HOME, ".config/gtk-4.0/dank-colors.css")
+# Staged, not live: theme-apply's fade engine promotes this into
+# matugen-theme.conf frame by frame, so a config reload from anywhere at any
+# moment (DMS signals every kitty after matugen) lands on the current frame.
+OUT = os.path.join(HOME, ".config/kitty/matugen-theme.next.conf")
+STARSHIP_IN = os.path.join(HOME, ".config/starship.template.toml")
+STARSHIP_OUT = os.path.join(HOME, ".config/starship.toml")
+FOLDER_COLOR_OUT = os.path.join(HOME, ".local/state/theme-apply/folder-color")
+GTK_CSS_OUT = (os.path.join(HOME, ".config/gtk-3.0/palette-colors.css"),
+               os.path.join(HOME, ".config/gtk-4.0/palette-colors.css"))
+
+# Papirus folder colours by approximate OKLCH hue; grey when the accent has
+# no real chroma.  theme-apply applies the choice with papirus-folders.
+PAPIRUS_HUES = [("red", 22), ("carmine", 8), ("deeporange", 42), ("orange", 62),
+                ("yellow", 95), ("green", 142), ("teal", 175), ("cyan", 200),
+                ("darkcyan", 215), ("blue", 255), ("indigo", 278), ("violet", 300),
+                ("magenta", 328), ("pink", 350)]
+
+# --- tuning -----------------------------------------------------------------
+PULL      = 0.14   # fraction of the accent offset applied to every hue
+MAX_ROT   = 6.0   # hard cap on that rotation, in degrees
+L_NORM    = 0.760  # lightness of the 6 normal colours
+L_BRIGHT  = 0.845  # lightness of the 6 bright colours
+C_NORM    = 0.095  # chroma: low = flat and cohesive, high = neon
+C_BRIGHT  = 0.085
+L_BG      = 0.170  # background
+L_FG      = 0.900  # foreground
+L_SEL_BG  = 0.330  # selection background
+C_NEUTRAL = 0.006  # chroma of the greys and foreground: near neutral on purpose
+C_BG      = 0.013  # the background carries a slightly stronger accent tint
+
+# Canonical OKLCH hue anchors, so semantics survive the rotation.
+ANCHORS = {"red": 25.0, "green": 148.0, "yellow": 90.0,
+           "blue": 254.0, "magenta": 328.0, "cyan": 196.0}
+ORDER = ["red", "green", "yellow", "blue", "magenta", "cyan"]  # ANSI 1..6
+
+
+def _srgb_to_linear(c):
+    return c / 12.92 if c <= 0.04045 else ((c + 0.055) / 1.055) ** 2.4
+
+
+def _linear_to_srgb(c):
+    return 12.92 * c if c <= 0.0031308 else 1.055 * (c ** (1 / 2.4)) - 0.055
+
+
+def hex_to_oklch(h):
+    h = h.lstrip("#")
+    r, g, b = (_srgb_to_linear(int(h[i:i + 2], 16) / 255) for i in (0, 2, 4))
+    l = (0.4122214708 * r + 0.5363325363 * g + 0.0514459929 * b) ** (1 / 3)
+    m = (0.2119034982 * r + 0.6806995451 * g + 0.1073969566 * b) ** (1 / 3)
+    s = (0.0883024619 * r + 0.2817188376 * g + 0.6299787005 * b) ** (1 / 3)
+    L = 0.2104542553 * l + 0.7936177850 * m - 0.0040720468 * s
+    A = 1.9779984951 * l - 2.4285922050 * m + 0.4505937099 * s
+    B = 0.0259040371 * l + 0.7827717662 * m - 0.8086757660 * s
+    import math
+    return L, math.hypot(A, B), math.degrees(math.atan2(B, A)) % 360
+
+
+def _oklch_rgb(L, C, H):
+    import math
+    a, b = C * math.cos(math.radians(H)), C * math.sin(math.radians(H))
+    l = (L + 0.3963377774 * a + 0.2158037573 * b) ** 3
+    m = (L - 0.1055613458 * a - 0.0638541728 * b) ** 3
+    s = (L - 0.0894841775 * a - 1.2914855480 * b) ** 3
+    return (+4.0767416621 * l - 3.3077115913 * m + 0.2309699292 * s,
+            -1.2684380046 * l + 2.6097574011 * m - 0.3413193965 * s,
+            -0.0041960863 * l - 0.7034186147 * m + 1.7076147010 * s)
+
+
+def oklch_to_hex(L, C, H):
+    """Clip chroma (never lightness) until the colour fits in sRGB, so every
+    swatch keeps the lightness that carries its contrast."""
+    lo, hi = 0.0, C
+    for _ in range(24):
+        mid = (lo + hi) / 2
+        if all(-1e-4 <= v <= 1 + 1e-4 for v in _oklch_rgb(L, mid, H)):
+            lo = mid
+        else:
+            hi = mid
+    rgb = _oklch_rgb(L, lo, H)
+    return "#" + "".join("%02x" % round(min(1, max(0, _linear_to_srgb(min(1, max(0, v))))) * 255)
+                         for v in rgb)
+
+
+def rotation(accent, ref=254.0):
+    """One rigid offset applied to every anchor.  Pulling each hue toward the
+    accent individually would compress the wheel unevenly and collapse yellow
+    into green; a rigid rotation preserves every interval exactly, so the set
+    drifts toward the wallpaper family while red stays red."""
+    d = ((accent - ref + 180) % 360) - 180
+    return max(-MAX_ROT, min(MAX_ROT, PULL * d))
+
+
+def rotate(anchor, accent):
+    return (anchor + rotation(accent)) % 360
+
+
+def folder_color(H, C):
+    if C < 0.03:
+        return "grey"
+    return min(PAPIRUS_HUES, key=lambda hc: abs(((H - hc[1] + 180) % 360) - 180))[0]
+
+
+def accent_hue():
+    try:
+        css = open(SRC).read()
+    except OSError:
+        return 250.0
+    m = re.search(r"@define-color accent_bg_color (#[0-9a-fA-F]{6})", css) or \
+        re.search(r"@define-color accent_color (#[0-9a-fA-F]{6})", css)
+    if not m:
+        return 250.0, 0.1
+    L, C, H = hex_to_oklch(m.group(1))
+    return H, C
+
+
+def build():
+    H, C_acc = accent_hue()
+    c = {}
+    for i, name in enumerate(ORDER, start=1):
+        h = rotate(ANCHORS[name], H)
+        c["color%d" % i] = oklch_to_hex(L_NORM, C_NORM, h)
+        c["color%d" % (i + 8)] = oklch_to_hex(L_BRIGHT, C_BRIGHT, h)
+    c["color0"] = oklch_to_hex(0.300, C_BG, H)
+    c["color8"] = oklch_to_hex(0.450, C_NEUTRAL, H)
+    c["color7"] = oklch_to_hex(0.855, C_NEUTRAL, H)
+    c["color15"] = oklch_to_hex(0.960, C_NEUTRAL * 0.6, H)
+    c["background"] = oklch_to_hex(L_BG, C_BG, H)
+    c["foreground"] = oklch_to_hex(L_FG, C_NEUTRAL, H)
+    c["cursor"] = oklch_to_hex(0.800, C_NORM, H)
+    c["cursor_text_color"] = c["background"]
+    c["selection_background"] = oklch_to_hex(L_SEL_BG, 0.042, H)
+    c["selection_foreground"] = oklch_to_hex(0.960, C_NEUTRAL, H)
+    c["url_color"] = oklch_to_hex(L_BRIGHT, C_NORM, rotate(ANCHORS["cyan"], H))
+    c["active_border_color"] = c["color8"]
+    c["inactive_border_color"] = c["color0"]
+    c["bell_border_color"] = c["color1"]
+    # Prompt chrome tracks the true wallpaper hue, not a rotated anchor, so the
+    # shell visibly follows the wallpaper while program output stays stable.
+    c["accent"] = oklch_to_hex(0.780, 0.105, H)
+    c["accent_bright"] = oklch_to_hex(0.870, 0.090, H)
+    c["accent_dim"] = oklch_to_hex(0.640, 0.090, H)
+    c["muted"] = oklch_to_hex(0.600, 0.020, H)
+    c["fg"] = c["foreground"]
+    c["folder_color"] = folder_color(H, C_acc)
+    for n in ("red", "green", "yellow", "blue", "magenta", "cyan"):
+        c[n] = c["color%d" % (ORDER.index(n) + 1)]
+    return H, c
+
+
+def _atomic(path, text):
+    tmp = path + ".tmp"
+    with open(tmp, "w") as f:
+        f.write(text)
+    os.replace(tmp, path)
+
+
+def render_gtk(c, H):
+    """libadwaita / adw-gtk3 named colours from the same OKLCH palette as
+    kitty: the window and view background *are* the terminal background,
+    chrome (headerbar, sidebar) sits a step lighter, floating surfaces
+    (cards, popovers, dialogs) another step.  theme-apply appends this file
+    to the generated GTK themes so it overrides the matugen colours."""
+    bg, fg = c["background"], c["foreground"]
+    lvl = lambda L: oklch_to_hex(L, C_BG, H)
+    g = {
+        "window_bg_color": bg, "window_fg_color": fg,
+        "view_bg_color": bg, "view_fg_color": fg,
+        "headerbar_bg_color": lvl(0.205), "headerbar_fg_color": fg,
+        "headerbar_backdrop_color": lvl(0.185),
+        "headerbar_border_color": fg, "headerbar_shade_color": "rgba(0, 0, 0, 0.36)",
+        "headerbar_darker_shade_color": "rgba(0, 0, 0, 0.9)",
+        "sidebar_bg_color": lvl(0.215), "sidebar_fg_color": fg,
+        "sidebar_backdrop_color": lvl(0.195), "sidebar_border_color": lvl(0.30),
+        "sidebar_shade_color": "rgba(0, 0, 0, 0.25)",
+        "secondary_sidebar_bg_color": lvl(0.190), "secondary_sidebar_fg_color": fg,
+        "card_bg_color": lvl(0.235), "card_fg_color": fg,
+        "card_shade_color": "rgba(0, 0, 0, 0.36)",
+        "dialog_bg_color": lvl(0.225), "dialog_fg_color": fg,
+        "popover_bg_color": lvl(0.250), "popover_fg_color": fg,
+        "popover_shade_color": "rgba(0, 0, 0, 0.25)",
+        "overview_bg_color": bg, "overview_fg_color": fg,
+        "thumbnail_bg_color": lvl(0.235), "thumbnail_fg_color": fg,
+        "shade_color": "rgba(0, 0, 0, 0.36)", "scrollbar_outline_color": "rgba(0, 0, 0, 0.5)",
+        "accent_bg_color": c["accent"], "accent_fg_color": bg, "accent_color": c["accent_bright"],
+        "destructive_bg_color": c["red"], "destructive_fg_color": bg, "destructive_color": c["color9"],
+        "error_bg_color": c["red"], "error_fg_color": bg, "error_color": c["color9"],
+        "warning_bg_color": c["yellow"], "warning_fg_color": bg, "warning_color": c["color11"],
+        "success_bg_color": c["green"], "success_fg_color": bg, "success_color": c["color10"],
+        # GTK3 legacy names adw-gtk3 still reads
+        "theme_bg_color": bg, "theme_fg_color": fg, "theme_base_color": bg, "theme_text_color": fg,
+        "theme_selected_bg_color": c["accent"], "theme_selected_fg_color": bg,
+        "theme_unfocused_bg_color": bg, "theme_unfocused_fg_color": fg,
+        "theme_unfocused_base_color": bg, "theme_unfocused_text_color": fg,
+        "theme_unfocused_selected_bg_color": c["accent"], "theme_unfocused_selected_fg_color": bg,
+        "insensitive_bg_color": bg, "insensitive_base_color": bg, "insensitive_fg_color": c["muted"],
+        "unfocused_insensitive_color": c["muted"],
+        "borders": lvl(0.30), "unfocused_borders": lvl(0.30),
+        "content_view_bg": bg, "text_view_bg": bg,
+        "panel_bg_color": lvl(0.205), "panel_fg_color": fg,
+    }
+    text = "/* Generated by palette-gen from the wallpaper accent; same OKLCH palette as kitty. */\n"
+    text += "".join("@define-color %s %s;\n" % kv for kv in g.items())
+    for path in GTK_CSS_OUT:
+        os.makedirs(os.path.dirname(path), exist_ok=True)
+        _atomic(path, text)
+
+
+def render_starship(c):
+    """Substitute {{palette.NAME}} tokens in the starship template."""
+    try:
+        with open(STARSHIP_IN) as f:
+            text = f.read()
+    except OSError:
+        return False
+    text = re.sub(r"\{\{palette\.([a-z_]+)\}\}", lambda m: c.get(m.group(1), "#ffffff"), text)
+    tmp = STARSHIP_OUT + ".tmp"
+    with open(tmp, "w") as f:
+        f.write(text)
+    os.replace(tmp, STARSHIP_OUT)
+    return True
+
+
+ORDER_OUT = ["foreground", "background", "cursor", "cursor_text_color",
+             "selection_foreground", "selection_background", "url_color",
+             "active_border_color", "inactive_border_color", "bell_border_color"] + \
+            ["color%d" % i for i in range(16)]
+
+
+def main():
+    H, c = build()
+    body = ["# Generated by palette-gen: OKLCH, uniform lightness/chroma,",
+            "# hues rotated %+.0f deg toward the wallpaper accent (hue %.0f deg)." % (rotation(H), H), ""]
+    body += ["%-22s %s" % (k, c[k]) for k in ORDER_OUT]
+    body += ["", "# folder icon colour: %s" % c["folder_color"]]
+    text = "\n".join(body) + "\n"
+    if "--stdout" in sys.argv[1:]:
+        sys.stdout.write(text)
+        return
+    tmp = OUT + ".tmp"
+    with open(tmp, "w") as f:
+        f.write(text)
+    os.replace(tmp, OUT)
+    render_starship(c)
+    render_gtk(c, H)
+    os.makedirs(os.path.dirname(FOLDER_COLOR_OUT), exist_ok=True)
+    with open(FOLDER_COLOR_OUT, "w") as f:
+        f.write(c["folder_color"] + "\n")
+
+
+if __name__ == "__main__":
+    main()

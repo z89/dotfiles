@@ -1,0 +1,47 @@
+#!/usr/bin/env bash
+# screenshot — area/window/output capture to clipboard (+ file), Material-You themed.
+#   screenshot            area (drag to select)  -> clipboard + ~/Pictures/Screenshots
+#   screenshot window     active window
+#   screenshot output     the monitor under the cursor
+#   screenshot all        every monitor
+#   screenshot edit       area, then open satty to annotate (Enter/Ctrl+C copies)
+#   screenshot --geometry "x,y wxh"   non-interactive (tests/scripts)
+set -euo pipefail
+dir=~/Pictures/Screenshots
+file="$dir/$(date +%Y-%m-%d_%H-%M-%S).png"
+mode="${1:-area}"; geom=""
+
+# Selection colours from the current matugen palette (gtk4 dank-colors.css)
+css=~/.config/gtk-4.0/dank-colors.css
+hex() { grep -oP "@define-color $1 #\K[0-9a-fA-F]{6}" "$css" 2>/dev/null || echo "$2"; }
+accent=$(hex accent_bg_color 9dcbfc); dim=$(hex window_bg_color 101418)
+
+pick() { slurp -d -b "${dim}66" -c "${accent}ff" -s "${accent}22" -w 2 -F Inter "$@"; }
+
+case "$mode" in
+    --geometry) geom="$2" ;;
+    area|edit)  geom=$(pick) ;;
+    window)     geom=$(hyprctl activewindow -j | jq -r '"\(.at[0]),\(.at[1]) \(.size[0])x\(.size[1])"') ;;
+    output)     geom=$(hyprctl monitors -j | jq -r --argjson c "$(hyprctl cursorpos -j)" \
+                    '.[] | select($c.x >= .x and $c.x < .x + .width and $c.y >= .y and $c.y < .y + .height)
+                     | "\(.x),\(.y) \(.width)x\(.height)"') ;;
+    all)        geom="" ;;
+    *) echo "usage: screenshot [area|window|output|all|edit|--geometry G]" >&2; exit 2 ;;
+esac
+
+if [[ -n "$geom" ]]; then grim -g "$geom" "$file"; else grim "$file"; fi
+
+if [[ "$mode" == edit ]]; then
+    # satty copies on Enter/Ctrl+C via wl-copy and saves to the same file
+    exec satty --filename "$file" --output-filename "$file" --copy-command wl-copy --early-exit
+fi
+
+wl-copy --type image/png < "$file"
+notify-send -a screenshot -i "$file" -t 3500 "Copied to clipboard" "$(basename "$file")" \
+    --action=edit=Edit --action=open=Open 2>/dev/null | {
+    read -r action || true
+    case "$action" in
+        edit) satty --filename "$file" --output-filename "$file" --copy-command wl-copy --early-exit ;;
+        open) xdg-open "$file" ;;
+    esac
+} &

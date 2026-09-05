@@ -1,0 +1,17 @@
+{
+  "ember": {
+    "enabled": true,
+    "showTemperature": true,
+    "tintIcon": true
+  },
+  "airpods": {
+    "enabled": true
+  },
+  "auris": {
+    "enabled": true
+  },
+  "persona": {
+    "enabled": true,
+    "themedBackdrop": false
+  }
+}

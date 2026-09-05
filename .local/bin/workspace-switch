@@ -1,0 +1,27 @@
+#!/bin/sh
+# Switch to next/prev open workspace without wrapping.
+# Usage: workspace-switch +1 | workspace-switch -1
+
+dir="$1"
+current=$(hyprctl activeworkspace -j | jq '.id')
+workspaces=$(hyprctl workspaces -j | jq '[.[].id] | sort')
+
+if [ "$dir" = "+1" ]; then
+    target=$(echo "$workspaces" | jq --argjson c "$current" '[.[] | select(. > $c)] | first // empty')
+else
+    target=$(echo "$workspaces" | jq --argjson c "$current" '[.[] | select(. < $c)] | last // empty')
+fi
+
+# The two config managers need opposite calls, and which one is live is fixed
+# at compositor startup:
+#   lua     -> `dispatch` evaluates its argument as Lua, so `dispatch workspace N`
+#              is a syntax error; `eval` is the working form.
+#   hyprlang-> `eval` is rejected ("only supported with the lua config manager");
+#              `dispatch workspace N` is the working form.
+# Try eval first and fall back, so this works either side of a .conf -> .lua
+# migration without needing to know which session it is.
+if [ -n "$target" ]; then
+    if [ "$(hyprctl eval "hl.dispatch(hl.dsp.focus({ workspace = $target }))" 2>/dev/null | head -1)" != "ok" ]; then
+        hyprctl dispatch workspace "$target" >/dev/null
+    fi
+fi

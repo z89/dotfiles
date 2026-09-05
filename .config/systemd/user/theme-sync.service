@@ -1,0 +1,6 @@
+[Unit]
+Description=Repair GTK3 theme if it drifted from the generated palette
+
+[Service]
+Type=oneshot
+ExecStart=%h/.local/bin/theme-apply --check

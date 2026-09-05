@@ -1,0 +1,29 @@
+#!/usr/bin/env bash
+# greeter-setup — switch the login manager from SDDM to greetd + DankGreeter
+# (the DMS lock-screen look, synced to the current wallpaper/palette).
+#
+#   1. yay -S greetd greetd-dms-greeter-bin      (as your user)
+#   2. sudo ~/.local/bin/greeter-setup            (this script)
+#   3. reboot when convenient — nothing changes in the running session.
+#
+# dms-greeter owns /etc/greetd/config.toml and its own embedded Hyprland config,
+# so this script never writes either: it runs the greeter's sync and flips the
+# systemd units. Safe to re-run.
+set -euo pipefail
+[[ $EUID -eq 0 ]] || { echo "run with sudo"; exit 1; }
+user=${SUDO_USER:-archie}
+command -v dms-greeter >/dev/null || { echo "dms-greeter not installed: yay -S greetd greetd-dms-greeter-bin"; exit 1; }
+
+# Writes /etc/greetd/config.toml, group + ACLs, and links the live DMS theme,
+# wallpaper and colours into /var/cache/dms-greeter.
+sudo -u "$user" dms-greeter sync
+
+systemctl disable sddm.service 2>/dev/null || true
+systemctl enable greetd.service
+
+# Stale hand-written compositor config from an earlier version of this script.
+rm -f /etc/greetd/dms-hypr.conf
+
+echo
+echo "Done. greetd + DankGreeter take over at the next boot; SDDM keeps this session alive until then."
+echo "Check with: sudo -u $user dms-greeter status"

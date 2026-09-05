@@ -1,0 +1,45 @@
+#!/usr/bin/env python3
+"""Build ~/.local/share/icons/Papirus-Dank: a user-writable overlay on
+Papirus-Dark containing only the coloured folder variants, so papirus-folders can recolour
+folders without root and GTK/Qt apps pick the change up live.  papirus-folders
+skips symlinks and only handles five sizes, so those five get reflink copies
+(zero extra space on btrfs).  Idempotent; re-run after a Papirus update."""
+import os, re, shutil, subprocess
+
+SIZES = ("22x22", "24x24", "32x32", "48x48", "64x64")  # what papirus-folders touches
+
+SRC = "/usr/share/icons/Papirus-Dark"
+DST = os.path.expanduser("~/.local/share/icons/Papirus-Dank")
+COLORS = ("adwaita|black|blue|bluegrey|breeze|brown|carmine|cyan|darkcyan|deeporange|"
+          "green|grey|indigo|magenta|nordic|orange|palebrown|paleorange|pink|red|teal|"
+          "violet|white|yaru|yellow")
+PAT = re.compile(r"^(folder|user)-(%s)(-|\.)" % COLORS)
+
+if os.path.isdir(DST):
+    shutil.rmtree(DST)
+os.makedirs(DST)
+src_index = open(os.path.join(SRC, "index.theme")).read()
+sections, dirs = [], []
+for d in SIZES:
+    rel = d + "/places"
+    m = re.search(r"^\[%s\]\n(?:[^\[\n][^\n]*\n)*" % re.escape(rel), src_index, re.M)
+    if not m:
+        continue
+    dirs.append(rel)
+    sections.append(m.group(0).rstrip("\n") + "\n")
+    out = os.path.join(DST, rel)
+    os.makedirs(out)
+    n = 0
+    for f in os.listdir(os.path.join(SRC, rel)):
+        if PAT.match(f) and not os.path.islink(os.path.join(SRC, rel, f)):
+            subprocess.run(["cp", "--reflink=auto", os.path.join(SRC, rel, f), os.path.join(out, f)], check=True)
+            n += 1
+with open(os.path.join(DST, "index.theme"), "w") as f:
+    f.write("[Icon Theme]\nName=Papirus-Dank\nComment=Papirus-Dark with wallpaper-coloured folders\n"
+            "Inherits=Papirus-Dark\nDirectories=%s\n\n%s" % (",".join(dirs), "\n".join(sections)))
+alias = DST + "-B"
+os.makedirs(alias, exist_ok=True)
+with open(os.path.join(alias, "index.theme"), "w") as f:
+    f.write("[Icon Theme]\nName=Papirus-Dank-B\nComment=Alias of Papirus-Dank; theme-apply flips "
+            "between the two so running apps reload recoloured icons\nInherits=Papirus-Dank\nDirectories=\n")
+print("built %s: %d directories, %d files" % (DST, len(dirs), sum(len(os.listdir(os.path.join(DST, d))) for d in dirs)))

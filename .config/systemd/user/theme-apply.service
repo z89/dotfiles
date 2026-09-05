@@ -1,0 +1,8 @@
+[Unit]
+Description=Reload running apps after a theme (matugen) regeneration
+# Triggered by theme-apply.path; no Install section on purpose.
+
+[Service]
+Type=oneshot
+ExecStart=%h/.local/bin/theme-apply
+TimeoutStartSec=15

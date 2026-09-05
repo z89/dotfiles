@@ -1,0 +1,12 @@
+[Unit]
+Description=Watch DankMaterialShell colour output
+
+[Path]
+# DMS rewrites both of these on every wallpaper change (matugen run).
+# Either one changing is enough to fire the hook.
+PathChanged=%h/.config/gtk-4.0/dank-colors.css
+PathChanged=%h/.config/gtk-3.0/dank-colors.css
+Unit=theme-apply.service
+
+[Install]
+WantedBy=graphical-session.target

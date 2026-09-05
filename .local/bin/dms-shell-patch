@@ -1,0 +1,321 @@
+#!/usr/bin/env bash
+# Build a patched copy of the DMS embedded shell UI.
+# Source: the shell dms extracts to $XDG_RUNTIME_DIR/danklinux-shell/<hash> on a stock start.
+# Output: ~/.local/share/dms-shell-patched (used via DMS_SHELL_DIR by dms-run-patched).
+# Patches: launcher size, launcher centred between the bar edge and the opposite screen edge, Spotlight bar width.
+# Re-run after every dms upgrade; dms-run-patched does this automatically.
+set -euo pipefail
+
+SPOT_WIDTH=${SPOT_WIDTH:-1600}        # Spotlight bar width (stock: 680)
+SPOT_RESULTS_H=${SPOT_RESULTS_H:-560} # Spotlight max results height (stock: 430)
+FULL_WIDTH=${FULL_WIDTH:-1800}        # Full launcher "compact" size width (stock: 620) - this is what Super+D opens
+FULL_HEIGHT=${FULL_HEIGHT:-900}       # Full launcher "compact" size height (stock: 600)
+
+RUNTIME=${XDG_RUNTIME_DIR:-/run/user/$(id -u)}
+OUT=${DMS_SHELL_PATCHED:-$HOME/.local/share/dms-shell-patched}
+BIN=$(command -v dms)
+BIN_SHA=$(sha256sum "$BIN" | cut -d' ' -f1)
+
+src=$(ls -td "$RUNTIME"/danklinux-shell/*/ 2>/dev/null | head -1 || true)
+if [[ -z "$src" || ! -f "$src/shell.qml" ]]; then
+    echo "dms-shell-patch: no extracted shell in $RUNTIME/danklinux-shell (start dms stock once)" >&2
+    exit 1
+fi
+
+tmp=$(mktemp -d "${OUT}.tmp.XXXX")
+trap 'rm -rf "$tmp"' EXIT
+cp -a "$src"/. "$tmp"/
+chmod -R u+w "$tmp"
+
+patch_one() { # file, sed-expr, must-match-regex
+    local f=$1 expr=$2 must=$3
+    grep -qE "$must" "$f" || { echo "dms-shell-patch: pattern not found in ${f#$tmp/}: $must" >&2; exit 2; }
+    sed -i -E "$expr" "$f"
+    if grep -qE "$must" "$f"; then echo "dms-shell-patch: patch did not apply in ${f#$tmp/}" >&2; exit 2; fi
+}
+
+SPOT=$tmp/Modals/DankLauncherV2
+patch_one "$SPOT/DankLauncherV2ModalSpotlight.qml" \
+    "s/modalWidth: Math\.min\(680, screenWidth - 80\)/modalWidth: Math.min($SPOT_WIDTH, screenWidth - 80)/" \
+    'modalWidth: Math\.min\(680, screenWidth - 80\)'
+patch_one "$SPOT/SpotlightLauncherContent.qml" \
+    "s/Math\.min\(430, \(parentModal\?\.screenHeight \?\? 900\) \* 0\.55\)/Math.min($SPOT_RESULTS_H, (parentModal?.screenHeight ?? 900) * 0.7)/" \
+    'Math\.min\(430, \(parentModal\?\.screenHeight \?\? 900\) \* 0\.55\)'
+patch_one "$SPOT/DankLauncherV2ModalStandalone.qml" \
+    "s/return 620;/return $FULL_WIDTH;/" 'return 620;'
+patch_one "$SPOT/DankLauncherV2ModalStandalone.qml" \
+    "s/return 600;/return $FULL_HEIGHT;/" 'return 600;'
+
+patch_one "$SPOT/DankLauncherV2ModalStandalone.qml" \
+    "s|readonly property real modalY: \(screenHeight - modalHeight\) / 2|readonly property real modalY: { const bw = BarWidgetService.getBarWindowForScreen(effectiveScreen?.name ?? \"\"); const ez = Math.max(0, bw?.exclusiveZone ?? 0); const pos = bw?.barConfig?.position ?? SettingsData.Position.Top; const top = pos === SettingsData.Position.Top ? ez : 0; const bottom = pos === SettingsData.Position.Bottom ? ez : 0; return top + Math.max(0, (screenHeight - top - bottom - modalHeight) / 2); }|" \
+    'readonly property real modalY: \(screenHeight - modalHeight\) / 2'
+
+# ---- Lock screen crossfade (optional) -------------------------------------------
+# Super+Alt+L (dms ipc call lock lock) crossfades a copy of the lock screen over the
+# desktop before the real session lock engages, and fades it back out on unlock.
+# Hyprland cannot animate session-lock surfaces, so this lives in the shell. The block
+# is skipped with a warning (launcher patches still apply) if upstream changed the files.
+LOCK_FADE=${LOCK_FADE:-1}             # 0 disables the block
+LOCK_FADE_IN=${LOCK_FADE_IN:-900}     # ms, desktop -> lock screen
+LOCK_FADE_OUT=${LOCK_FADE_OUT:-800}   # ms, lock screen -> desktop
+STOCK_FADE_WINDOW_SHA=34e02e2660ca6634610b35f6f28304a51c2cc7db170efc2761dfce688826701e
+
+lock_fade_files=(Modules/Lock/Lock.qml DMSShell.qml Services/IdleService.qml Modules/Lock/FadeToLockWindow.qml Modules/Lock/LockScreenContent.qml)
+lock_fade_skip() {
+    echo "dms-shell-patch: lock fade skipped: $1" >&2
+    local f
+    for f in "${lock_fade_files[@]}"; do cp -a "$src/$f" "$tmp/$f"; done
+    LOCK_FADE=0
+}
+apply_lock_fade() {
+    local have
+    have=$(sha256sum "$tmp/Modules/Lock/FadeToLockWindow.qml" | cut -d' ' -f1)
+    [[ "$have" == "$STOCK_FADE_WINDOW_SHA" ]] || { lock_fade_skip "FadeToLockWindow.qml changed upstream"; return; }
+    [[ $(grep -c '^            root\.lock();$' "$tmp/Modules/Lock/Lock.qml") == 1 ]] || { lock_fade_skip "Lock.qml IPC anchor"; return; }
+    grep -q '^    signal dismissFadeToLock$' "$tmp/Services/IdleService.qml" || { lock_fade_skip "IdleService.qml anchor"; return; }
+    [[ $(grep -c '^                function onCancelFadeToLock() {$' "$tmp/DMSShell.qml") == 1 ]] || { lock_fade_skip "DMSShell.qml anchor"; return; }
+    [[ $(grep -c 'return "••••••••";' "$tmp/Modules/Lock/LockScreenContent.qml") == 1 ]] || { lock_fade_skip "LockScreenContent.qml anchor"; return; }
+
+    LOCK_FADE_IN="$LOCK_FADE_IN" python3 - "$tmp" <<'PY'
+import os, sys
+tmp = sys.argv[1]
+ms = int(os.environ["LOCK_FADE_IN"])
+def edit(rel, old, new):
+    p = os.path.join(tmp, rel); s = open(p).read()
+    assert s.count(old) == 1, rel
+    open(p, "w").write(s.replace(old, new))
+edit("Services/IdleService.qml", "    signal dismissFadeToLock\n",
+     "    signal dismissFadeToLock\n    signal quickFadeToLockRequested\n")
+edit("Modules/Lock/Lock.qml", "            root.lock();\n",
+     "            // Crossfade into the lock screen instead of cutting to it (dms-shell-patch).\n"
+     "            if (SettingsData.fadeToLockEnabled && !root.shouldLock && !root.pendingLock && !(SettingsData.customPowerActionLock?.length > 0))\n"
+     "                IdleService.quickFadeToLockRequested();\n"
+     "            else\n"
+     "                root.lock();\n")
+# The overlay copy runs LockScreenContent in demoMode, which shows placeholder
+# password dots for the settings preview. demoPassword=false keeps the field
+# looking exactly like the real, empty lock prompt.
+edit("Modules/Lock/LockScreenContent.qml", "    property bool demoMode: false\n",
+     "    property bool demoMode: false\n    property bool demoPassword: true\n")
+edit("Modules/Lock/LockScreenContent.qml",
+     "                            if (demoMode) {\n                                return \"\";\n                            }\n                            if (root.unlocking) {\n",
+     "                            if (demoMode) {\n                                return root.demoPassword ? \"\" : \"Password...\";\n                            }\n                            if (root.unlocking) {\n")
+edit("Modules/Lock/LockScreenContent.qml", "                                return \"••••••••\";\n",
+     "                                return root.demoPassword ? \"••••••••\" : \"\";\n")
+edit("Modules/Lock/LockScreenContent.qml", "opacity: (demoMode || root.passwordBuffer.length > 0) ? 1 : 0\n",
+     "opacity: ((demoMode && root.demoPassword) || root.passwordBuffer.length > 0) ? 1 : 0\n")
+edit("DMSShell.qml", "                function onCancelFadeToLock() {\n",
+     "                function onQuickFadeToLockRequested() {\n"
+     "                    if (fadeWindowLoader.loadedWindow) {\n"
+     f"                        fadeWindowLoader.loadedWindow.startFade({ms});\n"
+     "                    }\n"
+     "                }\n\n"
+     "                function onCancelFadeToLock() {\n")
+PY
+    sed "s/@LOCK_FADE_OUT@/$LOCK_FADE_OUT/" > "$tmp/Modules/Lock/FadeToLockWindow.qml" <<'QML'
+pragma ComponentBehavior: Bound
+
+import QtQuick
+import Quickshell
+import Quickshell.Wayland
+import qs.Common
+import qs.Services
+
+PanelWindow {
+    id: root
+
+    property bool active: false
+    property bool _completed: false
+    // quick: a manual lock. The lock screen's own look crossfades in over the
+    // desktop; once it is fully opaque the real session lock takes over and the
+    // switch is invisible. Not cancellable.
+    property bool quick: false
+    property int quickMs: 0
+    property bool revealing: false
+
+    signal fadeCompleted
+    signal fadeCancelled
+
+    visible: active
+    color: "transparent"
+
+    WlrLayershell.namespace: "dms:fade-to-lock"
+    WlrLayershell.layer: WlrLayershell.Overlay
+    WlrLayershell.exclusiveZone: -1
+    WlrLayershell.keyboardFocus: active && !revealing ? WlrKeyboardFocus.Exclusive : WlrKeyboardFocus.None
+
+    anchors {
+        left: true
+        right: true
+        top: true
+        bottom: true
+    }
+
+    // Idle path: the stock dim-to-black over the grace period.
+    Rectangle {
+        id: fadeOverlay
+
+        anchors.fill: parent
+        color: "black"
+        opacity: 0
+        visible: !root.quick
+
+        onOpacityChanged: {
+            if (opacity >= 0.99 && root.active && !root._completed) {
+                root._completed = true;
+                root.fadeCompleted();
+            }
+        }
+    }
+
+    // Manual path: a visual copy of the lock screen that fades in over the desktop.
+    Item {
+        id: lockLook
+
+        anchors.fill: parent
+        opacity: 0
+        visible: root.quick && opacity > 0
+
+        onOpacityChanged: {
+            if (opacity >= 0.995 && root.active && root.quick && !root._completed) {
+                root._completed = true;
+                root.fadeCompleted();
+            }
+        }
+
+        Loader {
+            anchors.fill: parent
+            active: root.quick && root.active
+            sourceComponent: LockScreenContent {
+                demoMode: true
+                demoPassword: false
+                screenName: root.screen?.name ?? ""
+            }
+        }
+    }
+
+    SequentialAnimation {
+        id: fadeSeq
+
+        running: false
+
+        NumberAnimation {
+            target: root.quick ? lockLook : fadeOverlay
+            property: "opacity"
+            from: 0.0
+            to: 1.0
+            duration: root.quick ? root.quickMs : SettingsData.fadeToLockGracePeriod * 1000
+            easing.type: root.quick ? Easing.InOutSine : Easing.OutCubic
+        }
+    }
+
+    // Unlock after a manual lock: the lock look fades back out to the desktop.
+    NumberAnimation {
+        id: revealAnim
+
+        target: lockLook
+        property: "opacity"
+        to: 0.0
+        duration: @LOCK_FADE_OUT@
+        easing.type: Easing.InOutSine
+        onFinished: root.dismiss(true)
+    }
+
+    function reveal() {
+        fadeSeq.stop();
+        if (!quick) {
+            dismiss(true);
+            return;
+        }
+        revealing = true;
+        revealAnim.restart();
+    }
+
+    function startFade(quickMs) {
+        if (!SettingsData.fadeToLockEnabled)
+            return;
+        revealAnim.stop();
+        revealing = false;
+        quick = quickMs !== undefined && quickMs > 0;
+        root.quickMs = quick ? quickMs : 0;
+        _completed = false;
+        active = true;
+        fadeOverlay.opacity = 0.0;
+        lockLook.opacity = 0.0;
+        fadeSeq.stop();
+        fadeSeq.start();
+    }
+
+    function cancelFade() {
+        if (_completed || quick || revealing)
+            return;
+        fadeSeq.stop();
+        fadeOverlay.opacity = 0.0;
+        active = false;
+        fadeCancelled();
+    }
+
+    // After a manual lock the overlay stays resident beneath the session lock
+    // (DMS asks to dismiss it as soon as the lock is secure) so the lock look
+    // is already on screen when the lock releases and can fade out to the desktop.
+    function dismiss(force) {
+        if (!force && quick && _completed && IdleService.isShellLocked)
+            return;
+        fadeSeq.stop();
+        revealAnim.stop();
+        fadeOverlay.opacity = 0.0;
+        lockLook.opacity = 0.0;
+        active = false;
+        _completed = false;
+        quick = false;
+        revealing = false;
+    }
+
+    Connections {
+        target: IdleService
+
+        function onIsShellLockedChanged() {
+            if (!IdleService.isShellLocked && root._completed)
+                root.reveal();
+        }
+    }
+
+    MouseArea {
+        anchors.fill: parent
+        enabled: root.active && !root.revealing
+        onClicked: root.cancelFade()
+        onPressed: root.cancelFade()
+    }
+
+    FocusScope {
+        anchors.fill: parent
+        focus: root.active
+
+        Keys.onPressed: event => {
+            root.cancelFade();
+            event.accepted = true;
+        }
+    }
+
+    Component.onCompleted: {
+        if (active) {
+            forceActiveFocus();
+        }
+    }
+
+    onActiveChanged: {
+        if (active) {
+            forceActiveFocus();
+        }
+    }
+}
+QML
+}
+[[ "$LOCK_FADE" == 1 ]] && apply_lock_fade
+
+echo "$BIN_SHA" > "$tmp/.dms-binary-sha256"
+rm -rf "$OUT"
+mv "$tmp" "$OUT"
+trap - EXIT
+lockmsg="lock fade ${LOCK_FADE_IN}/${LOCK_FADE_OUT}ms"; [[ "$LOCK_FADE" == 1 ]] || lockmsg="lock fade off"
+echo "dms-shell-patch: built $OUT from $(cat "$OUT/VERSION") (launcher ${FULL_WIDTH}x${FULL_HEIGHT}, spotlight bar ${SPOT_WIDTH}px wide, $lockmsg)"

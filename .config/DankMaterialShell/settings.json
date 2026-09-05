@@ -1,0 +1,113 @@
+{
+  "currentThemeName": "dynamic",
+  "matugenScheme": "scheme-vibrant",
+  "matugenSourceMode": "darkness",
+  "matugenContrast": 0.2,
+  "clockFormat": "12h",
+  "controlCenterShowMicPercent": true,
+  "appIdSubstitutions": [],
+  "spotlightModalViewMode": "grid",
+  "appLauncherGridColumns": 8,
+  "appDrawerSectionViewModes": {
+    "apps": "list"
+  },
+  "cursorSettings": {
+    "theme": "System Default",
+    "size": 24,
+    "niri": {
+      "hideWhenTyping": false,
+      "hideAfterInactiveMs": 0
+    },
+    "hyprland": {
+      "hideOnKeyPress": false,
+      "hideOnTouch": false,
+      "inactiveTimeout": 0
+    },
+    "mango": {
+      "cursorHideTimeout": 0
+    }
+  },
+  "fontFamily": "Inter",
+  "monoFontFamily": "JetBrainsMono Nerd Font",
+  "acMonitorTimeout": 1200,
+  "acLockTimeout": 900,
+  "lockBeforeSuspend": true,
+  "terminalsAlwaysDark": true,
+  "matugenTemplateKitty": false,
+  "notificationPopupShadowEnabled": false,
+  "notificationShowTimeoutBar": true,
+  "dankIslandReserveHeight": 44,
+  "dankIslandCompactHeight": 40,
+  "dankIslandOuterGap": 6,
+  "osdPowerProfileEnabled": true,
+  "barConfigs": [
+    {
+      "id": "default",
+      "name": "Main Bar",
+      "enabled": true,
+      "position": 0,
+      "screenPreferences": [
+        "DP-2"
+      ],
+      "leftWidgets": [
+        "launcherButton",
+        "workspaceSwitcher",
+        "focusedWindow"
+      ],
+      "centerWidgets": [
+        "music",
+        "clock",
+        "weather"
+      ],
+      "rightWidgets": [
+        "systemTray",
+        "clipboard",
+        "cpuUsage",
+        "memUsage",
+        "notificationButton",
+        "auris",
+        "battery",
+        "ember",
+        "controlCenterButton",
+        "persona"
+      ],
+      "spacing": 6,
+      "innerPadding": 4,
+      "widgetPadding": 8,
+      "squareCorners": false,
+      "gothCornersEnabled": false,
+      "autoHide": false,
+      "shadowIntensity": 0,
+      "attachToScreenEdge": false,
+      "borderEnabled": false,
+      "barLengthPadding": 1360
+    }
+  ],
+  "desktopClockCustomColor": {
+    "r": 1,
+    "g": 1,
+    "b": 1,
+    "a": 1,
+    "hsvHue": -1,
+    "hsvSaturation": 0,
+    "hsvValue": 1,
+    "hslHue": -1,
+    "hslSaturation": 0,
+    "hslLightness": 1,
+    "valid": true
+  },
+  "systemMonitorCustomColor": {
+    "r": 1,
+    "g": 1,
+    "b": 1,
+    "a": 1,
+    "hsvHue": -1,
+    "hsvSaturation": 0,
+    "hsvValue": 1,
+    "hslHue": -1,
+    "hslSaturation": 0,
+    "hslLightness": 1,
+    "valid": true
+  },
+  "configVersion": 17
+}

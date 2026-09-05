@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+# app-relaunch — close the focused window's process and start it again with the
+# same command line, cwd and workspace. For apps that only read theme colours at
+# startup (libadwaita). Bound to Super+Alt+R.
+set -euo pipefail
+win=$(hyprctl activewindow -j)
+pid=$(jq -r '.pid' <<<"$win"); ws=$(jq -r '.workspace.id' <<<"$win"); cls=$(jq -r '.class' <<<"$win")
+[[ "$pid" =~ ^[0-9]+$ ]] || { notify-send -a app-relaunch "No focused window"; exit 1; }
+mapfile -d '' argv < /proc/"$pid"/cmdline
+cwd=$(readlink /proc/"$pid"/cwd 2>/dev/null || echo "$HOME")
+kill -TERM "$pid" 2>/dev/null || true
+for _ in $(seq 40); do kill -0 "$pid" 2>/dev/null || break; sleep 0.05; done
+kill -0 "$pid" 2>/dev/null && kill -KILL "$pid" 2>/dev/null || true
+hyprctl dispatch workspace "$ws" >/dev/null
+cd "$cwd" && setsid -f "${argv[@]}" >/dev/null 2>&1
+notify-send -a app-relaunch -t 2000 "Relaunched $cls" "Fresh colour palette applied"

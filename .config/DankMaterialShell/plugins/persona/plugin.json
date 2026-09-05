@@ -1,0 +1,18 @@
+{
+    "id": "persona",
+    "name": "Persona",
+    "description": "your profile picture on the DankBar. theme-coloured ring and backdrop, initials when there is no picture, a small user panel on click.",
+    "version": "0.1.0",
+    "author": "z89",
+    "type": "widget",
+    "capabilities": [
+        "dankbar-widget"
+    ],
+    "component": "./PersonaWidget.qml",
+    "settings": "./PersonaSettings.qml",
+    "icon": "account_circle",
+    "permissions": [
+        "settings_read",
+        "settings_write"
+    ]
+}

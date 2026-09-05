@@ -459,7 +459,7 @@
       "/home/archie"
     ]
   },
-  "model": "claude-opus-5[1m]",
+  "model": "claude-fable-5-1[1m]",
   "disableClaudeAiConnectors": true,
   "skillOverrides": {
     "design": "user-invocable-only",
@@ -540,6 +540,11 @@
       }
     ]
   },
+  "statusLine": {
+    "type": "command",
+    "command": "bash ~/.claude/statusline.sh",
+    "padding": 0
+  },
   "enabledPlugins": {
     "clangd-lsp@claude-plugins-official": true
   },
@@ -549,10 +554,10 @@
       "effortLevel": "high"
     },
     "claude-fable-5-1": {
-      "effortLevel": "low"
+      "effortLevel": "high"
     }
   },
-  "autoCompactWindow": 200000,
+  "autoCompactWindow": 300000,
   "tui": "fullscreen",
   "skipDangerousModePermissionPrompt": true,
   "skipWorkflowUsageWarning": true,
@@ -560,10 +565,5 @@
   "precomputeCompactionEnabled": true,
   "autoContinueAtUsageLimit": true,
   "inputNeededNotifEnabled": true,
-  "agentPushNotifEnabled": true,
-  "statusLine": {
-    "type": "command",
-    "command": "bash ~/.claude/statusline.sh",
-    "padding": 0
-  }
+  "agentPushNotifEnabled": true
 }
