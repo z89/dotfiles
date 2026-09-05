@@ -64,6 +64,8 @@
 !.config/systemd/user/hyprsunset-auto.service
 !.config/systemd/user/hyprsunset-auto.timer
 !.config/systemd/user/hyprland-session.target
+!.config/systemd/user/os3d.service
+!.config/systemd/user/os3d-rollback.service
 !.config/systemd/user/dms.service.d/
 !.config/systemd/user/app-dev.lizardbyte.app.Sunshine.service.d/
 !.config/kitty/

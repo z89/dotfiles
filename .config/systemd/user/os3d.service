@@ -1,0 +1,30 @@
+[Unit]
+Description=os3 daemon (Anya)
+Documentation=file:%h/Documents/Github-Projects/os3/docs/POC_BOOTSTRAP.md
+After=default.target
+
+# If os3d cannot come up, systemd must stop hammering it and hand over to the
+# rollback: five starts in two minutes is a daemon that is not going to start,
+# and the previous binary is one rename away.
+StartLimitIntervalSec=120
+StartLimitBurst=5
+OnFailure=os3d-rollback.service
+
+[Service]
+Type=simple
+# Refuse to start on a home the binary cannot read: -self-check validates the
+# home read-only, opens no socket and exits within two seconds. A failing
+# check fails the start, which is what drives the rollback above.
+ExecStartPre=%h/.local/bin/os3d -self-check
+ExecStart=%h/.local/bin/os3d
+Restart=always
+RestartSec=2
+
+# A stray ANTHROPIC_API_KEY silently bills the API instead of the Claude
+# subscription: the headless `claude` call would authenticate with the key
+# and the charge appears on the API account with no visible change in
+# behaviour. Scrub it from the unit's environment.
+UnsetEnvironment=ANTHROPIC_API_KEY
+
+[Install]
+WantedBy=default.target

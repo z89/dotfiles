@@ -1,0 +1,17 @@
+[Unit]
+Description=Restore the previous os3 binaries after os3d failed to start
+Documentation=file:%h/.local/bin/os3d-rollback
+
+# The rollback itself must not be able to loop. os3d-rollback MOVES the .prev
+# binaries back rather than copying them, so the second failure in a row finds
+# nothing to restore, says so and stops; this is the belt to that braces.
+StartLimitIntervalSec=600
+StartLimitBurst=2
+
+[Service]
+Type=oneshot
+# Deliberately the installed copy, not the repo checkout: a rollback has to
+# work on a machine where the os3 checkout is missing, half-edited, or is
+# exactly what broke the daemon. scripts/deploy installs this copy.
+ExecStart=%h/.local/bin/os3d-rollback
+TimeoutStartSec=120
