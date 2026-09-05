@@ -1,0 +1,133 @@
+#!/usr/bin/env bash
+# system-tune — trim measured boot-time waste and one runtime stall source.
+#
+#   sudo ~/.local/bin/system-tune            apply the changes below
+#   sudo ~/.local/bin/system-tune --dry-run  show what would change, touch nothing
+#
+# What it fixes (measured with systemd-analyze blame / critical-chain):
+#   1. NetworkManager-wait-online.service sits on the boot critical chain for 5.3 s.
+#      A desktop with NetworkManager does not need boot to block on link-up, so the
+#      unit is disabled (not masked — it can still be re-enabled or run manually).
+#   2. docker.service costs 2.2 s on the critical path and pulls network-online.target
+#      in as a dependency. Switching to socket activation (docker.socket) means the
+#      daemon only starts on first use instead of blocking every boot. The running
+#      docker.service is NOT touched — a container is running right now — so this
+#      change only takes effect from the next boot onward.
+#   3. GRUB_TIMEOUT=5 held the loader phase open for 10.3 s measured end to end.
+#      Cut to 1 s; holding Shift or Esc during POST still opens the GRUB menu.
+#   4. The running kernel is linux-lts, built PREEMPT_VOLUNTARY with
+#      CONFIG_PREEMPT_DYNAMIC=y, so preempt=full on the kernel command line switches
+#      it to full preemption at boot with no kernel rebuild — lower input latency and
+#      steadier frame pacing, at a small throughput cost.
+#   5. split_lock_mitigate throttles any process that trips the split-lock detector,
+#      which shows up as intermittent whole-system stalls in games and Electron apps.
+#      Disabling the mitigation removes the throttle; applied live via sysctl too.
+#
+# luks-boot-setup owns GRUB_CMDLINE_LINUX (the rootflags= tuning) — this script only
+# ever touches GRUB_CMDLINE_LINUX_DEFAULT and GRUB_TIMEOUT, and never that variable.
+#
+# Idempotent: every step checks current state before writing. /etc/default/grub is
+# backed up with a timestamp suffix before its first edit. Nothing here stops,
+# restarts, or masks a running service.
+set -euo pipefail
+
+dry=0
+for a in "$@"; do
+  case $a in
+    --dry-run) dry=1 ;;
+    *) echo "unknown option: $a"; exit 1 ;;
+  esac
+done
+[[ $EUID -eq 0 || $dry -eq 1 ]] || { echo "run with sudo (or --dry-run)"; exit 1; }
+
+run() { if (( dry )); then echo "  would: $*"; else "$@"; fi; }
+note() { echo "-> $*"; }
+
+grub_changed=0
+
+# 1. NetworkManager-wait-online.service --------------------------------------------------
+if [[ "$(systemctl is-enabled NetworkManager-wait-online.service 2>/dev/null || true)" != "disabled" ]]; then
+  note "disable NetworkManager-wait-online.service (5.3 s on the boot critical chain)"
+  run systemctl disable NetworkManager-wait-online.service
+else
+  note "NetworkManager-wait-online.service already disabled"
+fi
+
+# 2. Docker socket activation -------------------------------------------------------------
+if [[ "$(systemctl is-enabled docker.service 2>/dev/null || true)" == "enabled" ]]; then
+  note "disable docker.service (2.2 s on the critical path; running daemon is left alone,"
+  note "  the change only applies from the next boot)"
+  run systemctl disable docker.service
+else
+  note "docker.service already not enabled"
+fi
+if [[ "$(systemctl is-enabled docker.socket 2>/dev/null || true)" != "enabled" ]]; then
+  note "enable docker.socket (start docker on first use instead of every boot)"
+  run systemctl enable docker.socket
+else
+  note "docker.socket already enabled"
+fi
+
+# 3+4. GRUB: timeout and preempt=full -----------------------------------------------------
+grub=/etc/default/grub
+backup_grub() {
+  if (( ! backed_up )); then
+    cp -a "$grub" "$grub.bak-$(date +%Y%m%d%H%M%S)"
+    backed_up=1
+  fi
+}
+backed_up=0
+
+cur_timeout=$(grep -oP '^GRUB_TIMEOUT=\K.*' "$grub" || true)
+if [[ "$cur_timeout" != "1" ]]; then
+  note "GRUB_TIMEOUT=$cur_timeout -> 1 (loader phase measured 10.3 s; Shift/Esc still opens the menu)"
+  if (( ! dry )); then
+    backup_grub
+    sed -i -E 's/^GRUB_TIMEOUT=.*/GRUB_TIMEOUT=1/' "$grub"
+  fi
+  grub_changed=1
+else
+  note "GRUB_TIMEOUT already 1"
+fi
+
+if ! grep -E '^GRUB_CMDLINE_LINUX_DEFAULT=' "$grub" | grep -qw 'preempt=full'; then
+  note "GRUB_CMDLINE_LINUX_DEFAULT += preempt=full (linux-lts is PREEMPT_DYNAMIC; switches to full preemption)"
+  if (( ! dry )); then
+    backup_grub
+    sed -i -E 's/^GRUB_CMDLINE_LINUX_DEFAULT="(.*)"/GRUB_CMDLINE_LINUX_DEFAULT="\1 preempt=full"/' "$grub"
+    sed -i -E '/^GRUB_CMDLINE_LINUX_DEFAULT=/s/  +/ /g' "$grub"
+    grep -E '^GRUB_CMDLINE_LINUX_DEFAULT=' "$grub"
+  fi
+  grub_changed=1
+else
+  note "GRUB_CMDLINE_LINUX_DEFAULT already has preempt=full"
+fi
+
+if (( grub_changed )); then
+  note "grub-mkconfig -o /boot/grub/grub.cfg"
+  run grub-mkconfig -o /boot/grub/grub.cfg
+fi
+
+# 5. Split-lock mitigation ------------------------------------------------------------------
+sysctl_file=/etc/sysctl.d/90-split-lock.conf
+if [[ ! -f $sysctl_file ]] || ! grep -qx 'kernel.split_lock_mitigate = 0' "$sysctl_file"; then
+  note "write $sysctl_file (split-lock detection throttles offending processes, causing"
+  note "  intermittent whole-system stalls in games and Electron apps) and apply live"
+  if (( ! dry )); then
+    cat > "$sysctl_file" <<'EOF'
+# system-tune: split-lock detection throttles any process that trips it, which shows up
+# as intermittent whole-system stalls in games and Electron apps. Disable the mitigation.
+kernel.split_lock_mitigate = 0
+EOF
+  fi
+  run sysctl -q -p "$sysctl_file"
+else
+  note "$sysctl_file already correct"
+fi
+
+echo
+echo "Done."
+echo "Needs a reboot to take effect: (1) wait-online disabled, (2) docker socket activation,"
+echo "  (3) GRUB_TIMEOUT=1, (4) preempt=full."
+echo "Already live: (5) split_lock_mitigate=0."
+echo "Not touched here (manual, in the UEFI setup screen): enable Fast Boot, disable CSM (firmware phase measured 10.9 s)."

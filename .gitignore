@@ -105,12 +105,17 @@
 !/.local/bin/screenshot
 !/.config/satty/
 !/.config/satty/config.toml
+!/.config/chromium-flags.conf
+!/.config/spotify-flags.conf
+!/.config/environment.d/
+!/.config/environment.d/50-mesa.conf
 !/.config/matugen/templates/satty-config
 !/.config/matugen/templates/hypr-borders
 !/.config/hypr/borders.lua
 !/.local/bin/app-relaunch
 !/.local/bin/greeter-setup
 !/.local/bin/luks-boot-setup
+!/.local/bin/system-tune
 !/.local/bin/plymouth-dank-theme
 !/.local/bin/palette-gen
 !/.local/bin/papirus-dank-build
