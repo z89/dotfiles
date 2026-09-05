@@ -98,6 +98,9 @@ end)
 hl.env("XCURSOR_SIZE", "24")
 hl.env("XCURSOR_THEME", "Bibata-Modern-Classic")
 hl.env("HYPRCURSOR_SIZE", "24")
+-- Pin GTK apps (libadwaita too) to the theme-apply theme so the Matugen-A/B flip recolours them live.
+-- Same value as ~/.config/environment.d/60-gtk-theme.conf; Hyprland only applies env at launch.
+hl.env("GTK_THEME", "Matugen-A")
 hl.env("QT_QPA_PLATFORMTHEME", "qt5ct")
 
 

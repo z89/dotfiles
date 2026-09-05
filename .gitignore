@@ -139,3 +139,6 @@
 !.config/gtk-4.0/settings.ini
 !.config/gsettings/
 __pycache__/
+!.local/bin/dms-shim/
+!.local/bin/papirus-dank-build
+!.config/DankMaterialShell/README.md

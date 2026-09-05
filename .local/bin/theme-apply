@@ -37,13 +37,27 @@ NET_TIMEOUT = 2.0
 NOTION_CSS = os.path.join(HOME, ".cache/matugen/notion-colors.css")
 SPICETIFY_INI = os.path.join(HOME, ".config/spicetify/Themes/matugen/color.ini")
 GTK4_COLORS = os.path.join(HOME, ".config/gtk-4.0/dank-colors.css")
+# libadwaita CSS custom properties (user matugen template gtk4-vars). Folded into the
+# Matugen-A/B gtk-4.0 theme so GTK4 apps recolour on the flip, not at the template write.
+GTK4_VARS = os.path.join(HOME, ".config/gtk-4.0/dank-vars.css")
 HYPR_COLORS = os.path.join(HOME, ".config/hypr/dms/colors.lua")
 GTK3_COLORS = os.path.join(HOME, ".config/gtk-3.0/dank-colors.css")
 GTK3_BASE_THEME = "/usr/share/themes/adw-gtk3-dark/gtk-3.0/gtk.css"
 # A theme's gtk-4.0/gtk.css REPLACES GTK4's built-in stylesheet rather than
-# overlaying it, so it must import the stock Default theme first or plain
-# GTK4 apps (pavucontrol etc.) render with no backgrounds or widget styling.
-GTK4_BASE_THEME = "resource:///org/gtk/libgtk/theme/Default/Default-dark.css"
+# overlaying it, so it must import a complete base first or GTK4 apps render
+# with no backgrounds or widget styling. The base is libadwaita's own compiled
+# stylesheet, extracted from the library into each theme dir (adwaita.css plus
+# assets/) whenever the library is newer than the copy. With GTK_THEME=Matugen-A
+# pinned in the session environment (environment.d, hyprland.lua) libadwaita
+# skips its built-in provider and loads this theme instead, and like every GTK
+# process it re-reads the theme from disk each time gtk-theme-name changes, so
+# the A/B flip below recolours Nautilus and friends live (verified 2026-09-06).
+# A user ~/.config/gtk-4.0/gtk.css is read once per process and outranks the
+# theme, so it must import nothing. Falls back to GTK's Default theme when the
+# extraction fails (libadwaita missing).
+ADW_LIB = "/usr/lib/libadwaita-1.so.0"
+ADW_RES = "/org/gnome/Adwaita/styles"
+GTK4_FALLBACK_BASE = "resource:///org/gtk/libgtk/theme/Default/Default-dark.css"
 # Written by palette-gen (step_palette) from the kitty palette; appended after
 # the DMS colours so GTK windows share the terminal's background exactly.
 GTK_PALETTE_CSS = os.path.join(HOME, ".config/gtk-3.0/palette-colors.css")
@@ -53,8 +67,9 @@ GTK_PALETTE_CSS = os.path.join(HOME, ".config/gtk-3.0/palette-colors.css")
 # it itself through CSS transitions (they fire on a theme swap), kitty is fed
 # interpolated palettes over its control socket, Hyprland eases its border
 # colours with its own "border" animation once given the target.
-FADE_MS = 500
+FADE_MS = 500          # keep equal to THEME_FADE_MS in dms-shell-patch (DMS colours + wallpaper)
 FADE_FPS = 30
+SYNC_WAIT_S = 2.5   # longest wait for the DMS palette stamp after a matugen write (covers its wallpaper-decode hold)
 FADE_BEZIER = "cubic-bezier(0.33, 1, 0.68, 1)"   # easeOutCubic, same as _ease()
 GTK_FADE_CSS = (
     "\n/* fade engine: colour changes ease over the same curve and duration as kitty */\n"
@@ -67,9 +82,49 @@ GTK_FADE_CSS = (
     % {"d": FADE_MS, "b": FADE_BEZIER})
 KITTY_PALETTE = os.path.join(HOME, ".config/kitty/matugen-theme.conf")        # live include
 KITTY_PALETTE_NEXT = os.path.join(HOME, ".config/kitty/matugen-theme.next.conf")  # from palette-gen
+# Touched by DMS (dms-shell-patch, Theme.qml) on the first frame that animates a new
+# palette.  theme-apply.path fires on the matugen CSS write a little earlier, so this
+# process is already warm; the fade step then waits for the stamp and the GTK flip and the
+# kitty fade start on the same frame as the bar and the wallpaper crossfade.
+PALETTE_STAMP = os.path.join(os.environ.get("XDG_CACHE_HOME") or os.path.join(HOME, ".cache"),
+                             "DankMaterialShell/palette-applied.stamp")
+
+
+GTK_FLIP = None   # gsettings argv prepared by step_gtk3, run by step_fade on the stamp
+
+
+def _mtime(path):
+    try:
+        return os.stat(path).st_mtime
+    except OSError:
+        return 0.0
+
+
+def _fade_anchor():
+    """Start of the shared fade.  Wait (4 ms polls, at most SYNC_WAIT_S) for a
+    stamp newer than the matugen write that fired this run, then share its
+    timestamp while it is fresh; without a stamp (stock shell, greeter) fall
+    back to now so nothing ever hangs.  Called once everything that can be
+    prepared ahead (palette, GTK theme files, kitty's live colours) is done."""
+    trigger = _mtime(GTK3_COLORS)
+    deadline = trigger + SYNC_WAIT_S
+    while (stamp := _mtime(PALETTE_STAMP)) < trigger and time.time() < deadline:
+        time.sleep(0.004)
+    now = time.time()
+    return stamp if 0 <= now - stamp < FADE_MS / 1000.0 else now
+
+
+def _flip_gtk():
+    """Run the gtk-theme flip step_gtk3 prepared, once, not awaited."""
+    global GTK_FLIP
+    if GTK_FLIP:
+        subprocess.Popen(GTK_FLIP, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        GTK_FLIP = None
 HYPR_BORDERS = os.path.join(HOME, ".config/hypr/borders.lua")
 THEMES_DIR = os.path.join(HOME, ".themes")
 THEME_NAMES = ("Matugen-A", "Matugen-B")
+GTK_FLIPPED = False   # set by step_gtk3 when the palette changed; step_portal keys on it
+RUN_STAMP = os.path.join(STATE_DIR, "run-active")   # touched at begin; check() stays out for 3s
 
 DRY_RUN = "--dry-run" in sys.argv[1:]
 _log_lock = threading.Lock()
@@ -78,7 +133,9 @@ _log_lock = threading.Lock()
 # ---------------------------------------------------------------- logging
 
 def log(step, msg):
-    line = "%s %-9s %s" % (time.strftime("%Y-%m-%d %H:%M:%S"), step, msg)
+    now = time.time()
+    line = "%s.%03d %-9s %s" % (time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(now)),
+                                 int(now * 1000) % 1000, step, msg)
     if DRY_RUN:
         print(line)
         return
@@ -94,12 +151,17 @@ def log(step, msg):
             pass
 
 
+STEP_MS = []   # (step, ms) for the sequential steps, reported on the done line
+
+
 def guard(step, fn):
     """Run fn, swallowing and logging anything it raises."""
+    t = time.time()
     try:
         fn()
     except Exception as exc:  # one broken step must not stop the others
         log(step, "error: %s: %s" % (type(exc).__name__, exc))
+    STEP_MS.append((step, int((time.time() - t) * 1000)))
 
 
 # ------------------------------------------------------------ CDP / websocket
@@ -456,10 +518,19 @@ def step_fade():
     in_sync = [pid for pid in socks if old[pid] and not keys[pid]]
     FADE_HANDLED_PIDS.update(in_sync)
     file_keys = sorted(k for k in new if k in file_old and file_old[k] != new[k])
+    # Everything above is preparation; tell DMS the consumer is ready so it applies
+    # (and stamps) the palette it is holding for us.
+    if not DRY_RUN:   # not awaited: the dms client takes ~200 ms to exit, DMS acts on receipt
+        subprocess.Popen(["dms", "ipc", "call", "theme", "consumerReady"],
+                         stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    join_ms = 0
     if fading or file_keys:
         frames = max(1, int(FADE_MS * FADE_FPS / 1000))
-        t0 = time.time()
-        for i in range(1, frames + 1):
+        t0 = _fade_anchor()          # blocks until DMS stamps its first animated frame
+        _flip_gtk()
+        join_ms = int((time.time() - t0) * 1000)
+        first = min(frames, 1 + int((time.time() - t0) * FADE_FPS))
+        for i in range(first, frames + 1):
             t = _ease(i / frames)
             last = i == frames
             if file_keys and next_text:
@@ -482,10 +553,11 @@ def step_fade():
             current = ""
         if current != next_text:
             _atomic_write(KITTY_PALETTE, next_text)   # nothing faded; promote outright
+    _flip_gtk()                      # nothing to fade: flip GTK without waiting further
     nkeys = max([len(keys[p]) for p in fading] or [0])
-    log("fade", "kitty: %d instance(s) faded over %dms (%d key(s)), %d already in sync, "
+    log("fade", "kitty: %d instance(s) faded over %dms (%d key(s), joined %+dms), %d already in sync, "
         "%d unreachable; live file %s; borders %s"
-        % (len(fading), FADE_MS, nkeys, len(in_sync), len(socks) - len(fading) - len(in_sync),
+        % (len(fading), FADE_MS, nkeys, join_ms, len(in_sync), len(socks) - len(fading) - len(in_sync),
            "stepped %d key(s)" % len(file_keys) if file_keys else "unchanged",
            ", ".join("%s->%s" % (w, h) for w, h in border_changes.items()) or "unchanged"))
 
@@ -741,9 +813,10 @@ def _read_stable(path, tries=8):
         try:
             with open(path) as f:
                 data = f.read()
+            settled = time.time() - os.stat(path).st_mtime > 0.15
         except OSError:
-            data = None
-        if data and data == last and "@define-color" in data and data.endswith("\n"):
+            data, settled = None, False
+        if data and (data == last or settled) and "@define-color" in data and data.endswith("\n"):
             return data
         last = data
         time.sleep(0.05)
@@ -757,15 +830,57 @@ def _atomic_write(path, data):
     os.replace(tmp, path)
 
 
-def _theme_css(colors_css):
+def _atomic_write_bytes(path, data):
+    tmp = path + ".tmp"
+    with open(tmp, "wb") as f:
+        f.write(data)
+    os.replace(tmp, path)
+
+
+def _ensure_adwaita_css(root):
+    """Extract libadwaita's compiled stylesheet and assets into <root>/gtk-4.0 when
+    the library is newer than the copy. Returns the @import target for css4.
+    Steady-state cost: two stats."""
+    d = os.path.join(root, "gtk-4.0")
+    dest = os.path.join(d, "adwaita.css")
+    try:
+        lib_m = os.stat(ADW_LIB).st_mtime
+    except OSError:
+        return GTK4_FALLBACK_BASE
+    try:
+        if os.stat(dest).st_mtime >= lib_m and os.stat(dest).st_size > 0:
+            return "adwaita.css"
+    except OSError:
+        pass
+    try:
+        run = lambda *a: subprocess.run(["gresource", *a], capture_output=True, check=True, timeout=5).stdout
+        css = run("extract", ADW_LIB, ADW_RES + "/gtk.css")
+        assets = run("list", ADW_LIB, ADW_RES + "/assets").decode().split()
+        os.makedirs(os.path.join(d, "assets"), exist_ok=True)
+        for res in assets:
+            _atomic_write_bytes(os.path.join(d, "assets", os.path.basename(res)), run("extract", ADW_LIB, res))
+        _atomic_write_bytes(dest, css)
+        log("gtk3", "extracted libadwaita stylesheet (%d bytes, %d assets) into %s" % (len(css), len(assets), d))
+        return "adwaita.css"
+    except (OSError, subprocess.SubprocessError) as e:
+        log("gtk3", "libadwaita extract failed (%s); using GTK Default base" % e)
+        return GTK4_FALLBACK_BASE
+
+
+def _theme_css(colors_css, base4):
     try:
         with open(GTK_PALETTE_CSS) as f:
             palette = f.read()
     except OSError:
         palette = ""
+    try:
+        with open(GTK4_VARS) as f:
+            vars4 = f.read()
+    except OSError:
+        vars4 = ""
     body = colors_css + palette + GTK_FADE_CSS
     css3 = '@import url("%s");\n%s' % (GTK3_BASE_THEME, body)
-    css4 = '@import url("%s");\n%s' % (GTK4_BASE_THEME, body)
+    css4 = '@import url("%s");\n%s%s' % (base4, body, vars4)
     return (css3, css4)
 
 
@@ -776,9 +891,17 @@ def _write_theme(name, colors_css):
     _atomic_write(os.path.join(root, "index.theme"),
                   "[Desktop Entry]\nType=X-GNOME-Metatheme\nName=%s\n"
                   "[X-GNOME-Metatheme]\nGtkTheme=%s\n" % (name, name))
-    css3, css4 = _theme_css(colors_css)
+    css3, css4 = _theme_css(colors_css, _ensure_adwaita_css(root))
     _atomic_write(os.path.join(root, "gtk-3.0", "gtk.css"), css3)
     _atomic_write(os.path.join(root, "gtk-4.0", "gtk.css"), css4)
+
+
+def _file_is(path, text):
+    try:
+        with open(path) as f:
+            return f.read() == text
+    except OSError:
+        return False
 
 
 def _current_gtk_theme():
@@ -812,59 +935,93 @@ def step_gtk3():
     if not colors_css:
         log("gtk3", "no usable %s" % GTK3_COLORS)
         return
+    cur = _current_gtk_theme()
+    # Compare before writing: if the active theme already holds this palette (a rerun,
+    # or DMS regenerating the same wallpaper) there is nothing for GTK to reload.
+    unchanged = cur in THEME_NAMES and all(
+        _file_is(os.path.join(THEMES_DIR, cur, d, "gtk.css"), css)
+        for d, css in zip(("gtk-3.0", "gtk-4.0"),
+                          _theme_css(colors_css, _ensure_adwaita_css(os.path.join(THEMES_DIR, cur)))))
     for name in THEME_NAMES:
         _write_theme(name, colors_css)
-    cur = _current_gtk_theme()
+    if unchanged:
+        log("gtk3", "palette unchanged; %s stays, no restyle" % cur)
+        return
+    global GTK_FLIPPED
+    GTK_FLIPPED = True
     nxt = THEME_NAMES[1] if cur == THEME_NAMES[0] else THEME_NAMES[0]
     if DRY_RUN:
         log("gtk3", "would flip gtk-theme %s -> %s" % (cur, nxt))
         return
-    subprocess.run(["gsettings", "set", "org.gnome.desktop.interface", "gtk-theme", nxt],
-                   stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=2)
+    # Theme files are written now; the flip itself waits for the palette stamp
+    # so GTK's CSS transition starts on the same frame as the kitty fade.
+    global GTK_FLIP
+    GTK_FLIP = ["gsettings", "set", "org.gnome.desktop.interface", "gtk-theme", nxt]
     log("gtk3", "gtk-theme %s -> %s (live restyle)" % (cur, nxt))
 
 
 # -------------------------------------------------------------- e. Hyprland
 
+def _hypr_colour_keywords(text):
+    """Flatten the hl.config({...}) colour table in colors.lua into hyprctl keywords:
+    general.col.active_border -> general:col.active_border, group.groupbar.col.active
+    -> group:groupbar:col.active."""
+    out, stack = {}, []
+    for m in re.finditer(r'(\w+)\s*=\s*\{|\}|(\w+)\s*=\s*"(rgba?\([0-9a-fA-F]+\))"', text):
+        if m.group(1):
+            stack.append(m.group(1))
+        elif m.group(2):
+            if stack:
+                out[":".join(stack) + "." + m.group(2)] = m.group(3)
+        elif stack:
+            stack.pop()
+    return out
+
+
 def step_hypr():
-    """Reload only when DMS actually rewrote colors.lua since the last run."""
+    """Push the group colours DMS rendered into colors.lua as live keywords. No
+    hyprctl reload: hyprland.lua reads the colour files without registering them
+    for autoreload, and a reload re-creates the headless output and stalls the
+    shell. general:col.* is left to the fade (borders.lua wins there)."""
     if not os.path.exists(HYPR_COLORS):
         log("hypr", "no %s" % HYPR_COLORS)
         return
     src = os.path.getmtime(HYPR_COLORS)
     stamp = os.path.getmtime(HYPR_STAMP) if os.path.exists(HYPR_STAMP) else 0
     if src <= stamp:
-        log("hypr", "colors.lua unchanged; no reload")
+        log("hypr", "colors.lua unchanged; nothing to push")
         return
+    with open(HYPR_COLORS) as f:
+        keys = {k: v for k, v in _hypr_colour_keywords(f.read()).items() if not k.startswith("general:")}
     if DRY_RUN:
-        log("hypr", "would run hyprctl reload and touch stamp")
+        log("hypr", "would push %d group colour keyword(s)" % len(keys))
         return
-    subprocess.run(["hyprctl", "reload"], stdout=subprocess.DEVNULL,
-                   stderr=subprocess.DEVNULL, timeout=2)
+    if keys:
+        _hypr_request("[[BATCH]]" + ";".join("keyword %s %s" % kv for kv in sorted(keys.items())))
     os.makedirs(STATE_DIR, exist_ok=True)
     with open(HYPR_STAMP, "a"):
         os.utime(HYPR_STAMP, None)
-    log("hypr", "hyprctl reload")
+    log("hypr", "pushed %d group colour keyword(s), no reload" % len(keys))
 
 
 # ----------------------------------------------------------------- f. portal
 
 def step_portal():
-    """Fire and forget: the GTK file chooser only picks up colours on restart."""
-    if DRY_RUN:
-        log("portal", "would restart xdg-desktop-portal-gtk")
-        return
-    subprocess.Popen(["systemctl", "--user", "restart", "xdg-desktop-portal-gtk"],
-                     stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
-                     start_new_session=True)
-    log("portal", "restart xdg-desktop-portal-gtk (async)")
+    """No restart any more. xdg-desktop-portal-gtk is a GTK3 process that, like every
+    other GTK process with GTK_THEME pinned, re-reads the theme on the gtk-theme flip,
+    so the file chooser recolours live. Restarting it was actively harmful: GTK4 apps
+    on Wayland receive gtk-theme-name through the settings portal, and while the
+    backend restarted their notify arrived one to two seconds late, so libadwaita
+    windows recoloured well after the fade (measured 2026-09-06)."""
+    log("portal", "left alone (reloads the pinned theme on the flip)"
+        if GTK_FLIPPED else "palette unchanged")
 
 
 # -------------------------------------------------------------------- driver
 
 # Deliberately excludes the kitty palette: theme-apply writes that file itself,
 # so watching it would retrigger this run forever.
-SOURCES = (GTK3_COLORS, GTK4_COLORS, HYPR_COLORS)
+SOURCES = (GTK3_COLORS, GTK4_COLORS, GTK4_VARS, HYPR_COLORS)
 
 
 def _newest_source():
@@ -875,7 +1032,12 @@ def check():
     """Cheap guard (theme-sync.timer, and theme-sync-dconf.path on every
     gsettings write): repair the GTK theme and icon theme if anything drifted.
     DMS itself points gtk-theme back at stock adw-gtk3-dark after every colour
-    change, so this must be fast and must stay quiet when nothing is wrong."""
+    change, so this must be fast and must stay quiet when nothing is wrong.
+    A main run is in flight for about a second and its own gsettings writes
+    fire the dconf path unit, so stay out while one is recent: repairing then
+    re-flipped the GTK theme in the middle of the fade."""
+    if time.time() - _mtime(RUN_STAMP) < 3 or time.time() - _mtime(GTK3_COLORS) < 3:
+        return   # a run is in flight or about to start
     if _gset("icon-theme") not in ICON_THEMES and os.path.isdir(
             os.path.expanduser("~/.local/share/icons/%s" % ICON_THEMES[1])):
         log("check", "icon-theme drifted, repointing")
@@ -891,6 +1053,7 @@ def main():
         check()
         return
     for _ in range(3):
+        _wait_sources()          # before the timestamp, or the late gtk-4.0 write reads as "changed during run"
         start = time.time()
         run_once(start)
         # A wallpaper change that landed while we were running would otherwise
@@ -901,21 +1064,44 @@ def main():
         log("rerun", "sources changed during run")
 
 
+def _wait_sources(timeout=0.3):
+    """matugen writes its templates one after another and the path unit fires on
+    the gtk-3.0 file; palette-gen reads the gtk-4.0 one. Give the rest of the set
+    a moment to land so one run carries the whole palette (a stale read here meant
+    kitty faded on the rerun, 250ms late)."""
+    deadline = time.time() + timeout
+    ref = _mtime(GTK3_COLORS) - 1.0
+    while any(_mtime(p) < ref for p in (GTK4_COLORS, GTK4_VARS)) and time.time() < deadline:
+        time.sleep(0.01)
+
+
 def run_once(start):
+    global GTK_FLIPPED
+    GTK_FLIPPED = False
+    del STEP_MS[:]
+    os.makedirs(STATE_DIR, exist_ok=True)
+    with open(RUN_STAMP, "a"):
+        os.utime(RUN_STAMP, None)
+    log("begin", "%+dms after the matugen CSS write" % int((start - _mtime(GTK3_COLORS)) * 1000))
     # The two CDP steps are the only ones that can block on the network, so
     # they run in parallel with the cheap local ones.
     threads = [threading.Thread(target=guard, args=(name, fn), daemon=True)
                for name, fn in (("notion", step_notion), ("spotify", step_spotify))]
     for t in threads:
         t.start()
-    for name, fn in (("palette", step_palette), ("icons", step_icons), ("gnome", step_gnome), ("gtk3", step_gtk3),
+    # palette-gen, the GTK theme files and kitty's live colours are prepared
+    # while DMS is still parsing the same matugen write; the fade then blocks
+    # until DMS stamps its first animated frame and the GTK flip and the kitty
+    # frames start on it.  Everything slower comes after.
+    for name, fn in (("palette", step_palette), ("gtk3", step_gtk3),
                      ("fade", step_fade), ("kitty", step_kitty),
+                     ("icons", step_icons), ("gnome", step_gnome),
                      ("hypr", step_hypr), ("portal", step_portal)):
         guard(name, fn)
     deadline = start + 2.8
     for t in threads:
         t.join(max(0.05, deadline - time.time()))
-    log("done", "%.2fs" % (time.time() - start))
+    log("done", "%.2fs (%s)" % (time.time() - start, ", ".join("%s %dms" % st for st in STEP_MS)))
 
 
 if __name__ == "__main__":

@@ -4,6 +4,7 @@
 # in the background, then restart once so the patched UI takes over.
 PATCHED=${DMS_SHELL_PATCHED:-$HOME/.local/share/dms-shell-patched}
 BIN_SHA=$(sha256sum "$(command -v dms)" | cut -d' ' -f1)
+rm -rf "$PATCHED.prev"   # tree the previous instance ran from; safe to drop now that it is gone
 
 if [[ -f "$PATCHED/shell.qml" && "$(cat "$PATCHED/.dms-binary-sha256" 2>/dev/null)" == "$BIN_SHA" ]]; then
     export DMS_SHELL_DIR=$PATCHED
@@ -21,4 +22,7 @@ else
     ) &
 fi
 
+# DMS's matugen worker rewrites gtk-theme, icon-theme and accent-color after every palette;
+# theme-apply owns those (see ~/.local/bin/dms-shim/gsettings), so DMS gets a shim first in PATH.
+export PATH="$HOME/.local/bin/dms-shim:$PATH"
 exec /usr/bin/dms run --session

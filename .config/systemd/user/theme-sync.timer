@@ -3,7 +3,7 @@ Description=Periodic GTK3 palette sync check
 
 [Timer]
 OnBootSec=20
-OnUnitActiveSec=30
+OnUnitActiveSec=300
 AccuracySec=5
 
 [Install]
