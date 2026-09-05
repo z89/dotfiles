@@ -2,7 +2,8 @@
 # Build a patched copy of the DMS embedded shell UI.
 # Source: the shell dms extracts to $XDG_RUNTIME_DIR/danklinux-shell/<hash> on a stock start.
 # Output: ~/.local/share/dms-shell-patched (used via DMS_SHELL_DIR by dms-run-patched).
-# Patches: launcher size, launcher centred between the bar edge and the opposite screen edge, Spotlight bar width.
+# Patches: launcher size, launcher centred between the bar edge and the opposite screen edge, Spotlight bar width,
+# lock-screen crossfade, compact notification popup card, synced palette/wallpaper fades.
 # Re-run after every dms upgrade; dms-run-patched does this automatically.
 set -euo pipefail
 
@@ -16,11 +17,21 @@ OUT=${DMS_SHELL_PATCHED:-$HOME/.local/share/dms-shell-patched}
 BIN=$(command -v dms)
 BIN_SHA=$(sha256sum "$BIN" | cut -d' ' -f1)
 
-src=$(ls -td "$RUNTIME"/danklinux-shell/*/ 2>/dev/null | head -1 || true)
+# Stock source, in order: DMS_SHELL_SRC override; the tree dms extracts on a stock start
+# (tmpfs, gone after a reboot); a cached copy of the upstream source at the installed
+# commit (~/.cache/dms-shell-stock/<short-rev>, quickshell/ plus the dank-qml-common
+# submodule as DankCommon/), which survives reboots and yay cache purges.
+src=${DMS_SHELL_SRC:-}
+[[ -n "$src" ]] || src=$(ls -td "$RUNTIME"/danklinux-shell/*/ 2>/dev/null | head -1 || true)
 if [[ -z "$src" || ! -f "$src/shell.qml" ]]; then
-    echo "dms-shell-patch: no extracted shell in $RUNTIME/danklinux-shell (start dms stock once)" >&2
+    rev=$(pacman -Q dms-shell-git 2>/dev/null | grep -oE 'g[0-9a-f]{7,}' | head -1 | cut -c2-)
+    [[ -n "$rev" && -f "$HOME/.cache/dms-shell-stock/$rev/shell.qml" ]] && src="$HOME/.cache/dms-shell-stock/$rev"
+fi
+if [[ -z "$src" || ! -f "$src/shell.qml" ]]; then
+    echo "dms-shell-patch: no stock shell source (start dms stock once, or populate ~/.cache/dms-shell-stock/<rev>)" >&2
     exit 1
 fi
+src=${src%/}
 
 tmp=$(mktemp -d "${OUT}.tmp.XXXX")
 trap 'rm -rf "$tmp"' EXIT
@@ -313,9 +324,544 @@ QML
 }
 [[ "$LOCK_FADE" == 1 ]] && apply_lock_fade
 
+# ---- Notification popup: compact banner card (optional) ---------------------------
+# Rewrites the popup card body (Modules/Notifications/Popup/NotificationPopup.qml) into a
+# compact banner: 36px rounded-square app icon, bold title with "app · time" on the right,
+# body under it, close button on hover, action pills only when the app sends actions, a
+# 2px timeout hairline. The card fragment lives in $NOTIF_CARD; the popup manager's
+# minimum slot height is lowered to match. Skipped with a warning (other patches still
+# apply) if upstream changed the anchors.
+NOTIF_CARD_PATCH=${NOTIF_CARD_PATCH:-1}   # 0 disables the block
+NOTIF_CARD=${NOTIF_CARD:-$HOME/.config/DankMaterialShell/patches/notification-popup-card.qml}
+STOCK_NOTIF_POPUP_SHA=2518b088afefd63155b21b76dc7a6c00d72843efdd7f2524ec3a77543b21f57b
+
+notif_card_files=(Modules/Notifications/Popup/NotificationPopup.qml Modules/Notifications/Popup/NotificationPopupManager.qml)
+notif_card_skip() {
+    echo "dms-shell-patch: notification card skipped: $1" >&2
+    local f
+    for f in "${notif_card_files[@]}"; do cp -a "$src/$f" "$tmp/$f"; done
+    rm -f "$tmp/DankCommon/Widgets/DankRoundedImage.qml" "$tmp/Widgets/DankRoundedImage.qml"
+    NOTIF_CARD_PATCH=0
+}
+apply_notif_card() {
+    [[ -f "$NOTIF_CARD" ]] || { notif_card_skip "fragment $NOTIF_CARD missing"; return; }
+    local have
+    have=$(sha256sum "$tmp/Modules/Notifications/Popup/NotificationPopup.qml" | cut -d' ' -f1)
+    [[ "$have" == "$STOCK_NOTIF_POPUP_SHA" ]] || { notif_card_skip "NotificationPopup.qml changed upstream"; return; }
+
+    # DankRoundedImage: DankCircularImage with a configurable corner radius and no inset ring.
+    local ci=$tmp/DankCommon/Widgets/DankCircularImage.qml
+    local pat
+    for pat in '^    id: root$' '^    radius: width / 2$' '^        radius: Math\.min\(width, height\) / 2$' '^        anchors\.margins: 2$'; do
+        [[ $(grep -cE "$pat" "$ci") == 1 ]] || { notif_card_skip "DankCircularImage.qml anchor $pat"; return; }
+    done
+    sed -E \
+        -e 's|^    id: root$|    id: root\n    property real cornerRadius: 8|' \
+        -e 's|^    radius: width / 2$|    radius: cornerRadius|' \
+        -e 's|^        radius: Math\.min\(width, height\) / 2$|        radius: root.cornerRadius|' \
+        -e 's|^        anchors\.margins: 2$|        anchors.margins: 0|' \
+        "$ci" > "$tmp/DankCommon/Widgets/DankRoundedImage.qml"
+    sed 's/DankCircularImage/DankRoundedImage/' "$tmp/Widgets/DankCircularImage.qml" > "$tmp/Widgets/DankRoundedImage.qml"
+
+    if ! NOTIF_CARD="$NOTIF_CARD" python3 - "$tmp" <<'PY2'
+import os, sys
+tmp = sys.argv[1]
+frag = open(os.environ["NOTIF_CARD"]).read()
+
+def between(s, start, end):
+    i = s.index(start); j = s.index(end, i)
+    return i, j
+
+pp = os.path.join(tmp, "Modules/Notifications/Popup/NotificationPopup.qml")
+s = open(pp).read()
+
+# 1. geometry properties
+i, j = between(s, "    readonly property bool compactMode: SettingsData.notificationCompactMode\n",
+               "    readonly property real basePopupHeightPrivacy:")
+j = s.index("\n", j) + 1
+props = """    // dms-shell-patch: compact banner card geometry. Card body fragment:
+    // ~/.config/DankMaterialShell/patches/notification-popup-card.qml
+    readonly property bool compactMode: SettingsData.notificationCompactMode
+    readonly property real cardPadding: compactMode ? 10 : 12
+    // Bottom padding is larger than top: Inter's cap height sits well below the line box
+    // while descenders barely reach its bottom, so equal numbers look bottom-heavy.
+    readonly property real cardPaddingBottom: compactMode ? 14 : 17
+    readonly property bool isCritical: notificationData?.urgency === NotificationUrgency.Critical
+    readonly property real cardPaddingH: (compactMode ? 12 : 14) + (isCritical ? 6 : 0)
+    readonly property real popupIconSize: compactMode ? 32 : 36
+    readonly property real iconTextGap: 12
+    readonly property real contentSpacing: 2
+    readonly property real actionRowGap: compactMode ? 8 : 10
+    readonly property real actionButtonHeight: compactMode ? 24 : 26
+    readonly property real titleFontSize: SettingsData.notificationSummaryFontSize || Theme.fontSizeMedium
+    readonly property real bodyFontSize: SettingsData.notificationBodyFontSize || (Theme.fontSizeSmall + 1)
+    readonly property real metaFontSize: Theme.fontSizeSmall
+    readonly property real bodyLineRatio: 1.2
+    readonly property int collapsedBodyLines: compactMode ? 1 : 2
+    readonly property bool hasActions: (notificationData?.actions?.length ?? 0) > 0
+    readonly property string titleText: {
+        const s = (notificationData?.summary ?? "").trim();
+        return s.length > 0 ? s : (notificationData?.appName ?? "");
+    }
+    readonly property string metaText: {
+        const app = (notificationData?.appName ?? "").trim();
+        const t = notificationData?.timeStr ?? "";
+        const parts = [];
+        if (app.length > 0 && app.toLowerCase() !== titleText.toLowerCase())
+            parts.push(app);
+        if (t.length > 0)
+            parts.push(t);
+        return parts.join("  \\u00b7  ");
+    }
+    readonly property real titleLineHeight: Math.ceil(titleMeasure.implicitHeight || titleFontSize * 1.25)
+    readonly property real bodyLineHeight: Math.ceil(bodyLineMeasure.contentHeight || bodyFontSize * bodyLineRatio)
+    readonly property real collapsedBodyHeight: hasExpandableBody ? Math.ceil(Math.max(collapsedBodyMeasure.contentHeight, bodyLineHeight)) : 0
+    readonly property real expandedBodyHeight: hasExpandableBody ? Math.ceil(Math.max(expandedBodyMeasure.contentHeight, collapsedBodyHeight)) : 0
+    readonly property real textBlockHeight: titleLineHeight + (hasExpandableBody ? contentSpacing + collapsedBodyHeight : 0)
+    readonly property real privacyTextBlockHeight: titleLineHeight + (hasExpandableBody ? contentSpacing + bodyLineHeight : 0)
+    readonly property real collapsedContentHeight: Math.max(popupIconSize, textBlockHeight)
+    readonly property real privacyCollapsedContentHeight: Math.max(popupIconSize, privacyTextBlockHeight)
+    readonly property real actionsBlockHeight: hasActions ? actionRowGap + actionButtonHeight : 0
+    readonly property real basePopupHeight: cardPadding + cardPaddingBottom + collapsedContentHeight + actionsBlockHeight
+    readonly property real basePopupHeightPrivacy: cardPadding + cardPaddingBottom + privacyCollapsedContentHeight + actionsBlockHeight
+"""
+s = s[:i] + props + s[j:]
+
+# 2. implicit size
+i, j = between(s, "    readonly property real contentImplicitWidth:", "    readonly property real targetAlignedHeight:")
+size = """    readonly property real contentImplicitWidth: screen ? Math.min(380, Math.max(320, screen.width * 0.22)) : 380
+    readonly property real contentImplicitHeight: {
+        if (SettingsData.notificationPopupPrivacyMode && !descriptionExpanded)
+            return basePopupHeightPrivacy;
+        if (!descriptionExpanded)
+            return basePopupHeight;
+        return basePopupHeight + Math.max(0, expandedBodyHeight - collapsedBodyHeight);
+    }
+"""
+s = s[:i] + size + s[j:]
+
+# 3. card body
+i, j = between(s, "        // Keep critical accent outside shadow rendering so connected mode still shows it.\n",
+               "            MouseArea {\n                id: cardHoverArea\n")
+s = s[:i] + frag + s[j:]
+
+# 4. no accent ring around critical cards: the leading-edge rail carries urgency
+ring_c = "            borderColor: win.notificationData && win.notificationData.urgency === NotificationUrgency.Critical ? Theme.withAlpha(Theme.primary, 0.3) : Theme.withAlpha(Theme.outline, 0.08)\n"
+ring_w = "            borderWidth: win.notificationData && win.notificationData.urgency === NotificationUrgency.Critical ? 2 : 0\n"
+assert s.count(ring_c) == 1 and s.count(ring_w) == 1, "elevation ring anchor"
+s = s.replace(ring_c, "            borderColor: Theme.withAlpha(Theme.outline, 0.08)\n").replace(ring_w, "            borderWidth: 0\n")
+
+mp = os.path.join(tmp, "Modules/Notifications/Popup/NotificationPopupManager.qml")
+m = open(mp).read()
+old = "    readonly property int baseNotificationHeight: cardPadding * 2 + collapsedContentHeight + actionButtonHeight + contentSpacing + popupSpacing\n"
+assert m.count(old) == 1, "manager anchor"
+m = m.replace(old, "    readonly property int baseNotificationHeight: 12 + 17 + 36 + popupSpacing // dms-shell-patch: compact card minimum\n")
+
+open(pp, "w").write(s)
+open(mp, "w").write(m)
+PY2
+    then
+        notif_card_skip "fragment splice failed"
+        return
+    fi
+}
+[[ "$NOTIF_CARD_PATCH" == 1 ]] && apply_notif_card
+
+# ---- Theme sync: one clock for the bar, the wallpaper, kitty and GTK (optional) ----
+# Common/Theme.qml holds a new dynamic palette until (a) every WallpaperBackground has decoded its
+# new image, (b) theme-apply has prepared kitty/GTK and called `dms ipc call theme consumerReady`,
+# and (c) each visible DankBarWindow has grabbed a snapshot of its current pixels (600ms cap).
+# On the flip the bar fades that snapshot out over the recoloured live bar (one opacity animation;
+# animating the palette properties themselves re-evaluated every colour binding in the shell on
+# every frame and starved the render threads), WallpaperBackground starts its crossfade on the
+# same tick, and DankBarWindow stamps the first frame it presents so theme-apply anchors kitty and
+# the GTK flip there. All over THEME_FADE_MS, OutCubic. matugen runs against a cached 640px
+# thumbnail (scripts/dms-matugen-thumb): identical palette, ~500ms less latency on a 5120x1440 image.
+THEME_SYNC=${THEME_SYNC:-1}                 # 0 disables the block
+THEME_FADE_MS=${THEME_FADE_MS:-500}         # keep equal to FADE_MS in ~/.local/bin/theme-apply
+
+theme_sync_files=(Common/Theme.qml Modules/WallpaperBackground.qml Modules/DankBar/DankBarWindow.qml)
+theme_sync_skip() {
+    echo "dms-shell-patch: theme sync skipped: $1" >&2
+    local f
+    for f in "${theme_sync_files[@]}"; do cp -a "$src/$f" "$tmp/$f"; done
+    THEME_SYNC=0
+}
+apply_theme_sync() {
+    if ! THEME_FADE_MS="$THEME_FADE_MS" python3 - "$tmp" <<'PY2'
+import os, re, sys
+tmp = sys.argv[1]
+ms = int(os.environ["THEME_FADE_MS"])
+
+tp = os.path.join(tmp, "Common/Theme.qml")
+t = open(tp).read()
+old = "    property var workerRunning: false\n"
+assert t.count(old) == 1, "Theme.qml workerRunning anchor"
+t = t.replace(old, old + f"""    // dms-shell-patch: a palette change is a pixel crossfade of the bar (DankBarWindow
+    // snapshots itself before the flip and fades the snapshot out over colorFadeMs) on the
+    // same clock as the wallpaper crossfade and theme-apply's kitty/GTK fade. Armed after
+    // startup so the first palette load does not animate; never in greeter mode.
+    readonly property int colorFadeMs: {ms}
+    property bool colorFadeArmed: false
+    // True from the moment a regeneration is requested (100ms debounce included) until
+    // the matugen worker exits; WallpaperBackground holds its crossfade on this.
+    readonly property bool paletteRegenerating: workerRunning || !!_pendingGenerateParams
+    Timer {{
+        interval: 1500
+        running: !SessionData.isGreeterMode
+        repeat: false
+        onTriggered: root.colorFadeArmed = true
+    }}
+    // Set on a palette flip; DankBarWindow clears it from the first frame it presents
+    // with the new colours, touching the stamp theme-apply waits for (kitty fade, GTK flip).
+    property bool paletteStampPending: false
+    function paletteStamped() {{
+        if (!paletteStampPending) return;
+        paletteStampPending = false;
+        paletteStampFile.setText(String(Date.now()));   // async in-process write: no fork, no UI stall
+    }}
+    FileView {{
+        id: paletteStampFile
+        path: root.stateDir + "/palette-applied.stamp"
+        blockWrites: false
+        atomicWrites: true
+        printErrors: false
+    }}
+    // WallpaperBackground instances still decoding a new image. A big JPEG can outlast
+    // matugen, so while any is decoding the new palette waits (capped) and the bar, the
+    // terminals and the crossfade all start on the same frame.
+    // theme-apply (kitty, GTK) calls `dms ipc call theme consumerReady` once it has prepared
+    // the new palette; the palette is held for it too, so its fade starts on the same frame.
+    property int wallpapersDecoding: 0
+    property bool consumerReady: false
+    property bool paletteHeld: false
+    property bool _releasingPalette: false
+    // Visible bars grab their pixels before the flip (paletteSnapshotRequested, once per
+    // palette) and count themselves in snapshotsPending until the grab has rendered.
+    property int snapshotsPending: 0
+    property bool _snapshotAsked: false
+    signal paletteSnapshotRequested()
+    onSnapshotsPendingChanged: maybeReleasePalette()
+    onWallpapersDecodingChanged: maybeReleasePalette()
+    onWorkerRunningChanged: if (workerRunning) {{ consumerReady = false; _snapshotAsked = false; }}   // per palette
+    function maybeReleasePalette() {{
+        if (paletteHeld && consumerReady && snapshotsPending <= 0 && wallpapersDecoding <= 0)
+            releaseHeldPalette();
+    }}
+    function releaseHeldPalette() {{
+        paletteHoldCap.stop();
+        paletteHeld = false;
+        consumerReady = false;
+        _snapshotAsked = false;
+        _releasingPalette = true;
+        dynamicColorsFileView.parseAndLoadColors();
+        _releasingPalette = false;
+    }}
+    Timer {{
+        id: paletteHoldCap
+        interval: 600   // no consumer or a slow decode: apply anyway
+        repeat: false
+        onTriggered: root.releaseHeldPalette()
+    }}
+    Timer {{
+        id: gtkPatchDefer
+        interval: root.colorFadeMs + 700   // gtk.sh is a fork of this process: keep it off the fade
+        repeat: false
+        onTriggered: root.patchGtk3colors()
+    }}
+""")
+
+old = "                const colorsText = dynamicColorsFileView.text();\n                if (colorsText) {\n"
+assert t.count(old) == 1, "Theme.qml parseAndLoadColors text anchor"
+t = t.replace(old, old + """                    if (!root._releasingPalette && currentTheme === dynamic && !SessionData.isGreeterMode) {
+                        // dms-shell-patch: wait for the wallpaper decode, theme-apply and the bar snapshots
+                        if (root.colorFadeArmed && !root._snapshotAsked) {
+                            root._snapshotAsked = true;
+                            root.paletteSnapshotRequested();
+                        }
+                        if (root.wallpapersDecoding > 0 || !root.consumerReady || root.snapshotsPending > 0) {
+                            root.paletteHeld = true;
+                            paletteHoldCap.restart();
+                            return;
+                        }
+                    }
+""")
+old = "                    root.matugenColors = JSON.parse(colorsText);\n"
+assert t.count(old) == 1, "Theme.qml parseAndLoadColors anchor"
+t = t.replace(old, old + """                    if (!SessionData.isGreeterMode) root.paletteStampPending = true; // dms-shell-patch
+                    root.consumerReady = false;
+""")
+
+wp = os.path.join(tmp, "Modules/WallpaperBackground.qml")
+w = open(wp).read()
+old = """            function startTransition() {
+                root.useNextForEffect = true;
+                root.effectActive = true;
+                srcNext.scheduleUpdate();
+                transitionDelayTimer.start();
+            }
+"""
+assert w.count(old) == 1, "WallpaperBackground.qml startTransition anchor"
+w = w.replace(old, """            function startTransition() {
+                root.useNextForEffect = true;
+                root.effectActive = true;
+                srcNext.scheduleUpdate();
+                // dms-shell-patch: matugen is still deriving this wallpaper's palette; hold
+                // the crossfade until the colours land so it starts on the same tick as the
+                // shell and terminal fades. Capped so a failed worker never blocks it.
+                if (!root.paletteLanded && Theme.currentTheme === Theme.dynamic && (Theme.paletteRegenerating || Theme.paletteHeld)) {
+                    colorSyncHold.restart();
+                    return;
+                }
+                transitionDelayTimer.start();
+            }
+
+            Timer {
+                id: colorSyncHold
+                interval: 3000
+                repeat: false
+                onTriggered: transitionDelayTimer.start()
+            }
+
+            Connections {
+                target: Theme
+                function onMatugenColorsChanged() {
+                    root.paletteLanded = true;
+                    if (!colorSyncHold.running)
+                        return;
+                    colorSyncHold.stop();
+                    if (!transitionAnimation.running)
+                        transitionAnimation.start();   // same tick as the shell's colour fade
+                }
+            }
+""")
+old = """                duration: root.actualTransitionType === "none" ? 0 : 1000
+                easing.type: Easing.InOutCubic
+"""
+assert w.count(old) == 1, "WallpaperBackground.qml transition duration anchor"
+w = w.replace(old, """                duration: root.actualTransitionType === "none" ? 0 : Theme.colorFadeMs
+                easing.type: Easing.OutCubic
+""")
+old = """            case 0:
+                refreshGtkTheme();
+                break;
+"""
+assert t.count(old) == 1, "Theme.qml refreshGtkTheme call anchor"
+t = t.replace(old, """            case 0:
+                // dms-shell-patch: no adw-gtk3 reset here; theme-apply flips the Matugen-A/B
+                // GTK theme itself on the palette stamp, so this only caused a second restyle.
+                break;
+""")
+
+old = "                if (SettingsData.matugenTemplateGtk)\n                    patchGtk3colors();\n                return;\n"
+assert t.count(old) == 1, "Theme.qml patchGtk3colors call anchor"
+t = t.replace(old, "                if (SettingsData.matugenTemplateGtk)\n                    gtkPatchDefer.restart(); // dms-shell-patch: fork after the fade, not during it\n                return;\n")
+old = "        id: _themeGenerateDebounce\n        interval: 100\n"
+assert t.count(old) == 1, "Theme.qml generate debounce anchor"
+t = t.replace(old, "        id: _themeGenerateDebounce\n        interval: 10   // dms-shell-patch: was 100; coalescing needs a tick, not a tenth of a second\n")
+old = 'const args = ["dms", "matugen", "queue",'
+assert t.count(old) == 1, "Theme.qml worker args anchor"
+t = t.replace(old, 'const args = [shellDir + "/scripts/dms-matugen-thumb" /* dms-shell-patch: 640px thumbnail */, "matugen", "queue",')
+
+bp = os.path.join(tmp, "Modules/DankBar/DankBarWindow.qml")
+b = open(bp).read()
+old = '    IpcHandler {\n        target: "theme"\n'
+assert t.count(old) == 1, "Theme.qml theme IpcHandler anchor"
+t = t.replace(old, old + """
+        // dms-shell-patch: theme-apply calls this once its kitty/GTK fade is prepared.
+        function consumerReady(): string {
+            root.consumerReady = true;
+            root.maybeReleasePalette();
+            return "ok";
+        }
+""")
+
+old = "PanelWindow {\n    id: barWindow\n"
+assert b.count(old) == 1, "DankBarWindow.qml anchor"
+b = b.replace(old, old + """
+    // dms-shell-patch: stamp the first frame presented with a new palette. The render
+    // thread syncs, renders, then swaps; a frame already in flight at the flip swaps
+    // before any post-flip sync and is skipped. See Theme.paletteStamped.
+    Item {
+        id: paletteStampProbe
+        readonly property var qwin: Window.window
+        visible: false
+    }
+    Connections {
+        target: Theme.paletteStampPending ? paletteStampProbe.qwin : null
+        property bool synced: false
+        function onAfterSynchronizing() { synced = true; }
+        function onFrameSwapped() { if (synced) { synced = false; Theme.paletteStamped(); } }
+    }
+    // dms-shell-patch: palette crossfade. Theme asks for a snapshot before a new palette lands;
+    // the bar renders itself once into paletteSnap (one bar-sized texture) and reports back.
+    // After the flip the snapshot fades out over the live, recoloured bar: one opacity animation.
+    ShaderEffectSource {
+        id: paletteSnap
+        anchors.fill: body
+        z: 1000
+        sourceItem: body
+        live: false
+        hideSource: false
+        mipmap: false
+        opacity: 0
+        visible: opacity > 0
+        property bool fading: false
+        Behavior on opacity {
+            enabled: paletteSnap.fading
+            NumberAnimation { duration: Theme.colorFadeMs; easing.type: Easing.OutCubic }
+        }
+    }
+    property bool paletteSnapArmed: false
+    Connections {
+        target: Theme
+        function onPaletteSnapshotRequested() {
+            if (!barWindow.visible || body.width <= 0 || body.height <= 0)
+                return;
+            paletteSnap.fading = false;
+            paletteSnap.opacity = 0;
+            paletteSnap.scheduleUpdate();
+            Theme.snapshotsPending++;
+            barWindow.paletteSnapArmed = true;
+        }
+        function onMatugenColorsChanged() {
+            if (paletteSnap.opacity <= 0)
+                return;
+            paletteSnap.fading = true;
+            paletteSnap.opacity = 0;
+        }
+    }
+    Connections {
+        target: barWindow.paletteSnapArmed ? paletteStampProbe.qwin : null
+        property bool synced: false
+        function onAfterSynchronizing() { synced = true; }
+        function onFrameSwapped() {
+            if (!synced)
+                return;
+            synced = false;
+            barWindow.paletteSnapArmed = false;
+            if (Theme.paletteHeld) {          // the cap may have flipped the palette already
+                paletteSnap.fading = false;
+                paletteSnap.opacity = 1;      // never rendered: the flip follows in this call
+            }
+            Theme.snapshotsPending--;
+        }
+    }
+""")
+old = '            property string pendingWallpaper: ""\n'
+assert w.count(old) == 1, "WallpaperBackground.qml pendingWallpaper anchor"
+w = w.replace(old, old + """            property bool decodingForPalette: false   // dms-shell-patch: counted in Theme.wallpapersDecoding
+            property bool paletteLanded: true          // dms-shell-patch: false from a new source until its colours arrive
+""")
+old = "                onTriggered: transitionAnimation.start()\n"
+assert w.count(old) == 1, "WallpaperBackground.qml transitionDelayTimer anchor"
+w = w.replace(old, "                onTriggered: if (!transitionAnimation.running) transitionAnimation.start()\n")
+old = """            Component.onDestruction: {
+                SessionData.clearMonitorScrollPosition(modelData.name);
+"""
+assert w.count(old) == 1, "WallpaperBackground.qml onDestruction anchor"
+w = w.replace(old, old + """                if (decodingForPalette)
+                    Theme.wallpapersDecoding--; // dms-shell-patch: never leave the palette held
+""")
+old = """                nextWallpaper.source = newPath;
+
+                if (nextWallpaper.status === Image.Ready)
+                    root.startTransition();
+"""
+assert w.count(old) == 1, "WallpaperBackground.qml changeWallpaper anchor"
+w = w.replace(old, """                nextWallpaper.source = newPath;
+                root.paletteLanded = false;
+
+                if (nextWallpaper.status === Image.Ready) {
+                    root.startTransition();
+                } else if (!root.decodingForPalette) {
+                    // dms-shell-patch: Theme holds the new palette until this image is decoded
+                    root.decodingForPalette = true;
+                    Theme.wallpapersDecoding++;
+                }
+""")
+old = """            ShaderEffectSource {
+                id: srcCurrent
+"""
+assert w.count(old) == 1, "WallpaperBackground.qml srcCurrent anchor"
+w = w.replace(old, """            // dms-shell-patch: connected after nextWallpaper's own handler, so the crossfade
+            // is already holding when the palette Theme kept back for this decode is released.
+            Connections {
+                target: nextWallpaper
+                function onStatusChanged() {
+                    if (!root.decodingForPalette)
+                        return;
+                    if (nextWallpaper.status !== Image.Ready && nextWallpaper.status !== Image.Error)
+                        return;
+                    root.decodingForPalette = false;
+                    Theme.wallpapersDecoding--;
+                }
+            }
+
+""" + old)
+open(tp, "w").write(t)
+open(wp, "w").write(w)
+open(bp, "w").write(b)
+PY2
+    then
+        theme_sync_skip "anchors changed upstream"
+        return
+    fi
+    cat > "$tmp/scripts/dms-matugen-thumb" <<'SH'
+#!/usr/bin/env bash
+# dms-matugen-thumb (dms-shell-patch): run the matugen worker against a cached 640px
+# thumbnail of the wallpaper. matugen quantises a downscaled copy anyway, so the palette is
+# the same, but decoding a 5120x1440 JPEG twice (dank16 extraction + matugen) cost ~600ms.
+#   dms-matugen-thumb matugen queue ... --value <image> ...   exec dms with the thumbnail
+#   dms-matugen-thumb --warm <image>...                        pre-generate thumbnails
+cache=${XDG_CACHE_HOME:-$HOME/.cache}/dms-matugen-thumbs
+thumb_for() {   # prints the thumbnail for $1, generating it if needed; prints nothing on failure
+    local src=$1 key thumb
+    key=$(printf '%s:%s' "$src" "$(stat -c %Y:%s -- "$src" 2>/dev/null)" | md5sum | cut -c1-16)
+    thumb=$cache/$key.jpg
+    if [[ ! -s $thumb ]]; then
+        mkdir -p "$cache" || return
+        if ! magick "$src[0]" -auto-orient -resize '640x640>' -quality 92 "$thumb.tmp.jpg" 2>/dev/null \
+            || ! mv -f "$thumb.tmp.jpg" "$thumb"; then
+            rm -f "$thumb.tmp.jpg"; return
+        fi
+    fi
+    printf '%s' "$thumb"
+}
+if [[ ${1:-} == --warm ]]; then
+    shift; for f in "$@"; do [[ -f $f ]] && thumb_for "$f" >/dev/null; done; exit 0
+fi
+args=("$@")
+for ((i = 0; i < ${#args[@]} - 1; i++)); do
+    if [[ ${args[i]} == --value && ${args[i+1]} == /* && -f ${args[i+1]} ]]; then
+        t=$(thumb_for "${args[i+1]}"); [[ -n $t ]] && args[i+1]=$t
+        break
+    fi
+done
+exec dms "${args[@]}"
+SH
+    chmod +x "$tmp/scripts/dms-matugen-thumb"
+}
+[[ "$THEME_SYNC" == 1 ]] && apply_theme_sync
+
 echo "$BIN_SHA" > "$tmp/.dms-binary-sha256"
-rm -rf "$OUT"
+# Swap by rename, never delete in place: a running Quickshell watches the loaded
+# files and hot-reloads on change; deleting them under it aborts the shell (seen
+# 2026-09-06). The previous tree stays as $OUT.prev until the next dms start,
+# when dms-run-patched removes it. Restart dms.service to pick the build up.
+# Give every file in the new tree one fixed mtime (the build time). cp -a keeps the
+# stock cache's backdated stamps while sed-patched files get "now", and each rebuild
+# lands on new inodes, so quickshell's .qmlc disk cache never validated (9 cache
+# files for 711 sources). A consistent stamp lets the cache hit after the first
+# start, cutting the QML compile phase (~3-5 s CPU) from every later dms start.
+stamp=$(date +%Y%m%d%H%M.%S)
+find "$tmp" -type f -exec touch -m -t "$stamp" {} +
+
+[[ -e "$OUT.prev" ]] && rm -rf "$OUT.prev"
+[[ -e "$OUT" ]] && mv "$OUT" "$OUT.prev"
 mv "$tmp" "$OUT"
 trap - EXIT
 lockmsg="lock fade ${LOCK_FADE_IN}/${LOCK_FADE_OUT}ms"; [[ "$LOCK_FADE" == 1 ]] || lockmsg="lock fade off"
-echo "dms-shell-patch: built $OUT from $(cat "$OUT/VERSION") (launcher ${FULL_WIDTH}x${FULL_HEIGHT}, spotlight bar ${SPOT_WIDTH}px wide, $lockmsg)"
+notifmsg="compact notification card"; [[ "$NOTIF_CARD_PATCH" == 1 ]] || notifmsg="stock notification card"
+syncmsg="theme sync ${THEME_FADE_MS}ms"; [[ "$THEME_SYNC" == 1 ]] || syncmsg="theme sync off"
+echo "dms-shell-patch: built $OUT from $(cat "$OUT/VERSION") (launcher ${FULL_WIDTH}x${FULL_HEIGHT}, spotlight bar ${SPOT_WIDTH}px wide, $lockmsg, $notifmsg, $syncmsg)"
