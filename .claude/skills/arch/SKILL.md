@@ -41,6 +41,7 @@ This file defines the user's system. Load it before any task involving packages,
 - **Notifications:** swaync (replaces HyprPanel's built-in; bar icon delegates to swaync-client)
 - **Display:** Wayland-native (Hyprland)
 - **Colour scheme:** matugen
+- **Browser:** ungoogled-chromium (`/usr/bin/chromium`); launch-speed diagnosis and checklist in `chromium-launch.md` next to this file
 
 ## Fonts
 
@@ -94,6 +95,7 @@ When diagnosing issues, check in this order:
 3. `systemctl --user status <unit>` or `systemctl status <unit>` — specific service
 4. Relevant config file in `~/.config/<app>/`
 5. `yay -Qi <pkg>` — check installed version and deps
+6. Browser slow to open or laggy: follow `~/.claude/skills/arch/chromium-launch.md` (check machine load first, then extensions, then profile weight)
 
 ## Rules
 
