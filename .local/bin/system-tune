@@ -10,9 +10,11 @@
 #      unit is disabled (not masked — it can still be re-enabled or run manually).
 #   2. docker.service costs 2.2 s on the critical path and pulls network-online.target
 #      in as a dependency. Switching to socket activation (docker.socket) means the
-#      daemon only starts on first use instead of blocking every boot. The running
-#      docker.service is NOT touched — a container is running right now — so this
-#      change only takes effect from the next boot onward.
+#      daemon only starts on first use instead of blocking every boot. Caveat: a daemon
+#      that is not running cannot restart containers, so any container with a restart
+#      policy (always / unless-stopped) would stay down until something first talks to
+#      the socket. If such a container exists docker.service is kept (or re-enabled) and
+#      only docker.socket is added. The running daemon is never touched either way.
 #   3. GRUB_TIMEOUT=5 held the loader phase open for 10.3 s measured end to end.
 #      Cut to 1 s; holding Shift or Esc during POST still opens the GRUB menu.
 #   4. The running kernel is linux-lts, built PREEMPT_VOLUNTARY with
@@ -54,7 +56,17 @@ else
 fi
 
 # 2. Docker socket activation -------------------------------------------------------------
-if [[ "$(systemctl is-enabled docker.service 2>/dev/null || true)" == "enabled" ]]; then
+autostart=$(docker ps -a --format '{{.Names}}' 2>/dev/null | while read -r c; do
+  case "$(docker inspect -f '{{.HostConfig.RestartPolicy.Name}}' "$c" 2>/dev/null)" in
+    always|unless-stopped) echo "$c" ;;
+  esac
+done | tr '\n' ' ')
+docker_state=$(systemctl is-enabled docker.service 2>/dev/null || true)
+if [[ -n $autostart ]]; then
+  note "containers with a restart policy exist ($autostart); keeping docker.service enabled"
+  note "  so they come back at boot (socket-only activation would leave them down)"
+  [[ $docker_state == enabled ]] || run systemctl enable docker.service
+elif [[ $docker_state == enabled ]]; then
   note "disable docker.service (2.2 s on the critical path; running daemon is left alone,"
   note "  the change only applies from the next boot)"
   run systemctl disable docker.service
