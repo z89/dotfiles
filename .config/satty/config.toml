@@ -16,15 +16,15 @@ style = "Medium"
 
 [color-palette]
 palette = [
-    "#ffb1c2",
-    "#ffb599",
+    "#adc6ff",
+    "#ccbff8",
     "#ffb4ab",
-    "#f5b7b2",
-    "#fbe0e4",
-    "#1d1013",
+    "#c1c4eb",
+    "#e4e6f3",
+    "#0f131c",
 ]
-first = "#ffb1c2"
-second = "#ffb599"
+first = "#adc6ff"
+second = "#ccbff8"
 third = "#ffb4ab"
-fourth = "#f5b7b2"
-fifth = "#fbe0e4"
+fourth = "#c1c4eb"
+fifth = "#e4e6f3"
