@@ -1,0 +1,24 @@
+[Unit]
+Description=os3 daemon socket (Anya)
+Documentation=file:%h/Documents/Github-Projects/os3/docs/POC_BOOTSTRAP.md
+
+# systemd owns ~/.os3/os3d.sock: it binds and listens on it once, at login,
+# and hands the same listening descriptor to every os3d it starts. That is
+# what makes a redeploy invisible to a running client — while the daemon is
+# between processes the socket keeps accepting, and a connection made in that
+# window waits in the kernel backlog instead of being refused.
+#
+# This unit must therefore outlive the service it feeds. Stopping os3d does
+# not stop the socket; `systemctl --user stop os3d.socket` is what closes it,
+# and RemoveOnStop below is the only thing that unlinks the file.
+
+[Socket]
+ListenStream=%h/.os3/os3d.sock
+SocketMode=0600
+# The daemon reads and writes the user's conversation over this socket, so it
+# is a single-user channel and the mode is the whole of its access control.
+RemoveOnStop=true
+Service=os3d.service
+
+[Install]
+WantedBy=sockets.target

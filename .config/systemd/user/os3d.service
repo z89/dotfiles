@@ -3,6 +3,13 @@ Description=os3 daemon (Anya)
 Documentation=file:%h/Documents/Github-Projects/os3/docs/POC_BOOTSTRAP.md
 After=default.target
 
+# The socket unit owns ~/.os3/os3d.sock and passes it in already listening.
+# Requires, not Wants: a daemon that bound its own socket while os3d.socket
+# was also listening on that path would be a second listener on a file only
+# one process can serve, and the client would reach whichever won the race.
+Requires=os3d.socket
+After=os3d.socket
+
 # If os3d cannot come up, systemd must stop hammering it and hand over to the
 # rollback: five starts in two minutes is a daemon that is not going to start,
 # and the previous binary is one rename away.
@@ -11,7 +18,23 @@ StartLimitBurst=5
 OnFailure=os3d-rollback.service
 
 [Service]
-Type=simple
+# Type=notify: the unit is not "started" until os3d sends READY=1, which it
+# does once the listener is accepting. That is what makes a restart fail
+# loudly on a build that cannot come up, instead of reporting success and
+# leaving a dead unit behind for the health check to discover.
+Type=notify
+NotifyAccess=main
+# A daemon that comes up sends READY=1 within a second; anything past this is
+# not slow, it is stuck, and waiting the systemd default of 90s would leave
+# `systemctl restart os3d` hanging for a minute and a half before the deploy
+# could roll back. It also bounds a rollback to a binary older than
+# Type=notify, which never sends READY=1 at all.
+TimeoutStartSec=30
+# WatchdogSec is not a liveness timer on the process — a wedged daemon is
+# still a running process. os3d beats every 15s, and only after a probe has
+# gone through the same mutex a status request takes, so a daemon whose locks
+# are held for ever misses its beats and is restarted (cmd/os3d/sdnotify.go).
+WatchdogSec=30
 # Refuse to start on a home the binary cannot read: -self-check validates the
 # home read-only, opens no socket and exits within two seconds. A failing
 # check fails the start, which is what drives the rollback above.
@@ -27,4 +50,8 @@ RestartSec=2
 UnsetEnvironment=ANTHROPIC_API_KEY
 
 [Install]
+# Still started eagerly at login rather than on the first connection: the
+# daemon warms autosuggest and replays the ledger at start, and a user opening
+# os3 should not wait for that. Activation covers the restart window, not the
+# first start.
 WantedBy=default.target
