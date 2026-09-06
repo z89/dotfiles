@@ -139,7 +139,7 @@ fi
 
 echo
 echo "Done."
-echo "Needs a reboot to take effect: (1) wait-online disabled, (2) docker socket activation,"
+echo "Needs a reboot to take effect: (1) wait-online disabled, (2) docker socket activation (docker.service kept when containers need it),"
 echo "  (3) GRUB_TIMEOUT=1, (4) preempt=full."
 echo "Already live: (5) split_lock_mitigate=0."
 echo "Not touched here (manual, in the UEFI setup screen): enable Fast Boot, disable CSM (firmware phase measured 10.9 s)."
