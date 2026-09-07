@@ -3,7 +3,8 @@
 # Source: the shell dms extracts to $XDG_RUNTIME_DIR/danklinux-shell/<hash> on a stock start.
 # Output: ~/.local/share/dms-shell-patched (used via DMS_SHELL_DIR by dms-run-patched).
 # Patches: launcher size, launcher centred between the bar edge and the opposite screen edge, Spotlight bar width,
-# lock-screen crossfade, compact notification popup card, synced palette/wallpaper fades.
+# lock-screen crossfade, compact notification popup card, synced palette/wallpaper fades,
+# volume percent at the head of the control centre pill.
 # Re-run after every dms upgrade; dms-run-patched does this automatically.
 set -euo pipefail
 
@@ -844,6 +845,73 @@ SH
 }
 [[ "$THEME_SYNC" == 1 ]] && apply_theme_sync
 
+# ---- Volume percent at the head of the control centre pill (optional) -------------
+# Stock DMS can show a volume percent (controlCenterShowAudioPercent) but only glued to the
+# right of the speaker icon, inside the audio group. The pill is scroll-to-change-volume, so
+# the readout wants to be the first thing in the widget, ahead of every icon. This moves it to
+# the leading edge of the horizontal indicator row and reserves the width of "100%" so the rest
+# of the bar does not shuffle while scrolling. Vertical bars keep the stock layout.
+AUDIO_PCT_LEAD=${AUDIO_PCT_LEAD:-1}         # 0 disables the block
+
+audio_pct_files=(Modules/DankBar/Widgets/ControlCenterButton.qml)
+audio_pct_skip() {
+    echo "dms-shell-patch: leading volume percent skipped: $1" >&2
+    local f
+    for f in "${audio_pct_files[@]}"; do cp -a "$src/$f" "$tmp/$f"; done
+    AUDIO_PCT_LEAD=0
+}
+apply_audio_pct_lead() {
+    if ! python3 - "$tmp" <<'PY3'
+import os, sys
+tmp = sys.argv[1]
+p = os.path.join(tmp, "Modules/DankBar/Widgets/ControlCenterButton.qml")
+s = open(p).read()
+
+# 1. Head of the horizontal row, before the icon Repeater.
+anchor = """            Row {
+                id: controlIndicators
+                visible: !root.isVerticalOrientation
+                anchors.centerIn: parent
+                spacing: Theme.spacingXS
+"""
+assert s.count(anchor) == 1, "controlIndicators row anchor"
+lead = anchor + """
+                // dms-shell-patch: volume readout ahead of every icon in the pill
+                NumericText {
+                    id: leadingAudioPercent
+                    visible: root.showAudioPercent && isFinite(AudioService.sink?.audio?.volume)
+                    text: Math.round((AudioService.sink?.audio?.volume ?? 0) * 100) + "%"
+                    reserveText: "100%"
+                    width: reservedWidth
+                    horizontalAlignment: Text.AlignRight
+                    verticalAlignment: Text.AlignVCenter
+                    height: root.widgetThickness - root.horizontalPadding * 2
+                    font.pixelSize: Theme.barTextSize(root.barThickness, root.barConfig?.fontScale, root.barConfig?.maximizeWidgetText)
+                    color: Theme.widgetTextColor
+                }
+"""
+s = s.replace(anchor, lead)
+
+# 2. Stock in-group percent, now redundant on horizontal bars.
+old = """                                NumericText {
+                                    id: audioPercent
+                                    visible: root.showAudioPercent && isFinite(AudioService.sink?.audio?.volume)
+"""
+assert s.count(old) == 1, "in-group audioPercent anchor"
+s = s.replace(old, """                                NumericText {
+                                    id: audioPercent
+                                    visible: false // dms-shell-patch: moved to leadingAudioPercent
+""")
+
+open(p, "w").write(s)
+PY3
+    then
+        audio_pct_skip "ControlCenterButton.qml patterns changed upstream"
+        return
+    fi
+}
+[[ "$AUDIO_PCT_LEAD" == 1 ]] && apply_audio_pct_lead
+
 echo "$BIN_SHA" > "$tmp/.dms-binary-sha256"
 # Swap by rename, never delete in place: a running Quickshell watches the loaded
 # files and hot-reloads on change; deleting them under it aborts the shell (seen
@@ -864,4 +932,5 @@ trap - EXIT
 lockmsg="lock fade ${LOCK_FADE_IN}/${LOCK_FADE_OUT}ms"; [[ "$LOCK_FADE" == 1 ]] || lockmsg="lock fade off"
 notifmsg="compact notification card"; [[ "$NOTIF_CARD_PATCH" == 1 ]] || notifmsg="stock notification card"
 syncmsg="theme sync ${THEME_FADE_MS}ms"; [[ "$THEME_SYNC" == 1 ]] || syncmsg="theme sync off"
-echo "dms-shell-patch: built $OUT from $(cat "$OUT/VERSION") (launcher ${FULL_WIDTH}x${FULL_HEIGHT}, spotlight bar ${SPOT_WIDTH}px wide, $lockmsg, $notifmsg, $syncmsg)"
+pctmsg="leading volume percent"; [[ "$AUDIO_PCT_LEAD" == 1 ]] || pctmsg="stock volume percent"
+echo "dms-shell-patch: built $OUT from $(cat "$OUT/VERSION") (launcher ${FULL_WIDTH}x${FULL_HEIGHT}, spotlight bar ${SPOT_WIDTH}px wide, $lockmsg, $notifmsg, $syncmsg, $pctmsg)"
