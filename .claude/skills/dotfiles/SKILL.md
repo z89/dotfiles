@@ -14,7 +14,7 @@ allowed-tools: Bash, Read, Glob, Grep, Edit, Write
 | Remote | `git@github.com:z89/dotfiles.git` |
 | Branch | `desktop` |
 | Root | `/home/archie` (bare-style, worktree is `$HOME`) |
-| Git identity | z89 / z89 — follow `~/.claude/skills/commit/SKILL.md` for all commits |
+| Git identity | z89 <z89@matix.com.au> — follow `~/.claude/skills/commit/SKILL.md` for all commits |
 
 ## How the Repo Works
 
