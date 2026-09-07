@@ -35,7 +35,6 @@ pipes.sh
 python-grip
 spicetify-cli
 spotify
-sunshine-bin
 sunwait
 supabase-bin
 teams-for-linux
