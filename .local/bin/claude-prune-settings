@@ -5,9 +5,8 @@
 Claude Code merges both files, so the rules keep working — they just stop
 accumulating in the file that is committed to the public dotfiles repo.
 
-A rule is "project-specific" if it references a path under ~/Documents
-(excluding the ycombo/hyprlax desktop integrations) or matches a pattern in
-~/.claude/secret-denylist.txt.
+A rule is "project-specific" if it references a path under ~/Documents or
+matches a pattern in ~/.claude/secret-denylist.txt.
 
 Usage:
   claude-prune-settings            move the rules
@@ -23,7 +22,6 @@ SETTINGS = os.path.join(HOME, ".claude", "settings.json")
 LOCAL = os.path.join(HOME, ".claude", "settings.local.json")
 DENYLIST = os.path.join(HOME, ".claude", "secret-denylist.txt")
 DOCS_PREFIX = os.path.join(HOME, "Documents") + os.sep
-EXCEPTIONS = ("ycombo", "hyprlax")
 
 
 def load_patterns():
@@ -39,7 +37,7 @@ def load_patterns():
 
 
 def is_project(text, patterns):
-    if DOCS_PREFIX in text and not any(x in text for x in EXCEPTIONS):
+    if DOCS_PREFIX in text:
         return True
     for p in patterns:
         try:

@@ -357,13 +357,13 @@ def main():
                 findings.append(f"sensitive file: {n} ({label})")
                 break
 
-    # Project-specific paths must never reach this (public) repo. All real
-    # project work lives under ~/Documents; the only intentional exceptions are
-    # the ycombo/hyprlax desktop integrations referenced from the hypr config.
+    # Project-specific paths must never reach this (public) repo. All real project
+    # work lives under ~/Documents, and no tracked file has any business naming a
+    # path there: desktop integrations for unpublished projects are configured from
+    # untracked files (~/.config/hypr/local.lua) instead. No exceptions.
     docs_prefix = os.path.expanduser("~/Documents/")
-    proj_exceptions = ("ycombo", "hyprlax")
     for ln in added.splitlines():
-        if docs_prefix in ln and not any(x in ln for x in proj_exceptions):
+        if docs_prefix in ln:
             findings.append("project path under ~/Documents in a tracked file")
             break
 

@@ -64,12 +64,6 @@ from_conf() {
             else if (desc ~ /playerctl.*prev/)  desc = "Spotify Previous"
             else if (desc ~ /playerctl.*play/)  desc = "Spotify Play/Pause"
             else if (desc ~ /snapshot.*area/)   desc = "Screenshot (Area)"
-            else if (desc ~ /ycombo-refresh/)   desc = "YCombo Refresh"
-            else if (desc ~ /ycombo-toggle/)    desc = "YCombo Toggle"
-            else if (desc ~ /ycombo-resize.*\+h/) desc = "YCombo Taller"
-            else if (desc ~ /ycombo-resize.*-h/)  desc = "YCombo Shorter"
-            else if (desc ~ /ycombo-resize.*\+w/) desc = "YCombo Wider"
-            else if (desc ~ /ycombo-resize.*-w/)  desc = "YCombo Narrower"
         } else {
             if (desc ~ /killactive/)     desc = "Close Window"
             else if (desc ~ /togglefloating/) desc = "Toggle Floating"

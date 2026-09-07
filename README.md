@@ -24,9 +24,7 @@ Arch Linux, Hyprland (`~/.config/hypr/hyprland.lua`) and DankMaterialShell (DMS)
 6. **Fonts**: Inter (UI) and JetBrainsMono Nerd Font (mono). `~/.config/fontconfig/fonts.conf` sets the fallbacks and
    `~/.config/gtk-{3,4}.0/settings.ini` the GTK fallback. On Wayland GTK reads dconf, so load the tracked keyfile once:
    `dconf load /org/gnome/desktop/interface/ < ~/.config/gsettings/interface.ini` (fonts, cursor and dark scheme;
-   theme and icon names are left to `theme-apply`). `font-switch` from hyprkit changes all of these at once later.
-7. **Helpers from [z89/hyprkit](https://github.com/z89/hyprkit)**: `setup-spicetify`, `setup-betterdiscord` and `font-switch` in
-   `~/.local/bin` are symlinks into a clone at `~/.config/hyprkit`.
+   theme and icon names are left to `theme-apply`).
 
 Generated files are deliberately untracked and are recreated on first start: `~/.config/hypr/dms/`, `~/.config/hypr/colors.*`,
 kitty `dank-tabs.conf` / `matugen-theme*.conf`, GTK `dank-colors.css` / `palette-colors.css`, and DMS `firefox.css`.

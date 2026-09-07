@@ -40,6 +40,7 @@
 !.ssh/allowed_signers
 !.config/hypr/
 .config/hypr/dms/
+.config/hypr/local.lua
 .config/hypr/colors.conf
 .config/hypr/colors.lua
 .config/hypr/*.backup*
@@ -65,9 +66,6 @@
 !.config/systemd/user/hyprsunset-auto.service
 !.config/systemd/user/hyprsunset-auto.timer
 !.config/systemd/user/hyprland-session.target
-!.config/systemd/user/os3d.service
-!.config/systemd/user/os3d-rollback.service
-!.config/systemd/user/os3d.socket
 !.config/systemd/user/dms.service.d/
 !.config/kitty/
 .config/kitty/dank-tabs.conf
@@ -77,8 +75,6 @@
 .local/*
 !.local/bin/
 .local/bin/*
-!.local/bin/setup-spicetify
-!.local/bin/setup-betterdiscord
 !.local/bin/claude-prune-settings
 !.local/bin/mint-agent-token
 !.local/bin/dms-shell-patch
