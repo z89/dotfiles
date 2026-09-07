@@ -12,6 +12,8 @@
 #                       to https, credentials taken from GH_TOKEN, commits
 #                       attributed to the matching App bot and locally signed
 #   SSH_AUTH_SOCK       REMOVED, so nothing can sign or push with your key
+#   AGENT_SSH_KEY       the shared passphrase-less agent key (~/.config/agent-ssh); the
+#                       `mac-agent` ssh alias uses it. Never registered on GitHub.
 #   GITHUB_TOKEN        removed, so a stale one cannot win over GH_TOKEN
 #
 # THREE THINGS EACH CLOSE A DIFFERENT HOLE, and all three are needed:
@@ -141,6 +143,7 @@ exec env -u SSH_AUTH_SOCK -u GITHUB_TOKEN -u GIT_SSH_COMMAND \
   GIT_CONFIG_GLOBAL="${AGENT_GITCONFIG}" \
   GIT_CONFIG_SYSTEM=/dev/null \
   AGENT_GH=1 \
+  AGENT_SSH_KEY="${HOME}/.config/agent-ssh/agent_ed25519" \
   AGENT_GH_PROFILE="${PROFILE}" \
   AGENT_GH_OWNER="${PROFILE_OWNER}" \
   AGENT_GH_BOT_LOGIN="${BOT_LOGIN}" \
