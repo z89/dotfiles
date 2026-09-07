@@ -79,6 +79,53 @@ not a fault.
 If the App is not installed on the repository, the API returns 404 for the repo and the script
 fails. That is an installation question for the operator, not something to work around.
 
+## Push policy — decided by the repository OWNER, not by which bot is active
+
+There are exactly two App identities: the work org's bot (profile and config under `~/.config/agent-gh/`)
+and `z89-agent-ci` (profile `z89`, `~/.config/agent-gh-z89/`). Which one a session is running as
+does NOT decide whether you may push. The owner of the repository does.
+
+| Owner | May an agent push? |
+|---|---|
+| the work org | **No. Never, on any repo.** The operator pushes every org repo themselves. |
+| `z89/*` | **Yes.** Publish with `gh-signed-commit.sh`; plain `git push` where that cannot work. |
+
+### Work org repos — operator push only
+
+Set 2026-09-07, generalised from an earlier single-repo rule. It covers **all** repos the org App
+is installed on; the bot's publishing role there is retired. The bot keeps its installation, its read access, its API access, and still commits
+locally — it simply never moves anything to the remote.
+
+**Do not reconstruct a "the bot has no access" story to explain this.** The App IS installed on
+these repos and a push would very likely succeed. This rule is a deliberate choice, and it is the
+only thing enforcing it. A 404 on an org repo is a real fault to investigate, not the policy
+working.
+
+Do the local work — status, log, diff, staging, committing, `reset`, `gc` — then stop at the
+network boundary, hand the operator the exact command to run in their own terminal, and say why it
+has to be them. Push only if they waive the rule explicitly in the current session. Treat a
+question like "why can't you use the bot?" as a question: answer it, do not act on it.
+
+### z89/* — agents may publish freely
+
+`gh-signed-commit.sh` is the default, so commits land GitHub-signed and VERIFIED. Mint the right
+token first; the inherited `GH_TOKEN` is the org bot's and expires hourly:
+
+```bash
+export GH_TOKEN=$(AGENT_GH_CONF=~/.config/agent-gh-z89/config \
+                  AGENT_GH_KEY=~/.config/agent-gh-z89/agent.pem mint-agent-token)
+```
+
+Fall back to a plain push when the publisher genuinely cannot carry the change:
+
+- **LFS objects.** `createCommitOnBranch` sends file *contents*, which for an LFS-tracked file is
+  the ~130-byte pointer. The pointers land, the objects never upload, and the remote HEAD ends up
+  referencing objects that do not exist. Only the pre-push hook drives the LFS batch transfer.
+- **New executables and symlinks.** The API carries no file mode, so `100755` would land as `0644`.
+
+Installation is "selected repositories" — a new personal repo must be added at
+github.com/settings/installations before the bot can see it. The operator does that step.
+
 ## Rules
 
 - NEVER add "Co-authored-by", "Co-signed-by", or any Claude attribution trailer manually. In agent
