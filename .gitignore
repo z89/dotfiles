@@ -69,7 +69,6 @@
 !.config/systemd/user/os3d-rollback.service
 !.config/systemd/user/os3d.socket
 !.config/systemd/user/dms.service.d/
-!.config/systemd/user/app-dev.lizardbyte.app.Sunshine.service.d/
 !.config/kitty/
 .config/kitty/dank-tabs.conf
 .config/kitty/matugen-theme*.conf
@@ -94,7 +93,6 @@
 .icons/*
 !.icons/default/
 !.icons/default/index.theme
-!.local/bin/remote-display
 !.local/share/
 .local/share/*
 !.local/share/nautilus-python/
