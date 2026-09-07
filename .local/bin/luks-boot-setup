@@ -26,7 +26,25 @@
 # header backup in /root/luks-header-backup/. Nothing here touches the running session.
 set -euo pipefail
 
-LUKS_UUID=a986161b-b027-4f59-aead-83e06d88eb55
+# The LUKS container is discovered from the running system rather than hardcoded: a
+# disk UUID is a hardware identifier and this repo is public. Walk the block-device
+# ancestry of whatever is mounted at / until a crypto_LUKS parent turns up. Override
+# with LUKS_UUID=... to target a disk other than the running root.
+find_luks_uuid() {
+    local src name fstype uuid
+    # findmnt appends the subvolume for btrfs (/dev/mapper/x[/@]); lsblk wants the device.
+    src=$(findmnt -no SOURCE / 2>/dev/null | sed 's/\[.*\]$//') || return 1
+    [[ -n $src ]] || return 1
+    while read -r name fstype uuid; do
+        [[ $fstype == crypto_LUKS && -n $uuid ]] || continue
+        printf '%s' "$uuid"
+        return 0
+    done < <(lsblk -lnso NAME,FSTYPE,UUID "$src" 2>/dev/null)
+    return 1
+}
+
+LUKS_UUID=${LUKS_UUID:-$(find_luks_uuid || true)}
+[[ -n $LUKS_UUID ]] || { echo "no LUKS container found under / (set LUKS_UUID= to override)"; exit 1; }
 MAPPER=cryptlvm
 THEME=dank-unlock
 CRYPTTAB_OPTS="fido2-device=auto,token-timeout=2,tries=5,timeout=0"

@@ -47,10 +47,16 @@ MINT="${AGENT_GH_MINT:-$HOME/.local/bin/mint-agent-token}"
 # Select the App from the repository owner. This prevents an agent launched in a
 # personal repository from silently receiving the organisation identity (or vice
 # versa). An explicit profile is useful only when launching outside a repository.
+#
+# The owner -> profile mapping is NOT written here. Every profile directory carries
+# an untracked config that already declares the account it serves (OWNER= for a user,
+# ORG= for an organisation), so this script discovers the mapping at runtime and the
+# public dotfiles repo never learns which accounts exist. Profile directories are
+# ~/.config/agent-gh (the original) and ~/.config/agent-gh-<name>.
 PROFILE="${AGENT_GH_PROFILE:-}"
 if [ -z "${PROFILE}" ]; then
   if ! git rev-parse --git-dir >/dev/null 2>&1; then
-    echo "agent-run: not in a Git repository; set AGENT_GH_PROFILE=z89 or matixau" >&2
+    echo "agent-run: not in a Git repository; set AGENT_GH_PROFILE=<account> or AGENT_GH_CONF" >&2
     exit 1
   fi
   URL="$(git config --get remote.origin.url || true)"
@@ -63,18 +69,35 @@ if [ -z "${PROFILE}" ]; then
   PROFILE="${REPO_OWNER}"
 fi
 
-case "${PROFILE}" in
-  z89)
-    PROFILE_DIR="$HOME/.config/agent-gh-z89"
-    ;;
-  matixau)
-    PROFILE_DIR="$HOME/.config/agent-gh"
-    ;;
-  *)
-    echo "agent-run: unsupported profile '${PROFILE}'; expected z89 or matixau" >&2
-    exit 1
-    ;;
-esac
+# Resolve the profile directory. A directory named after the profile wins outright;
+# otherwise every profile config is read and the one declaring this account is used.
+# GitHub account names are case-insensitive, so the comparison is too.
+lower() { printf '%s' "$1" | tr '[:upper:]' '[:lower:]'; }
+declared_account() { # profile dir -> the account its config serves, or nothing
+  sed -nE 's/^[[:space:]]*(OWNER|ORG)=["'"'"']?([^"'"'"'[:space:]#]+).*/\2/p' "$1/config" 2>/dev/null | head -1
+}
+
+PROFILE_DIR=""
+if [ -r "$HOME/.config/agent-gh-${PROFILE}/config" ]; then
+  PROFILE_DIR="$HOME/.config/agent-gh-${PROFILE}"
+else
+  for d in "$HOME"/.config/agent-gh "$HOME"/.config/agent-gh-*; do
+    [ -r "$d/config" ] || continue
+    a="$(declared_account "$d")"
+    [ -n "$a" ] || continue
+    if [ "$(lower "$a")" = "$(lower "${PROFILE}")" ]; then
+      PROFILE_DIR="$d"
+      break
+    fi
+  done
+fi
+
+if [ -z "${PROFILE_DIR}" ]; then
+  echo "agent-run: no App profile for '${PROFILE}'." >&2
+  echo "agent-run: add ~/.config/agent-gh-${PROFILE}/ (config, agent.pem, gitconfig)," >&2
+  echo "agent-run: or set OWNER=/ORG= in an existing profile config to claim that account." >&2
+  exit 1
+fi
 
 CONF="${AGENT_GH_CONF:-$PROFILE_DIR/config}"
 KEY="${AGENT_GH_KEY:-$PROFILE_DIR/agent.pem}"

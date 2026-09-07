@@ -19,6 +19,36 @@ end
 load_colours("dms/colors.lua")
 load_colours("borders.lua")
 
+-- Machine-local additions for projects that are not published: autostart commands,
+-- keybinds and layer rules. They live in ~/.config/hypr/local.lua, which this repo
+-- deliberately does not track — it is public, and an unreleased project's name and
+-- paths are not something a dotfiles repo should announce. Read the same way as the
+-- colours above (io + load, never require) so Hyprland does not watch it for reload.
+-- The file returns a table:
+--   return {
+--     autostart   = { "cmd --flag" },
+--     binds       = { { key = "SUPER + Y", cmd = "…", desc = "…" } },
+--     layer_rules = { { name = "…", match = { namespace = "…" }, animation = "none" } },
+--   }
+local local_conf = {}
+do
+    local f = io.open(os.getenv("HOME") .. "/.config/hypr/local.lua", "r")
+    if f then
+        local chunk, err = load(f:read("*a"), "@local.lua")
+        f:close()
+        if chunk then
+            local ok, t = pcall(chunk)
+            if ok and type(t) == "table" then
+                local_conf = t
+            else
+                print("hyprland.lua: local.lua did not return a table: " .. tostring(t))
+            end
+        else
+            print("hyprland.lua: " .. tostring(err))
+        end
+    end
+end
+
 
 ------------------
 ---- MONITORS ----
@@ -72,7 +102,11 @@ hl.on("hyprland.start", function()
     hl.exec_cmd("sleep 6 && discord")
     hl.exec_cmd("sleep 9 && notion-app")
     -- claude-desktop and chatgpt are launched on demand, not at boot.
-    hl.exec_cmd("/home/archie/Documents/Github-Projects/ycombo/ycombo-start.sh --hidden")
+
+    -- Anything ~/.config/hypr/local.lua wants started with the session.
+    for _, cmd in ipairs(local_conf.autostart or {}) do
+        hl.exec_cmd(cmd)
+    end
 end)
 
 
@@ -359,13 +393,13 @@ hl.bind(mainMod .. " + Print",      hl.dsp.exec_cmd("~/.local/bin/screenshot win
 hl.bind(mainMod .. " + SHIFT + Print", hl.dsp.exec_cmd("~/.local/bin/screenshot output"), { desc = "Screenshot monitor" })
 hl.bind(mainMod .. " + ALT + R",     hl.dsp.exec_cmd("~/.local/bin/app-relaunch"),        { desc = "Relaunch focused app (fresh theme)" })
 
--- YCOMBO — AI & Dev HN feed
-hl.bind(mainMod .. " + F5",           hl.dsp.exec_cmd("/home/archie/Documents/Github-Projects/ycombo/ycombo-refresh.sh"),    { desc = "YCombo Refresh" })
-hl.bind(mainMod .. " + Y",            hl.dsp.exec_cmd("/home/archie/Documents/Github-Projects/ycombo/ycombo-toggle.sh"),     { desc = "YCombo Toggle" })
-hl.bind(mainMod .. " + CTRL + Up",    hl.dsp.exec_cmd("/home/archie/Documents/Github-Projects/ycombo/ycombo-resize.sh +h"),  { desc = "YCombo Taller" })
-hl.bind(mainMod .. " + CTRL + Down",  hl.dsp.exec_cmd("/home/archie/Documents/Github-Projects/ycombo/ycombo-resize.sh -h"),  { desc = "YCombo Shorter" })
-hl.bind(mainMod .. " + CTRL + Right", hl.dsp.exec_cmd("/home/archie/Documents/Github-Projects/ycombo/ycombo-resize.sh +w"),  { desc = "YCombo Wider" })
-hl.bind(mainMod .. " + CTRL + Left",  hl.dsp.exec_cmd("/home/archie/Documents/Github-Projects/ycombo/ycombo-resize.sh -w"),  { desc = "YCombo Narrower" })
+-- Keybinds from ~/.config/hypr/local.lua. `key` is the full combination, e.g.
+-- "SUPER + Y" or "SUPER + CTRL + Left"; mainMod above is the SUPER these use.
+for _, b in ipairs(local_conf.binds or {}) do
+    if b.key and b.cmd then
+        hl.bind(b.key, hl.dsp.exec_cmd(b.cmd), { desc = b.desc or b.cmd })
+    end
+end
 
 
 --------------------------------
@@ -380,8 +414,10 @@ hl.layer_rule({ name = "dms-noanim", match = { namespace = "dms" }, no_anim = tr
 
 -- Wallpaper picker - fade
 
--- YCOMBO - disable resize animation
-hl.layer_rule({ name = "ycombo-no-anim", match = { namespace = "ycombo" }, animation = "none" })
+-- Layer rules from ~/.config/hypr/local.lua, passed through untouched.
+for _, r in ipairs(local_conf.layer_rules or {}) do
+    hl.layer_rule(r)
+end
 
 -- Float all windows by default
 hl.window_rule({
@@ -545,13 +581,8 @@ hl.window_rule({
 ---- PLUGINS ----
 -----------------
 
--- hl.plugin.load("/home/archie/Documents/Github-Projects/hyprlax/hyprlax.so")
-
--- hl.config({
---     plugin = {
---         hyprlax = {
---             parallax_strength = 0.15,
---             enabled = 1,
---         },
---     },
--- })
+-- Plugins built from local, unpublished sources are listed in ~/.config/hypr/local.lua
+-- (plugins = { "/path/to/plugin.so" }), so their paths stay out of this public repo.
+for _, so in ipairs(local_conf.plugins or {}) do
+    hl.plugin.load(so)
+end

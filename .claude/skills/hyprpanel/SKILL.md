@@ -107,7 +107,7 @@ Because `modules.scss` is concatenated (not imported), standard SCSS variables l
 
 ---
 
-## Theme Switcher (`~/.config/hyprkit/theme-switch/`)
+## Theme Switcher (`$TS/theme-switch/`, where `$TS` is the theme-switch checkout under `~/.config/`)
 
 ### `theme-switch` (orchestrator)
 
@@ -257,9 +257,9 @@ Generated to `~/.config/hyprpanel/matugen-colors.scss` on every theme switch. Co
 | `~/.config/hyprpanel/matugen-colors.scss` | Generated matugen SCSS variables — do not edit |
 | `~/.config/hyprpanel/config.json` | HyprPanel settings + 400+ theme color overrides |
 | `~/.config/hyprpanel/README.md` | Detailed patch documentation |
-| `~/.config/hyprkit/theme-switch/theme-switch` | Theme switch orchestrator |
-| `~/.config/hyprkit/theme-switch/color-fade` | Color interpolation engine (Python) |
-| `~/.config/hyprkit/theme-switch/hyprpanel-colors` | HyprPanel color mapper (Catppuccin → Material Design) |
+| `$TS/theme-switch/theme-switch` | Theme switch orchestrator |
+| `$TS/theme-switch/color-fade` | Color interpolation engine (Python) |
+| `$TS/theme-switch/hyprpanel-colors` | HyprPanel color mapper (Catppuccin → Material Design) |
 | `~/.config/matugen/config.toml` | Matugen template registry |
 | `~/.config/matugen/templates/hyprpanel-colors` | SCSS variable template source |
 | `~/.local/share/nautilus-python/extensions/matugen-css-reload.py` | Nautilus CSS + icon live-reload extension |
