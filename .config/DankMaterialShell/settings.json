@@ -5,6 +5,7 @@
   "matugenContrast": 0.2,
   "clockFormat": "12h",
   "showBatteryPercent": false,
+  "controlCenterShowAudioPercent": true,
   "controlCenterShowMicPercent": true,
   "appIdSubstitutions": [],
   "greeterAutoLogin": true,
