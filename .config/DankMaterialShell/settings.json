@@ -64,13 +64,13 @@
         "ember",
         "music",
         "weather",
-        "clock",
         {
           "id": "cpuUsage",
           "minimumWidth": false
         },
         "memUsage",
         "systemTray",
+        "clock",
         "controlCenterButton",
         "notificationButton",
         "persona"
