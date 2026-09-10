@@ -1,0 +1,43 @@
+#!/usr/bin/env bash
+# claude-focus-or-launch: open Claude Desktop on the current workspace, or jump
+# to its window if it is already running.
+#
+# Why a wrapper is needed:
+#   * Claude Desktop is an Electron single-instance app. Running `claude-desktop`
+#     while it is open only signals the first process and exits. No new window.
+#   * Hyprland ignores the focus request the app then makes (misc:focus_on_activate
+#     is off, the default), so nothing visible happens.
+#
+# So: if a Claude window exists, focus it and Hyprland switches to its workspace.
+# Otherwise start Claude Desktop, which opens on the active workspace because
+# ~/.config/hypr/hyprland.lua deliberately has no workspace rule for it.
+#
+# Wired in by ~/.local/share/applications/com.anthropic.Claude.desktop, a user
+# override of the package's entry, so the DMS launcher (Super + D) and anything
+# else that opens desktop entries comes through here. Arguments (the claude://
+# URLs from the entry's actions) are passed straight to claude-desktop; a running
+# instance receives them through its single-instance lock.
+#
+# Revert: delete this script and the desktop override; the package entry takes
+# over again. Nothing else depends on this file.
+set -u
+
+CLASS='^(com\.anthropic\.[Cc]laude(-desktop)?|[Cc]laude)$'
+
+addr=$(hyprctl clients -j 2>/dev/null \
+    | jq -r --arg re "$CLASS" \
+        '[.[] | select(.class | test($re))] | sort_by(.focusHistoryID) | .[0].address // empty')
+
+if [[ -n "$addr" ]]; then
+    # Lua config manager: `hyprctl dispatch` takes Lua, so `eval` is the working
+    # form. Fall back to the hyprlang dispatcher for a .conf session.
+    hyprctl eval "hl.dispatch(hl.dsp.focus({ window = 'address:$addr' }))" >/dev/null 2>&1 \
+        || hyprctl dispatch focuswindow "address:$addr" >/dev/null
+    # Forward a URL, if any, to the running instance.
+    if (( $# )); then
+        exec claude-desktop "$@"
+    fi
+    exit 0
+fi
+
+exec claude-desktop "$@"

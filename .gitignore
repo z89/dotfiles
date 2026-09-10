@@ -85,12 +85,16 @@
 !.local/bin/theme-switch
 !.local/bin/avatar-make
 !.local/bin/theme-apply
+!.local/bin/claude-focus-or-launch
 !.icons/
 .icons/*
 !.icons/default/
 !.icons/default/index.theme
 !.local/share/
 .local/share/*
+!.local/share/applications/
+.local/share/applications/*
+!.local/share/applications/com.anthropic.Claude.desktop
 !.local/share/nautilus-python/
 .local/share/nautilus-python/*
 !.local/share/nautilus-python/extensions/
