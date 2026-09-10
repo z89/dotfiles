@@ -85,7 +85,7 @@
 !.local/bin/theme-switch
 !.local/bin/avatar-make
 !.local/bin/theme-apply
-!.local/bin/claude-focus-or-launch
+!.local/bin/focus-or-launch
 !.icons/
 .icons/*
 !.icons/default/
@@ -96,6 +96,15 @@
 !.local/share/applications/
 .local/share/applications/*
 !.local/share/applications/com.anthropic.Claude.desktop
+!.local/share/applications/spotify.desktop
+!.local/share/applications/discord.desktop
+!.local/share/applications/notion.desktop
+!.local/share/applications/mullvad-vpn.desktop
+!.local/share/applications/org.telegram.desktop.desktop
+!.local/share/applications/codex-desktop.desktop
+!.local/share/applications/com.obsproject.Studio.desktop
+!.local/share/applications/org.qbittorrent.qBittorrent.desktop
+!.local/share/applications/net.nokyan.Resources.desktop
 !.local/share/nautilus-python/
 .local/share/nautilus-python/*
 !.local/share/nautilus-python/extensions/

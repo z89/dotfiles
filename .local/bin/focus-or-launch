@@ -1,0 +1,100 @@
+#!/usr/bin/env bash
+# focus-or-launch: jump to a single-window app if it is open, else start it and
+# follow it to wherever its window appears.
+#
+#   focus-or-launch <app> -- <command> [args...]
+#
+# <app> is a key from the CLASS table below, or a raw regex matched against the
+# Hyprland window class. Everything after `--` is the app's own Exec line.
+#
+# Behaviour:
+#   * A window with that class exists: focus it. Hyprland switches to the
+#     workspace the window is ACTUALLY on right now, not the one a rule pins it
+#     to, so an app you moved by hand this session is found where you left it.
+#     If the command carries a URL (claude://, spotify:, tg://, ...) it is also
+#     run so the single-instance app receives the URL.
+#   * No window: run the command detached, poll for up to 15 s until its window
+#     is mapped, then focus it. Apps with a "N silent" workspace rule in
+#     hyprland.lua therefore land on their pinned workspace and you follow them;
+#     apps with no rule open on the current workspace. Boot autostart never goes
+#     through this script, so it stays silent.
+#
+# Why a wrapper: these are Electron/Qt/GTK single-instance apps. Running them a
+# second time only signals the first process and exits, and Hyprland ignores the
+# focus request that follows (misc:focus_on_activate is off), so picking a
+# running app in the DMS launcher (Super + D) did nothing visible.
+#
+# Wired in by the user desktop entries in ~/.local/share/applications/, which
+# override the package entries and must use this script's FULL PATH: dms.service
+# runs with a PATH that lacks ~/.local/bin. Revert an app by deleting its
+# override; revert everything by deleting them all and this script.
+set -u
+
+declare -A CLASS=(
+    [claude]='^(com\.anthropic\.[Cc]laude(-desktop)?|[Cc]laude)$'
+    [spotify]='^[Ss]potify$'
+    [discord]='^[Dd]iscord$'
+    [notion]='^([Nn]otion|notion-app|notion-app-electron)$'
+    [mullvad]='^(mullvad-vpn|Mullvad VPN)$'
+    [telegram]='^(org\.telegram\.desktop|[Tt]elegram[Dd]esktop|telegram-desktop)$'
+    [chatgpt]='^(codex-desktop|[Cc]odex)$'
+    [obs]='^(com\.obsproject\.Studio|obs)$'
+    [qbittorrent]='^(org\.qbittorrent\.qBittorrent|qbittorrent)$'
+    [resources]='^(net\.nokyan\.Resources|resources)$'
+)
+
+if (( $# < 1 )) || [[ $1 == -h || $1 == --help ]]; then
+    sed -n '2,7p' "$0" >&2
+    printf 'known apps: %s\n' "${!CLASS[*]}" >&2
+    exit 2
+fi
+app=$1; shift
+[[ ${1:-} == -- ]] && shift
+re=${CLASS[$app]:-$app}
+
+find_window() {
+    hyprctl clients -j 2>/dev/null | jq -r --arg re "$re" \
+        '[.[] | select(.mapped) | select(.class | test($re))]
+         | sort_by(.focusHistoryID) | .[0].address // empty'
+}
+
+focus_window() {
+    # Lua config manager: `hyprctl dispatch` takes Lua, so `eval` is the working
+    # form. Fall back to the hyprlang dispatcher for a .conf session.
+    hyprctl eval "hl.dispatch(hl.dsp.focus({ window = 'address:$1' }))" >/dev/null 2>&1 \
+        || hyprctl dispatch focuswindow "address:$1" >/dev/null
+}
+
+has_url() {
+    local a
+    for a in "$@"; do
+        [[ $a =~ ^[A-Za-z][A-Za-z0-9+.-]*: ]] && return 0
+    done
+    return 1
+}
+
+addr=$(find_window)
+if [[ -n $addr ]]; then
+    focus_window "$addr"
+    if (( $# )) && has_url "$@"; then
+        exec "$@"
+    fi
+    exit 0
+fi
+
+if (( $# == 0 )); then
+    echo "focus-or-launch: no window for '$app' and no command given" >&2
+    exit 1
+fi
+
+setsid -f "$@" >/dev/null 2>&1
+
+for _ in $(seq 60); do
+    sleep 0.25
+    addr=$(find_window)
+    if [[ -n $addr ]]; then
+        focus_window "$addr"
+        exit 0
+    fi
+done
+exit 0

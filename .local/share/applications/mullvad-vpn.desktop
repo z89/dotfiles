@@ -1,0 +1,14 @@
+# User override of /usr/share/applications/mullvad-vpn.desktop (package mullvad-vpn-bin 2026.4-1). Identical to the package entry
+# except that Exec goes through /home/archie/.local/bin/focus-or-launch, so picking
+# this app in the DMS launcher (Super + D) jumps to its open window, or starts it and
+# follows it. XDG precedence makes this copy win. Full path is required: dms.service's
+# PATH lacks ~/.local/bin. Revert: delete this file.
+[Desktop Entry]
+Name=Mullvad VPN
+Exec=/home/archie/.local/bin/focus-or-launch mullvad -- "/opt/Mullvad VPN/mullvad-vpn" %U
+Terminal=false
+Type=Application
+Icon=mullvad-vpn
+StartupWMClass=Mullvad VPN
+Comment=Mullvad VPN client
+Categories=Network;

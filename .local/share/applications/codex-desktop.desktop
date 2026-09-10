@@ -1,0 +1,24 @@
+# User override of /usr/share/applications/codex-desktop.desktop (package codex-desktop-git 26.901.51231.r2100.gbb40cf5e-1). Identical to the package entry
+# except that Exec goes through /home/archie/.local/bin/focus-or-launch, so picking
+# this app in the DMS launcher (Super + D) jumps to its open window, or starts it and
+# follows it. XDG precedence makes this copy win. Full path is required: dms.service's
+# PATH lacks ~/.local/bin. Revert: delete this file.
+[Desktop Entry]
+Name=ChatGPT Community
+Comment=Community Linux distribution based on OpenAI ChatGPT
+Exec=/home/archie/.local/bin/focus-or-launch chatgpt -- env BAMF_DESKTOP_FILE_HINT=/usr/share/applications/codex-desktop.desktop CHROME_DESKTOP=codex-desktop.desktop /usr/bin/codex-desktop %u
+Icon=codex-desktop
+Terminal=false
+Type=Application
+Categories=Development;
+MimeType=x-scheme-handler/codex;x-scheme-handler/codex-browser-sidebar;
+Keywords=codex;openai;ai;coding;
+StartupNotify=true
+StartupWMClass=codex-desktop
+X-GNOME-WMClass=codex-desktop
+Actions=new-window;
+
+[Desktop Action new-window]
+Name=New Window
+Exec=env BAMF_DESKTOP_FILE_HINT=/usr/share/applications/codex-desktop.desktop CHROME_DESKTOP=codex-desktop.desktop CODEX_MULTI_LAUNCH=1 /usr/bin/codex-desktop --new-instance
+

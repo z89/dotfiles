@@ -1,20 +1,21 @@
-# User override of /usr/share/applications/com.anthropic.Claude.desktop
-# (package claude-desktop 1.49585.0-1). Identical to the package entry except
-# that every Exec goes through ~/.local/bin/claude-focus-or-launch, so picking
-# Claude in the DMS launcher (Super + D) jumps to the open window or starts
-# Claude on the current workspace. XDG precedence makes this copy win over the
-# package's. The full path is required: the DMS shell runs with a PATH that
-# lacks ~/.local/bin. Revert: delete this file.
+# User override of /usr/share/applications/com.anthropic.Claude.desktop (package claude-desktop 1.49585.0-1). Identical to the package entry
+# except that Exec goes through /home/archie/.local/bin/focus-or-launch, so picking
+# this app in the DMS launcher (Super + D) jumps to its open window, or starts it and
+# follows it. XDG precedence makes this copy win. Full path is required: dms.service's
+# PATH lacks ~/.local/bin. Revert: delete this file.
 [Desktop Entry]
 Name=Claude
 Comment=Desktop application for Claude.ai
 GenericName=AI Assistant
 Keywords=AI;Chat;Assistant;Claude;Code;LLM;
-Exec=/home/archie/.local/bin/claude-focus-or-launch %U
+Exec=/home/archie/.local/bin/focus-or-launch claude -- claude-desktop %U
 Icon=claude-desktop
 Type=Application
 StartupNotify=true
+# Matches the Wayland app_id / X11 WM_CLASS Chromium derives from
+# package.json desktopName, so docks group windows under this entry.
 StartupWMClass=com.anthropic.Claude
+# second-instance just focuses mainWindow; suppress GNOME's default "New Window" item
 SingleMainWindow=true
 Categories=Utility;Development;
 MimeType=x-scheme-handler/claude;
@@ -22,8 +23,8 @@ Actions=NewChat;NewCode;
 
 [Desktop Action NewChat]
 Name=New Chat
-Exec=/home/archie/.local/bin/claude-focus-or-launch "claude://claude.ai/new?surface=chat&source=desktop_action"
+Exec=/home/archie/.local/bin/focus-or-launch claude -- claude-desktop "claude://claude.ai/new?surface=chat&source=desktop_action"
 
 [Desktop Action NewCode]
 Name=New Claude Code Session
-Exec=/home/archie/.local/bin/claude-focus-or-launch "claude://code/new?source=desktop_action"
+Exec=/home/archie/.local/bin/focus-or-launch claude -- claude-desktop "claude://code/new?source=desktop_action"

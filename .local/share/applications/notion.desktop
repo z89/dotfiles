@@ -1,0 +1,15 @@
+# User override of /usr/share/applications/notion.desktop (package notion-app-electron 7.32.1-1). Identical to the package entry
+# except that Exec goes through /home/archie/.local/bin/focus-or-launch, so picking
+# this app in the DMS launcher (Super + D) jumps to its open window, or starts it and
+# follows it. XDG precedence makes this copy win. Full path is required: dms.service's
+# PATH lacks ~/.local/bin. Revert: delete this file.
+[Desktop Entry]
+Version=1.0
+Type=Application
+Name=Notion
+GenericName=Online Document Editor
+Comment=Your connected workspace for wiki, docs & projects
+Exec=/home/archie/.local/bin/focus-or-launch notion -- notion-app %U
+Icon=notion
+Categories=Office;
+MimeType=x-scheme-handler/notion;

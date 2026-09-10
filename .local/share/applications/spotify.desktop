@@ -1,0 +1,16 @@
+# User override of /usr/share/applications/spotify.desktop (package spotify 1:1.2.96.518-2). Identical to the package entry
+# except that Exec goes through /home/archie/.local/bin/focus-or-launch, so picking
+# this app in the DMS launcher (Super + D) jumps to its open window, or starts it and
+# follows it. XDG precedence makes this copy win. Full path is required: dms.service's
+# PATH lacks ~/.local/bin. Revert: delete this file.
+[Desktop Entry]
+Type=Application
+Name=Spotify
+GenericName=Music Player
+Icon=spotify-client
+TryExec=spotify
+Exec=/home/archie/.local/bin/focus-or-launch spotify -- spotify --uri=%u
+Terminal=false
+MimeType=x-scheme-handler/spotify;
+Categories=Audio;Music;Player;AudioVideo;
+StartupWMClass=spotify
