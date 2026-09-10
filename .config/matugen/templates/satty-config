@@ -23,8 +23,3 @@ palette = [
     "{{colors.on_surface.default.hex}}",
     "{{colors.surface.default.hex}}",
 ]
-first = "{{colors.primary.default.hex}}"
-second = "{{colors.tertiary.default.hex}}"
-third = "{{colors.error.default.hex}}"
-fourth = "{{colors.secondary.default.hex}}"
-fifth = "{{colors.on_surface.default.hex}}"
