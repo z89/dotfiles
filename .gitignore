@@ -92,6 +92,7 @@
 !.icons/default/index.theme
 !.local/share/
 .local/share/*
+!.local/share/initcpio/
 !.local/share/applications/
 .local/share/applications/*
 !.local/share/applications/com.anthropic.Claude.desktop

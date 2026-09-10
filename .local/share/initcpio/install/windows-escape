@@ -1,0 +1,178 @@
+#!/bin/bash
+# windows-escape — mkinitcpio install hook (source of truth: ~/.local/share/initcpio/install/windows-escape,
+# installed to /etc/initcpio/install/ by luks-boot-setup).
+#
+# Escape hatch on the Plymouth unlock screen: hold the Windows (Super) key for about a second
+# and the machine reboots straight into Windows. boot-windows looks up the firmware boot entry
+# labelled "Windows Boot Manager", writes it to the one-shot BootNext variable with efibootmgr,
+# and forces a reboot. UEFI honours BootNext exactly once, so GRUB and this unlock screen are
+# skipped on that boot only. Nothing is mounted read-write at that point, so the forced reboot
+# is safe even mid-passphrase.
+#
+# Why an evdev watcher and not `plymouth watch-keystroke`: plymouthd routes every key to the
+# password entry while a prompt is active and never consults keystroke watches (src/main.c,
+# on_keyboard_input), and it splits function keys into ESC + "[24~" (ESC toggles the details
+# view). The Super key is invisible to the console keymap and to plymouth, so holding it has
+# no side effects if you change your mind before the hold time elapses.
+#
+# Kernel command line tunables:
+#   rd.windows-escape=0                 disable for one boot
+#   rd.windows-escape.label=<string>    substring of the firmware entry label (default: Windows Boot Manager)
+#   rd.windows-escape.key=super|f12     trigger key (default super; f12 works but flashes the text log)
+#   rd.windows-escape.hold=<ms>         hold time in milliseconds (default 800)
+#
+# Requires: plymouth hook (feedback message), an EFI system, and gcc on the host at image build
+# time (the watcher is compiled into the image; the hook skips itself with a warning otherwise).
+
+build() {
+    local src tmp
+    if ! command -v gcc >/dev/null 2>&1; then
+        warning "windows-escape: gcc not found, watcher not built; hook disabled in this image"
+        return 0
+    fi
+
+    add_binary efibootmgr
+    add_binary plymouth
+    add_dir /usr/local/bin
+
+    cat > "$BUILDROOT/usr/local/bin/boot-windows" <<'SCRIPT'
+#!/bin/sh
+# boot-windows — set BootNext to the Windows firmware entry and reboot (windows-escape hook).
+label="Windows Boot Manager"
+for arg in $(cat /proc/cmdline); do
+    case $arg in rd.windows-escape.label=*) label=${arg#*=} ;; esac
+done
+label=$(printf '%s' "$label" | sed 's/%20/ /g')
+[ -d /sys/firmware/efi/efivars ] || mount -t efivarfs efivarfs /sys/firmware/efi/efivars 2>/dev/null
+num=$(efibootmgr 2>/dev/null | awk -v l="$label" 'index($0, l) && /^Boot[0-9A-Fa-f][0-9A-Fa-f][0-9A-Fa-f][0-9A-Fa-f]/ { print substr($1, 5, 4); exit }')
+if [ -z "$num" ]; then
+    echo "boot-windows: no firmware entry matching '$label'; efibootmgr says:" >&2
+    efibootmgr 2>&1 | head -12 >&2
+    plymouth display-message --text="No Windows boot entry found" 2>/dev/null
+    exit 1
+fi
+if ! efibootmgr -n "$num" >/dev/null 2>&1; then
+    echo "boot-windows: efibootmgr -n $num failed" >&2
+    plymouth display-message --text="Could not set BootNext" 2>/dev/null
+    exit 1
+fi
+echo "boot-windows: BootNext=$num ($label), rebooting"
+plymouth display-message --text="Rebooting into Windows" 2>/dev/null
+sync
+sleep 0.3
+systemctl reboot -ff 2>/dev/null || reboot -f
+SCRIPT
+    chmod 755 "$BUILDROOT/usr/local/bin/boot-windows"
+
+    tmp=$(mktemp -d)
+    cat > "$tmp/windows-escape-evdev.c" <<'CSRC'
+/* windows-escape-evdev: run a command when a key is held for HOLD ms on any evdev keyboard.
+ * Usage: windows-escape-evdev <super|f12> <hold-ms> <command>. Rescans /dev/input every 2 s so a
+ * keyboard plugged in late still works. Never grabs the device, so plymouth keeps receiving keys. */
+#include <dirent.h>
+#include <fcntl.h>
+#include <linux/input.h>
+#include <poll.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <sys/ioctl.h>
+#include <time.h>
+#include <unistd.h>
+
+#define MAXDEV 32
+static int fds[MAXDEV]; static char names[MAXDEV][32]; static int nfd;
+
+static int has(const char *name) { for (int i = 0; i < nfd; i++) if (!strcmp(names[i], name)) return 1; return 0; }
+static void scan(void) {
+    DIR *d = opendir("/dev/input"); if (!d) return;
+    struct dirent *e;
+    while ((e = readdir(d)) && nfd < MAXDEV) {
+        if (strncmp(e->d_name, "event", 5) || has(e->d_name)) continue;
+        char p[64]; snprintf(p, sizeof p, "/dev/input/%s", e->d_name);
+        int fd = open(p, O_RDONLY | O_NONBLOCK | O_CLOEXEC); if (fd < 0) continue;
+        unsigned long ev[(EV_MAX + 63) / 64] = {0}, keys[(KEY_MAX + 63) / 64] = {0};
+        ioctl(fd, EVIOCGBIT(0, sizeof ev), ev); ioctl(fd, EVIOCGBIT(EV_KEY, sizeof keys), keys);
+        int iskbd = (ev[EV_KEY / 64] >> (EV_KEY % 64) & 1) && (keys[KEY_F12 / 64] >> (KEY_F12 % 64) & 1);
+        if (!iskbd) { close(fd); continue; }
+        fds[nfd] = fd; snprintf(names[nfd], 32, "%s", e->d_name); nfd++;
+    }
+    closedir(d);
+}
+static double now_ms(void) { struct timespec t; clock_gettime(CLOCK_MONOTONIC, &t); return t.tv_sec * 1000.0 + t.tv_nsec / 1e6; }
+
+int main(int argc, char **argv) {
+    if (argc < 4) { fprintf(stderr, "usage: %s <super|f12> <hold-ms> <command>\n", argv[0]); return 2; }
+    int f12 = !strcmp(argv[1], "f12"); double hold = atof(argv[2]); const char *cmd = argv[3];
+    double down = -1; int fired = 0;
+    for (;;) {
+        scan();
+        struct pollfd pf[MAXDEV]; for (int i = 0; i < nfd; i++) { pf[i].fd = fds[i]; pf[i].events = POLLIN; }
+        int timeout = down >= 0 ? 50 : 2000;
+        int r = poll(pf, nfd, timeout);
+        if (r > 0) for (int i = 0; i < nfd; i++) {
+            if (pf[i].revents & (POLLERR | POLLHUP | POLLNVAL)) { close(fds[i]); fds[i] = fds[nfd - 1]; strcpy(names[i], names[nfd - 1]); nfd--; i--; continue; }
+            if (!(pf[i].revents & POLLIN)) continue;
+            struct input_event ev[16]; ssize_t n = read(fds[i], ev, sizeof ev);
+            for (ssize_t k = 0; k < (ssize_t)(n / sizeof ev[0]); k++) {
+                if (ev[k].type != EV_KEY) continue;
+                int match = f12 ? ev[k].code == KEY_F12 : (ev[k].code == KEY_LEFTMETA || ev[k].code == KEY_RIGHTMETA);
+                if (!match) continue;
+                if (ev[k].value == 1) down = now_ms();          /* press */
+                else if (ev[k].value == 0) { down = -1; fired = 0; } /* release: reset */
+            }
+        }
+        if (down >= 0 && !fired && now_ms() - down >= hold) {
+            fired = 1; printf("windows-escape: key held %.0f ms, running %s\n", hold, cmd); fflush(stdout);
+            if (fork() == 0) { execl("/bin/sh", "sh", "-c", cmd, (char *)NULL); _exit(127); }
+        }
+    }
+}
+CSRC
+    if ! gcc -O2 -Wall -o "$tmp/windows-escape-evdev" "$tmp/windows-escape-evdev.c" 2>"$tmp/err"; then
+        error "windows-escape: compiling the watcher failed: %s" "$(cat "$tmp/err")"
+        rm -rf "$tmp"; return 1
+    fi
+    add_binary "$tmp/windows-escape-evdev" /usr/local/bin/windows-escape-evdev
+    rm -rf "$tmp"
+
+    cat > "$BUILDROOT/usr/local/bin/windows-escape-watch" <<'SCRIPT'
+#!/bin/sh
+# windows-escape-watch — parse tunables and run the evdev watcher (initrd only).
+key=super; hold=800
+for arg in $(cat /proc/cmdline); do
+    case $arg in
+        rd.windows-escape=0)      exit 0 ;;
+        rd.windows-escape.key=*)  key=${arg#*=} ;;
+        rd.windows-escape.hold=*) hold=${arg#*=} ;;
+    esac
+done
+exec /usr/local/bin/windows-escape-evdev "$key" "$hold" /usr/local/bin/boot-windows
+SCRIPT
+    chmod 755 "$BUILDROOT/usr/local/bin/windows-escape-watch"
+
+    cat > "$BUILDROOT/usr/lib/systemd/system/windows-escape.service" <<'UNIT'
+[Unit]
+Description=Windows escape key on the unlock screen
+DefaultDependencies=no
+ConditionPathExists=/sys/firmware/efi
+ConditionKernelCommandLine=!rd.windows-escape=0
+After=systemd-udev-trigger.service
+Before=cryptsetup.target
+
+[Service]
+Type=simple
+ExecStart=/usr/local/bin/windows-escape-watch
+UNIT
+    mkdir -p "$BUILDROOT/usr/lib/systemd/system/sysinit.target.wants"
+    ln -sf ../windows-escape.service "$BUILDROOT/usr/lib/systemd/system/sysinit.target.wants/windows-escape.service"
+}
+
+help() {
+    cat <<HELPEOF
+Hold the Windows (Super) key on the Plymouth unlock screen to reboot straight into Windows via
+the UEFI BootNext variable. Needs the plymouth hook, an EFI system and gcc at build time.
+Tunables: rd.windows-escape=0, rd.windows-escape.label=, rd.windows-escape.key=super|f12,
+rd.windows-escape.hold=<ms>.
+HELPEOF
+}
