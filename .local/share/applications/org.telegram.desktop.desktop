@@ -1,0 +1,18 @@
+# User override of /usr/share/applications/org.telegram.desktop.desktop (package telegram-desktop-bin 7.2.5-1). Identical to the package entry
+# except that Exec goes through /home/archie/.local/bin/focus-or-launch, so picking
+# this app in the DMS launcher (Super + D) jumps to its open window, or starts it and
+# follows it. XDG precedence makes this copy win. Full path is required: dms.service's
+# PATH lacks ~/.local/bin. Revert: delete this file.
+[Desktop Entry]
+Encoding=UTF-8
+Version=1.0
+Name=Telegram Desktop
+Comment=Official desktop version of Telegram messaging app
+Exec=/home/archie/.local/bin/focus-or-launch telegram -- telegram-desktop -- %u
+StartupWMClass=org.telegram.desktop.desktop
+Icon=telegram
+Terminal=false
+Type=Application
+Categories=Network;
+MimeType=application/x-xdg-protocol-tg;x-scheme-handler/tg;
+X-Desktop-File-Install-Version=0.22

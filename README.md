@@ -27,28 +27,14 @@ Arch Linux, Hyprland (`~/.config/hypr/hyprland.lua`) and DankMaterialShell (DMS)
    `~/.config/gtk-{3,4}.0/settings.ini` the GTK fallback. On Wayland GTK reads dconf, so load the tracked keyfile once:
    `dconf load /org/gnome/desktop/interface/ < ~/.config/gsettings/interface.ini` (fonts, cursor and dark scheme;
    theme and icon names are left to `theme-apply`).
-7. **Claude Desktop on the current workspace**: `hyprland.lua` has no workspace rule for Claude, so it opens where you are.
-   `~/.local/share/applications/com.anthropic.Claude.desktop` overrides the package entry and runs
-   `~/.local/bin/claude-focus-or-launch`, which focuses the existing Claude window (Hyprland follows it to its workspace) or
-   starts Claude if none is open. Super + D goes through this automatically. Revert by deleting those two files and
-   restoring the `claude-workspace` rule noted in `hyprland.lua`.
-
-8. **System files outside `$HOME`**: `system/` mirrors the hand-edited files a rebuild needs, kept current by
-   `~/.local/bin/dotfiles-sync` (also regenerates `pkglist/` and the service lists; run it before committing).
-   `sudo dotfiles-sync --apply` copies them back and prints the follow-up commands:
-   - `etc/default/grub`: GRUB with LVM root (`root=/dev/archvg/root`), `quiet splash preempt=full`, 1 s menu, 5120x1440 gfxmode.
-   - `etc/mkinitcpio.conf`: systemd initrd, `plymouth sd-encrypt lvm2` hooks, `usbhid xhci_hcd` modules for the FIDO2 key.
-     The custom `fido2-smart` and `windows-escape` hooks are in `~/.local/share/initcpio/install/` and are installed, together
-     with `/etc/crypttab.initramfs` (not tracked: it carries the LUKS UUID), by `sudo ~/.local/bin/luks-boot-setup`.
-   - `etc/plymouth/plymouthd.conf`: theme `dank-unlock`, generated from the palette by `~/.local/bin/plymouth-dank-theme`.
-   - `etc/sysctl.d/90-split-lock.conf` plus whatever `~/.local/bin/system-tune` applies.
-   - `etc/systemd/system/mirror-refresh.{service,timer}` and `usr/local/bin/mirror-refresh`: weekly reflector run
-     (AU/NZ https mirrors behind the fastly anycast mirror). `/etc/pacman.d/mirrorlist` itself is generated.
-9. **Login**: greetd + dms-greeter, configured by `~/.local/bin/greeter-setup`. Pick the plain "Hyprland" session, not
-   "Hyprland (uwsm-managed)" (uwsm is not installed); the greeter remembers the choice in
-   `/var/cache/dms-greeter/.local/state/memory.json`.
-10. **Wallpapers**: `~/Pictures/wallpapers/` is what `theme-switch` cycles. Only `wallpaper.png` is tracked; the other
-    images are third-party 5120x1440 art and are not committed.
+7. **Single-window apps jump to their window**: user entries in `~/.local/share/applications/` override the package
+   entries for Claude, Spotify, Discord, Notion, Mullvad, Telegram, ChatGPT, OBS, qBittorrent and Resources so Super + D runs
+   `~/.local/bin/focus-or-launch <app> -- <exec>`. If the app has a window it is focused and Hyprland follows it to whatever
+   workspace it is actually on; otherwise the app is started and followed once its window appears. Apps pinned by a
+   `N silent` rule in `hyprland.lua` still land on their workspace (boot autostart stays silent, the wrapper does the
+   following). Claude has no rule and opens where you are. Add an app: one line in the script's class table plus a copy of
+   its desktop entry with Exec prefixed. Entries must use the script's full path, since `dms.service` has no `~/.local/bin`
+   on its PATH. Revert one app by deleting its override; revert all by deleting them and the script.
 
 Generated files are deliberately untracked and are recreated on first start: `~/.config/hypr/dms/`, `~/.config/hypr/colors.*`,
 kitty `dank-tabs.conf` / `matugen-theme*.conf`, GTK `dank-colors.css` / `palette-colors.css`, and DMS `firefox.css`.
