@@ -36,9 +36,9 @@ This file defines the user's system. Load it before any task involving packages,
 ## Desktop Environment
 
 - **WM:** Hyprland — config at `~/.config/hypr/hyprland.lua` (Lua; hyprlang `.conf` is deprecated since 0.55)
-- **Bar:** hyprpanel
+- **Bar / shell:** DankMaterialShell (DMS) via `dms.service` and the patched wrapper `~/.local/bin/dms-run-patched`; settings in `~/.config/DankMaterialShell/settings.json` (HyprPanel is retired, its files remain tracked until sign-off)
 - **Launcher:** wofi
-- **Notifications:** swaync (replaces HyprPanel's built-in; bar icon delegates to swaync-client)
+- **Notifications:** DMS built-in (compact popup card patched via `~/.config/DankMaterialShell/patches/`)
 - **Display:** Wayland-native (Hyprland)
 - **Colour scheme:** matugen
 - **Browser:** ungoogled-chromium (`/usr/bin/chromium`); launch-speed diagnosis and checklist in `chromium-launch.md` next to this file
@@ -53,7 +53,7 @@ This file defines the user's system. Load it before any task involving packages,
 Font config locations:
 - **GTK/GNOME:** gsettings (`org.gnome.desktop.interface` font-name / monospace-font-name)
 - **Kitty:** `~/.config/kitty/kitty.conf` (`font_family`)
-- **HyprPanel:** `~/.config/hyprpanel/config.json` (`theme.font.name`)
+- **DMS:** `~/.config/DankMaterialShell/settings.json` (`fontFamily` / `monoFontFamily`)
 - **System fallback:** `~/.config/fontconfig/fonts.conf`
 
 ## Key Paths
