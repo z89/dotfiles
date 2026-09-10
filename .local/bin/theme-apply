@@ -915,9 +915,12 @@ def gtk3_in_sync():
     colors_css = _read_stable(GTK3_COLORS)
     if not colors_css:
         return True  # nothing to sync from
-    css3, css4 = _theme_css(colors_css)
     for name in THEME_NAMES:
         root = os.path.join(THEMES_DIR, name)
+        # The css4 @import target depends on the theme dir (extracted adwaita.css
+        # or the GTK Default fallback), so build the expected text per theme,
+        # exactly as _write_theme does.
+        css3, css4 = _theme_css(colors_css, _ensure_adwaita_css(root))
         try:
             with open(os.path.join(root, "gtk-3.0", "gtk.css")) as f:
                 if f.read() != css3:
