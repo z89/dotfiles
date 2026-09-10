@@ -70,7 +70,10 @@
         },
         "memUsage",
         "systemTray",
-        "clock",
+        {
+          "id": "clock",
+          "clockDateOrder": "dateFirst"
+        },
         "controlCenterButton",
         "notificationButton",
         "persona"
