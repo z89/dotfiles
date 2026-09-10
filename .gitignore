@@ -142,3 +142,11 @@ __pycache__/
 !.local/bin/dms-shim/
 !.local/bin/papirus-dank-build
 !.config/DankMaterialShell/README.md
+# Added 2026-09-11 rebuild audit: prompt template, default apps, shell env, BT/font tools,
+# and the system-level mirror kept in sync by dotfiles-sync
+!.config/starship.template.toml
+!.config/mimeapps.list
+!.zshenv
+!.local/bin/airpods-mic
+!.local/bin/dotfiles-sync
+!/system/

@@ -1,0 +1,288 @@
+"$schema" = 'https://starship.rs/config-schema.json'
+
+# Rendered by palette-gen from the OKLCH wallpaper palette. Edit this file,
+# not ~/.config/starship.toml, which is overwritten on every wallpaper change.
+palette = "dank"
+
+
+format = """
+$username$hostname$directory$git_branch$git_commit$git_state$git_metrics\
+$docker_context$package\
+$c$cmake$dart$deno$dotnet$elixir$elm$erlang$fennel$fortran$golang$gradle\
+$haskell$haxe$java$julia$kotlin$lua$nim$nodejs$ocaml$perl$php$python\
+$rlang$ruby$rust$scala$swift$zig$buf$bun\
+$nix_shell$conda$meson$memory_usage\
+$cmd_duration\
+$jobs$status$character"""
+
+right_format = '$aws'
+
+[aws]
+format = '[$symbol($profile)]($style)'
+symbol = ""
+style = "bold {{palette.muted}}"
+
+[buf]
+symbol = " "
+
+[bun]
+style = "bold purple"
+symbol = " "
+
+[c]
+style = "bold purple"
+symbol = " "
+
+[cpp]
+style = "bold purple"
+symbol = " "
+
+[cmake]
+style = "bold purple"
+symbol = " "
+
+[conda]
+symbol = " "
+
+[crystal]
+style = "bold purple"
+symbol = " "
+
+[dart]
+style = "bold purple"
+symbol = " "
+
+[deno]
+style = "bold purple"
+symbol = " "
+
+[directory]
+read_only = " 󰌾"
+style = "bold accent"
+[docker_context]
+symbol = " "
+
+[elixir]
+style = "bold purple"
+symbol = " "
+
+[elm]
+style = "bold purple"
+symbol = " "
+
+[fennel]
+style = "bold purple"
+symbol = " "
+
+[fortran]
+style = "bold purple"
+symbol = " "
+
+[fossil_branch]
+symbol = " "
+
+[gcloud]
+symbol = " "
+
+[git_branch]
+format = "[$symbol$branch(:$remote_branch)]($style) "
+symbol = " "
+style = "accent-dim"
+[git_commit]
+tag_symbol = '  '
+
+[golang]
+style = "bold purple"
+symbol = " "
+
+[gradle]
+style = "bold purple"
+symbol = " "
+
+[guix_shell]
+symbol = " "
+
+[haskell]
+style = "bold purple"
+symbol = " "
+
+[haxe]
+style = "bold purple"
+symbol = " "
+
+[hg_branch]
+symbol = " "
+
+[hostname]
+ssh_symbol = " "
+style = "bold accent-dim"
+[java]
+style = "bold purple"
+symbol = " "
+
+[julia]
+style = "bold purple"
+symbol = " "
+
+[kotlin]
+style = "bold purple"
+symbol = " "
+
+[lua]
+style = "bold purple"
+symbol = " "
+
+[memory_usage]
+symbol = "󰍛 "
+
+[meson]
+symbol = "󰔷 "
+
+[nim]
+style = "bold purple"
+symbol = "󰆥 "
+
+[nix_shell]
+symbol = " "
+
+[nodejs]
+style = "bold purple"
+symbol = " "
+
+[ocaml]
+style = "bold purple"
+symbol = " "
+
+[os.symbols]
+Alpaquita = " "
+Alpine = " "
+AlmaLinux = " "
+Amazon = " "
+Android = " "
+AOSC = " "
+Arch = " "
+Artix = " "
+CachyOS = " "
+CentOS = " "
+Debian = " "
+DragonFly = " "
+Elementary = " "
+Emscripten = " "
+EndeavourOS = " "
+Fedora = " "
+FreeBSD = " "
+Garuda = "󰛓 "
+Gentoo = " "
+HardenedBSD = "󰞌 "
+Illumos = "󰈸 "
+Ios = "󰀷 "
+Kali = " "
+Linux = " "
+Mabox = " "
+Macos = " "
+Manjaro = " "
+Mariner = " "
+MidnightBSD = " "
+Mint = " "
+NetBSD = " "
+NixOS = " "
+Nobara = " "
+OpenBSD = "󰈺 "
+openSUSE = " "
+OracleLinux = "󰌷 "
+Pop = " "
+Raspbian = " "
+Redhat = " "
+RedHatEnterprise = " "
+RockyLinux = " "
+Redox = "󰀘 "
+Solus = "󰠳 "
+SUSE = " "
+Ubuntu = " "
+Unknown = " "
+Void = " "
+Windows = "󰍲 "
+Zorin = " "
+
+[package]
+symbol = "󰏗 "
+
+[perl]
+style = "bold purple"
+symbol = " "
+
+[php]
+style = "bold purple"
+symbol = " "
+
+[pijul_channel]
+symbol = " "
+
+[pixi]
+symbol = "󰏗 "
+
+[python]
+style = "bold purple"
+symbol = " "
+
+[rlang]
+style = "bold purple"
+symbol = "󰟔 "
+
+[ruby]
+style = "bold purple"
+symbol = " "
+
+[rust]
+style = "bold purple"
+symbol = "󱘗 "
+
+[scala]
+style = "bold purple"
+symbol = " "
+
+[status]
+symbol = " "
+
+[swift]
+style = "bold purple"
+symbol = " "
+
+[xmake]
+style = "bold purple"
+symbol = " "
+
+[zig]
+style = "bold purple"
+symbol = " "
+
+[cmd_duration]
+style = "bold purple"
+
+[git_status]
+disabled = true
+
+
+[username]
+style_user = "bold accent-dim"
+style_root = "bold red"
+
+[character]
+success_symbol = "[❯](bold accent)"
+error_symbol = "[❯](bold red)"
+vimcmd_symbol = "[❮](bold green)"
+
+[palettes.dank]
+# Standard names are redefined so every "bold purple" style in this file
+# resolves to the generated family instead of the raw terminal colour.
+red = "{{palette.red}}"
+green = "{{palette.green}}"
+yellow = "{{palette.yellow}}"
+blue = "{{palette.blue}}"
+purple = "{{palette.magenta}}"
+cyan = "{{palette.cyan}}"
+white = "{{palette.fg}}"
+bright-black = "{{palette.muted}}"
+accent = "{{palette.accent}}"
+accent-dim = "{{palette.accent_dim}}"
+accent-bright = "{{palette.accent_bright}}"

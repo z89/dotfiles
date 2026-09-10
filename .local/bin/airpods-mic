@@ -1,0 +1,79 @@
+#!/usr/bin/env bash
+# airpods-mic — switch the AirPods between high-quality playback and mic mode.
+#
+#   a2dp-sink          AAC, stereo, 48 kHz, NO microphone
+#   headset-head-unit  mSBC, mono, 16 kHz, microphone available
+#
+# Bluetooth Classic cannot carry both at once: A2DP has no mic channel, and
+# HFP is the only bidirectional profile. Anything using the mic costs you the
+# audio quality. This script makes that trade deliberate rather than letting
+# wireplumber autoswitch flip it whenever some background app opens the mic.
+#
+# Usage: airpods-mic [toggle|mic|hq|status]
+
+set -uo pipefail
+
+MAC="${AIRPODS_MAC:-BC:80:4E:DA:E8:5B}"
+CARD="bluez_card.${MAC//:/_}"
+HQ_PROFILE="a2dp-sink"
+MIC_PROFILE="headset-head-unit"
+
+notify() {
+    if command -v notify-send >/dev/null 2>&1; then
+        notify-send -a AirPods -i audio-headphones-bluetooth "$1" "$2"
+    fi
+    printf '%s\n' "$2"
+}
+
+active_profile() {
+    pactl list cards 2>/dev/null \
+        | sed -n "/Name: $CARD\$/,/^Card #/p" \
+        | awk -F': ' '/Active Profile:/{print $2; exit}'
+}
+
+if ! pactl list cards short 2>/dev/null | grep -q "$CARD"; then
+    notify "AirPods" "Not connected."
+    exit 1
+fi
+
+current=$(active_profile)
+
+case "${1:-toggle}" in
+    hq|a2dp)  target=$HQ_PROFILE ;;
+    mic|hfp)  target=$MIC_PROFILE ;;
+    status)   printf '%s\n' "$current"; exit 0 ;;
+    toggle)
+        case "$current" in
+            headset-head-unit*) target=$HQ_PROFILE ;;
+            *)                  target=$MIC_PROFILE ;;
+        esac ;;
+    *)
+        printf 'usage: %s [toggle|mic|hq|status]\n' "${0##*/}" >&2
+        exit 2 ;;
+esac
+
+# A profile switch can silently fall back to a neighbouring codec when the
+# Bluetooth endpoints have just been renegotiated, so confirm it actually took.
+for _ in 1 2 3; do
+    [ "$(active_profile)" = "$target" ] && break
+    pactl set-card-profile "$CARD" "$target" 2>/dev/null
+    sleep 0.4
+done
+
+final=$(active_profile)
+if [ "$final" != "$target" ]; then
+    notify "AirPods" "Switch failed — still on $final"
+    exit 1
+fi
+
+sink=$(pactl list sinks short 2>/dev/null | awk -v m="${MAC//:/_}" '$2 ~ m {print $2; exit}')
+[ -n "$sink" ] && pactl set-default-sink "$sink" 2>/dev/null
+
+if [ "$target" = "$MIC_PROFILE" ]; then
+    src=$(pactl list sources short 2>/dev/null \
+        | awk -v m="${MAC//:/_}" '$2 ~ m && $2 !~ /monitor/ {print $2; exit}')
+    [ -n "$src" ] && pactl set-default-source "$src" 2>/dev/null
+    notify "AirPods → mic mode" "Microphone on. Audio is 16 kHz mono until you switch back."
+else
+    notify "AirPods → high quality" "AAC stereo 48 kHz. No microphone."
+fi

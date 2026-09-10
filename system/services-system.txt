@@ -1,0 +1,16 @@
+bluetooth.service
+docker.service
+docker.socket
+fstrim.timer
+greetd.service
+mirror-refresh.timer
+mullvad-daemon.service
+NetworkManager-dispatcher.service
+NetworkManager.service
+remote-fs.target
+snapper-cleanup.timer
+snapper-timeline.timer
+sshd.service
+systemd-timesyncd.service
+systemd-userdbd.socket
+tailscaled.service

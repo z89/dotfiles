@@ -8,8 +8,8 @@ betterdiscordctl-git
 bibata-cursor-theme-bin
 bt-dualboot
 claude-code
-claude-cowork-service
-claude-desktop-bin
+claude-desktop
+codex-desktop-git
 dgop-bin
 dislocker
 dms-shell-git
@@ -23,12 +23,13 @@ google-cloud-cli
 greetd-dms-greeter-bin
 grimblast-git
 kwybars-bin
+libastal-idle-notify-git
+libastal-workspace-git
 librepods
 morewaita-icon-theme-git
 mullvad-vpn-bin
 notion-app-electron
 openai-codex-bin
-openai-codex-desktop
 opencode-desktop-bin
 papirus-folders
 pipes.sh

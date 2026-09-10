@@ -19,6 +19,8 @@ SRC = os.path.join(HOME, ".config/gtk-4.0/dank-colors.css")
 OUT = os.path.join(HOME, ".config/kitty/matugen-theme.next.conf")
 STARSHIP_IN = os.path.join(HOME, ".config/starship.template.toml")
 STARSHIP_OUT = os.path.join(HOME, ".config/starship.toml")
+# Untracked machine-local fragment (e.g. AWS profile aliases) appended to the rendered config.
+STARSHIP_LOCAL = os.path.join(HOME, ".config/starship.local.toml")
 FOLDER_COLOR_OUT = os.path.join(HOME, ".local/state/theme-apply/folder-color")
 GTK_CSS_OUT = (os.path.join(HOME, ".config/gtk-3.0/palette-colors.css"),
                os.path.join(HOME, ".config/gtk-4.0/palette-colors.css"))
@@ -228,6 +230,11 @@ def render_starship(c):
     except OSError:
         return False
     text = re.sub(r"\{\{palette\.([a-z_]+)\}\}", lambda m: c.get(m.group(1), "#ffffff"), text)
+    try:
+        with open(STARSHIP_LOCAL) as f:
+            text = text.rstrip("\n") + "\n\n" + f.read()
+    except OSError:
+        pass
     tmp = STARSHIP_OUT + ".tmp"
     with open(tmp, "w") as f:
         f.write(text)
