@@ -1,0 +1,68 @@
+#!/usr/bin/env bash
+# dotfiles-sync: capture the parts of this machine's setup that live outside $HOME
+# into the dotfiles repo, so `git status` shows drift and a rebuild can restore them.
+#
+#   dotfiles-sync            refresh pkglist/, system/etc mirror and system/services-*.txt
+#   sudo dotfiles-sync --apply   install system/etc + system/usr files back onto /, then
+#                                remind about grub-mkconfig, mkinitcpio and daemon-reload
+#
+# Secrets and machine identity stay out: /etc/crypttab.initramfs (LUKS UUID) and
+# /etc/pacman.d/mirrorlist are deliberately not mirrored; luks-boot-setup handles the former.
+set -euo pipefail
+
+home=${DOTFILES_HOME:-/home/archie}
+root=$home/system
+files=(
+  /etc/default/grub
+  /etc/mkinitcpio.conf
+  /etc/plymouth/plymouthd.conf
+  /etc/sysctl.d/90-split-lock.conf
+  /etc/systemd/system/mirror-refresh.service
+  /etc/systemd/system/mirror-refresh.timer
+  /usr/local/bin/mirror-refresh
+)
+
+capture() {
+  mkdir -p "$root" "$home/pkglist"
+  pacman -Qqen | sort > "$home/pkglist/native.txt"
+  pacman -Qqem | sort > "$home/pkglist/aur.txt"
+  systemctl list-unit-files --state=enabled --no-legend --no-pager \
+    | awk '{print $1}' | grep -v '@' | sort > "$root/services-system.txt"
+  systemctl --user list-unit-files --state=enabled --no-legend --no-pager \
+    | awk '{print $1}' | sort > "$root/services-user.txt"
+  for f in "${files[@]}"; do
+    if [[ -r $f ]]; then
+      install -D -m 644 "$f" "$root$f"
+    else
+      echo "skip (missing or unreadable): $f" >&2
+    fi
+  done
+  git -C "$home" status --short -- pkglist system
+}
+
+apply() {
+  if (( EUID != 0 )); then echo "--apply needs root: sudo $0 --apply" >&2; exit 1; fi
+  local changed=0
+  for f in "${files[@]}"; do
+    [[ -f $root$f ]] || continue
+    if ! cmp -s "$root$f" "$f"; then
+      echo "== $f"; diff -u "$f" "$root$f" || true
+      install -D -m "$([[ $f == /usr/local/bin/* ]] && echo 755 || echo 644)" "$root$f" "$f"
+      changed=1
+    fi
+  done
+  (( changed )) || { echo "system files already match"; return; }
+  echo
+  echo "Now run as needed:"
+  echo "  grub-mkconfig -o /boot/grub/grub.cfg      (if /etc/default/grub changed)"
+  echo "  mkinitcpio -P                             (if mkinitcpio.conf changed; luks-boot-setup installs the custom hooks)"
+  echo "  sysctl --system                           (if sysctl.d changed)"
+  echo "  systemctl daemon-reload && systemctl enable --now mirror-refresh.timer"
+  echo "  systemctl enable \$(cat $root/services-system.txt)   (review first)"
+}
+
+case ${1:-} in
+  --apply) apply ;;
+  ""|--capture) capture ;;
+  *) echo "usage: dotfiles-sync [--capture|--apply]" >&2; exit 2 ;;
+esac
