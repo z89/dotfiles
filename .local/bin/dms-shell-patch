@@ -4,7 +4,7 @@
 # Output: ~/.local/share/dms-shell-patched (used via DMS_SHELL_DIR by dms-run-patched).
 # Patches: launcher size, launcher centred between the bar edge and the opposite screen edge, Spotlight bar width,
 # lock-screen crossfade, compact notification popup card, synced palette/wallpaper fades,
-# volume percent at the head of the control centre pill.
+# volume percent at the head of the control centre pill, bar date as "Thu 10th Sept".
 # Re-run after every dms upgrade; dms-run-patched does this automatically.
 set -euo pipefail
 
@@ -912,6 +912,53 @@ PY3
 }
 [[ "$AUDIO_PCT_LEAD" == 1 ]] && apply_audio_pct_lead
 
+# ---- Bar clock date: "Thu 10th Sept" (optional) ------------------------------------
+# Modules/DankBar/Widgets/Clock.qml formats its date with Qt format strings, which have
+# no ordinal-day token and abbreviate September as "Sep". When clockDateFormat is empty
+# (the stock default) the bar shows "ddd d" ("Thu 10"); this rewrites that default to
+# "<weekday> <day><st|nd|rd|th> <month>" with June/July/Sept spelled the British way.
+# A non-empty clockDateFormat set in Settings still wins. Skipped with a warning if
+# upstream changed the widget.
+: "${CLOCK_ORDINAL:=1}"
+apply_clock_ordinal() {
+    if ! python3 - "$tmp" <<'PY4'
+import sys
+p = sys.argv[1] + "/Modules/DankBar/Widgets/Clock.qml"
+s = open(p).read()
+old = """                        text: {
+                            if (SettingsData.clockDateFormat && SettingsData.clockDateFormat.length > 0) {
+                                return systemClock?.date?.toLocaleDateString(I18n.locale(), SettingsData.clockDateFormat);
+                            }
+                            return systemClock?.date?.toLocaleDateString(I18n.locale(), "ddd d");
+                        }
+"""
+assert s.count(old) == 1, "bar clock date text block"
+new = """                        text: {
+                            const d = systemClock?.date;
+                            if (!d)
+                                return "";
+                            if (SettingsData.clockDateFormat && SettingsData.clockDateFormat.length > 0) {
+                                return d.toLocaleDateString(I18n.locale(), SettingsData.clockDateFormat);
+                            }
+                            // dms-shell-patch: "Thu 10th Sept" instead of "Thu 10"
+                            const day = d.getDate();
+                            const suffix = (day % 100 >= 11 && day % 100 <= 13) ? "th"
+                                : day % 10 === 1 ? "st" : day % 10 === 2 ? "nd" : day % 10 === 3 ? "rd" : "th";
+                            const months = ["Jan", "Feb", "Mar", "Apr", "May", "June", "July", "Aug", "Sept", "Oct", "Nov", "Dec"];
+                            return d.toLocaleDateString(I18n.locale(), "ddd") + " " + day + suffix + " " + months[d.getMonth()];
+                        }
+"""
+s = s.replace(old, new)
+open(p, "w").write(s)
+PY4
+    then
+        echo "dms-shell-patch: clock ordinal date skipped: Clock.qml pattern changed upstream" >&2
+        CLOCK_ORDINAL=0
+        return
+    fi
+}
+[[ "$CLOCK_ORDINAL" == 1 ]] && apply_clock_ordinal
+
 echo "$BIN_SHA" > "$tmp/.dms-binary-sha256"
 # Swap by rename, never delete in place: a running Quickshell watches the loaded
 # files and hot-reloads on change; deleting them under it aborts the shell (seen
@@ -933,4 +980,5 @@ lockmsg="lock fade ${LOCK_FADE_IN}/${LOCK_FADE_OUT}ms"; [[ "$LOCK_FADE" == 1 ]] 
 notifmsg="compact notification card"; [[ "$NOTIF_CARD_PATCH" == 1 ]] || notifmsg="stock notification card"
 syncmsg="theme sync ${THEME_FADE_MS}ms"; [[ "$THEME_SYNC" == 1 ]] || syncmsg="theme sync off"
 pctmsg="leading volume percent"; [[ "$AUDIO_PCT_LEAD" == 1 ]] || pctmsg="stock volume percent"
-echo "dms-shell-patch: built $OUT from $(cat "$OUT/VERSION") (launcher ${FULL_WIDTH}x${FULL_HEIGHT}, spotlight bar ${SPOT_WIDTH}px wide, $lockmsg, $notifmsg, $syncmsg, $pctmsg)"
+clkmsg="ordinal bar date"; [[ "$CLOCK_ORDINAL" == 1 ]] || clkmsg="stock bar date"
+echo "dms-shell-patch: built $OUT from $(cat "$OUT/VERSION") (launcher ${FULL_WIDTH}x${FULL_HEIGHT}, spotlight bar ${SPOT_WIDTH}px wide, $lockmsg, $notifmsg, $syncmsg, $pctmsg, $clkmsg)"
