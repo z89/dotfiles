@@ -21,6 +21,10 @@
 #      first one tried. --retune additionally rebenchmarks that slot to ~1 s / 512 MiB.
 #   4. Plymouth theme "dank-unlock", generated from the live DMS palette and wallpaper by
 #      plymouth-dank-theme, replaces the stock spinner theme.
+#   5. fido2-smart mkinitcpio hook (~/.local/share/initcpio/install/fido2-smart): wraps
+#      systemd-cryptsetup so the FIDO2 token is only tried when it is actually plugged in
+#      (USB enumeration is watched, not timed), and the passphrase prompt appears at once
+#      otherwise. Removes the token-timeout wait from every keyless boot.
 #
 # Idempotent: every step checks before it writes. Header changes are preceded by a LUKS
 # header backup in /root/luks-header-backup/. Nothing here touches the running session.
@@ -113,6 +117,35 @@ else
   note "mkinitcpio HOOKS order already fine"
 fi
 
+# 2c. custom mkinitcpio hooks from dotfiles ------------------------------------------------
+#   fido2-smart     after sd-encrypt : FIDO2 only when the token is plugged in, else passphrase at once
+#   windows-escape  after plymouth   : F12 on the unlock screen reboots into Windows (BootNext)
+install_hook() {
+  local name=$1 after=$2 src="$home/.local/share/initcpio/install/$1" dst="/etc/initcpio/install/$1"
+  if [[ ! -f $src ]]; then note "$src missing; hook $name not installed"; return; fi
+  if ! cmp -s "$src" "$dst"; then
+    note "install hook: $dst <- $src"
+    run install -D -m 644 "$src" "$dst"
+    changed=1
+  else
+    note "install hook $name already current"
+  fi
+  if ! grep -qE "^HOOKS=.*\\b$name\\b" "$mk"; then
+    note "mkinitcpio.conf: add $name after $after"
+    if (( ! dry )); then
+      cp -a "$mk" "$mk.bak-$(date +%Y%m%d%H%M%S)"
+      sed -i -E "/^HOOKS=/s/ $after\\b/ $after $name/" "$mk"
+      grep -E '^HOOKS=' "$mk"
+    fi
+    changed=1
+  else
+    note "mkinitcpio HOOKS already has $name"
+  fi
+}
+install_hook fido2-smart sd-encrypt
+install_hook windows-escape plymouth
+HINT="Hold the Windows key to boot Windows"
+
 # 3. Keyslot priority (and optional retune) ---------------------------------------------
 backup_header() {
   local dir=/root/luks-header-backup f
@@ -135,6 +168,16 @@ print(passw[0] if passw else "-", fido[0] if fido else "-")
 PY
 )"
   echo "  keyslots: passphrase=$pass_slot fido2=$fido_slot"
+  python3 - "$meta" <<'PY'
+import json, sys
+m = json.loads(sys.argv[1])
+for t in m.get("tokens", {}).values():
+    if t.get("type") != "systemd-fido2":
+        continue
+    pin = t.get("fido2-clientPin-required"); up = t.get("fido2-up-required"); uv = t.get("fido2-uv-required")
+    print(f"  fido2 token: PIN required={pin} touch required={up} user-verification={uv}")
+    print("  boot with the key plugged in: " + ("PIN prompt, then " if pin else "") + ("touch the key" if up else "unlocks without touch"))
+PY
   if [[ $pass_slot != - ]]; then
     prio=$(python3 -c "import json,sys;print(json.loads(sys.argv[1])['keyslots']['$pass_slot'].get('priority','normal'))" "$meta")
     if [[ $prio != prefer ]]; then
@@ -164,7 +207,7 @@ gen="$home/.local/bin/plymouth-dank-theme"
 build="$home/.cache/plymouth-dank-theme"
 if [[ -x $gen ]]; then
   note "generating $THEME from the current DMS palette + wallpaper"
-  run sudo -H -u "$user" "$gen" --out "$build"
+  run sudo -H -u "$user" "$gen" --out "$build" --hint "$HINT"
   if (( ! dry )); then
     rm -rf "/usr/share/plymouth/themes/$THEME"
     cp -r "$build" "/usr/share/plymouth/themes/$THEME"
@@ -191,7 +234,8 @@ if (( changed )); then
 fi
 
 echo
-echo "Done. Next boot: the passphrase prompt appears ~2 s after the initrd starts."
-echo "Plug the YubiKey in BEFORE powering on to unlock with it (touch when it blinks)."
+echo "Done. Next boot: no key plugged in -> passphrase prompt as soon as USB has enumerated (~2.5 s uptime);"
+echo "      key plugged in before power-on -> FIDO2 unlock (PIN/touch as enrolled), no passphrase."
+echo "Log line to look for: fido2-smart: ... (journalctl -b | grep fido2-smart)"
 echo "Check the timeline after a boot with:"
 echo "  journalctl -b -o short-monotonic | grep -E 'systemd-cryptsetup\\[|Cryptography Setup'"

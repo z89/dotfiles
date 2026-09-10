@@ -142,6 +142,24 @@ def render_background(out, pal):
     ])
 
 
+def render_hint(out, pal, text):
+    """Draw a small muted hint (e.g. "F12  boot Windows") near the bottom of background.png.
+    two-step draws prompts and messages on the same line under the dialog, so a hint that
+    must stay visible during the passphrase prompt has to live in the background image."""
+    bg = out / "background.png"
+    if not bg.exists() or not text:
+        return
+    img = cairo.ImageSurface.create_from_png(str(bg))
+    cr = cairo.Context(img)
+    cr.select_font_face(FONT, cairo.FONT_SLANT_NORMAL, cairo.FONT_WEIGHT_NORMAL)
+    cr.set_font_size(26)
+    xb, yb, w, h, _, _ = cr.text_extents(text)
+    cr.set_source_rgba(*rgb(pal["on_surface_variant"]), 0.85)
+    cr.move_to(img.get_width() / 2 - w / 2 - xb, img.get_height() - 72)
+    cr.show_text(text)
+    img.write_to_png(str(bg))
+
+
 def render_pill(out, pal):
     fill = rgb(pal["surface_container_high"])
     border = rgb(pal["outline_variant"])
@@ -358,6 +376,7 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--out", default=str(HOME / ".cache/plymouth-dank-theme"))
     ap.add_argument("--mode", choices=["dark", "light"])
+    ap.add_argument("--hint", default="", help="text drawn at the bottom of the background (e.g. the Windows escape key)")
     a = ap.parse_args()
     for tool in ("magick",):
         if not shutil.which(tool):
@@ -370,6 +389,7 @@ def main():
     with tempfile.TemporaryDirectory() as tmp:
         tmp = Path(tmp)
         render_background(out, pal)
+        render_hint(out, pal, a.hint)
         render_pill(out, pal)
         render_throbber(out, pal)
         render_watermark(out, pal, tmp)
