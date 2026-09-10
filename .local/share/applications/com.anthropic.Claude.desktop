@@ -3,13 +3,14 @@
 # that every Exec goes through ~/.local/bin/claude-focus-or-launch, so picking
 # Claude in the DMS launcher (Super + D) jumps to the open window or starts
 # Claude on the current workspace. XDG precedence makes this copy win over the
-# package's. Revert: delete this file.
+# package's. The full path is required: the DMS shell runs with a PATH that
+# lacks ~/.local/bin. Revert: delete this file.
 [Desktop Entry]
 Name=Claude
 Comment=Desktop application for Claude.ai
 GenericName=AI Assistant
 Keywords=AI;Chat;Assistant;Claude;Code;LLM;
-Exec=claude-focus-or-launch %U
+Exec=/home/archie/.local/bin/claude-focus-or-launch %U
 Icon=claude-desktop
 Type=Application
 StartupNotify=true
@@ -21,8 +22,8 @@ Actions=NewChat;NewCode;
 
 [Desktop Action NewChat]
 Name=New Chat
-Exec=claude-focus-or-launch "claude://claude.ai/new?surface=chat&source=desktop_action"
+Exec=/home/archie/.local/bin/claude-focus-or-launch "claude://claude.ai/new?surface=chat&source=desktop_action"
 
 [Desktop Action NewCode]
 Name=New Claude Code Session
-Exec=claude-focus-or-launch "claude://code/new?source=desktop_action"
+Exec=/home/archie/.local/bin/claude-focus-or-launch "claude://code/new?source=desktop_action"
