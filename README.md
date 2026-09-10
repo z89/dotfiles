@@ -25,6 +25,11 @@ Arch Linux, Hyprland (`~/.config/hypr/hyprland.lua`) and DankMaterialShell (DMS)
    `~/.config/gtk-{3,4}.0/settings.ini` the GTK fallback. On Wayland GTK reads dconf, so load the tracked keyfile once:
    `dconf load /org/gnome/desktop/interface/ < ~/.config/gsettings/interface.ini` (fonts, cursor and dark scheme;
    theme and icon names are left to `theme-apply`).
+7. **Claude Desktop on the current workspace**: `hyprland.lua` has no workspace rule for Claude, so it opens where you are.
+   `~/.local/share/applications/com.anthropic.Claude.desktop` overrides the package entry and runs
+   `~/.local/bin/claude-focus-or-launch`, which focuses the existing Claude window (Hyprland follows it to its workspace) or
+   starts Claude if none is open. Super + D goes through this automatically. Revert by deleting those two files and
+   restoring the `claude-workspace` rule noted in `hyprland.lua`.
 
 Generated files are deliberately untracked and are recreated on first start: `~/.config/hypr/dms/`, `~/.config/hypr/colors.*`,
 kitty `dank-tabs.conf` / `matugen-theme*.conf`, GTK `dank-colors.css` / `palette-colors.css`, and DMS `firefox.css`.

@@ -560,12 +560,13 @@ hl.window_rule({
     workspace = "7 silent",
 })
 
-hl.window_rule({
-    name  = "claude-workspace",
-    match = { class = "^(com\\.anthropic\\.[Cc]laude(-desktop)?|[Cc]laude)$" },
-
-    workspace = "6 silent",
-})
+-- Claude Desktop deliberately has NO workspace rule. It is launched on demand and
+-- should open on the active workspace; relaunching it while it is open jumps to
+-- its window instead (see ~/.local/bin/claude-focus-or-launch and the desktop
+-- entry override in ~/.local/share/applications/). To pin it again, restore:
+--   hl.window_rule({ name = "claude-workspace",
+--       match = { class = "^(com\\.anthropic\\.[Cc]laude(-desktop)?|[Cc]laude)$" },
+--       workspace = "6 silent" })
 
 -- Hyprland-run windowrule
 hl.window_rule({
