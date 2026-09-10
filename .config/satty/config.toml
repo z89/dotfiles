@@ -20,11 +20,6 @@ palette = [
     "#c1c2f9",
     "#ffb4ab",
     "#b9c6ea",
-    "#e1e7f2",
+    "#dce3ee",
     "#0d141b",
 ]
-first = "#99cbff"
-second = "#c1c2f9"
-third = "#ffb4ab"
-fourth = "#b9c6ea"
-fifth = "#e1e7f2"

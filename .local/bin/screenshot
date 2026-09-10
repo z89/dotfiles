@@ -37,11 +37,14 @@ if [[ "$mode" == edit ]]; then
 fi
 
 wl-copy --type image/png < "$file"
-notify-send -a screenshot -i "$file" -t 3500 "Copied to clipboard" "$(basename "$file")" \
+# No -t: notify-send keeps listening for a button press until DMS closes the
+# notification, so Edit/Open still work from the notification centre later.
+notify-send -a screenshot -i "$file" "Copied to clipboard" "$(basename "$file")" \
     --action=edit=Edit --action=open=Open 2>/dev/null | {
     read -r action || true
     case "$action" in
-        edit) satty --filename "$file" --output-filename "$file" --copy-command wl-copy --early-exit ;;
+        edit) satty --filename "$file" --output-filename "$file" --copy-command wl-copy --early-exit \
+                  || notify-send -a screenshot -u critical "Edit failed" "satty exited with status $?" ;;
         open) xdg-open "$file" ;;
     esac
 } &
