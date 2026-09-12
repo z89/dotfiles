@@ -22,7 +22,7 @@ sign-off and nothing starts them.
    `~/.local/bin/dms-run-patched`, which uses a patched copy of the DMS shell built by `~/.local/bin/dms-shell-patch`:
    a wider launcher centred between the bar and the screen edge, a wider Spotlight bar, a compact notification popup card
    (`patches/notification-popup-card.qml`), palette and wallpaper fades that land on the same frame, the volume percentage
-   at the head of the control-centre pill, a "Thu 10th Sept" bar date, and a lock-screen crossfade (Super + Alt + L fades the
+   at the head of the control-centre pill, a "Thu 10th Sept" bar date, a 1600px bottom-centred Notepad slideout, and a lock-screen crossfade (Super + Alt + L fades the
    lock screen in over the desktop and back out on unlock; `LOCK_FADE_IN`/`LOCK_FADE_OUT` set the durations, `LOCK_FADE=0`
    disables it). The patch rebuilds itself after a DMS upgrade. `~/.config/DankMaterialShell/README.md` has the full
    fresh-install sequence and the list of every file in the theme pipeline.

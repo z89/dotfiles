@@ -1,27 +1,193 @@
 #!/bin/sh
 # Switch to next/prev open workspace without wrapping.
-# Usage: workspace-switch +1 | workspace-switch -1
+# Usage: workspace-switch [--move] +1 | -1
+#   --move  carry the active window to the numerically next/prev workspace
+#           (1..10) with a visible flight, and follow it.
+#
+# Why --move is a three-phase animation
+# -------------------------------------
+# Hyprland has no per-window "travel to another workspace" animation. Its move
+# dispatcher reassigns the window first and then plays the ordinary workspace
+# slide, so the window is only ever drawn as part of the *incoming* workspace:
+# it cuts out where it was and rides in from the far edge. There is no config
+# option for the missing departure.
+#
+# A pinned window is the one case Hyprland draws differently: it is rendered at
+# its own position with no workspace render offset and no slide clipping, it is
+# drawn above everything else, and on a workspace change it is reassigned to the
+# workspace switched to. It is still the live surface, so video and animations
+# inside it keep playing. That makes it a usable carrier:
+#
+#   phase 1  pin the window, throw it toward the side the destination workspace
+#            is arriving from, and start the workspace switch on the same tick
+#   phase 2  send it back to its resting spot, so it lands just as the
+#            destination workspace settles underneath it
+#   phase 3  release the pin; the window is already on the destination, because
+#            Hyprland reassigned it during the switch, so nothing else moves
+#
+# Net effect: the window stays visible for the whole switch and visibly flies
+# across, instead of vanishing and reappearing.
+#
+# Tunables
+# --------
+CARRY_LEAD=0.30    # throw distance as a fraction of the screen width
+CARRY_MIN=0.12     # never throw less than this, even hard against a screen edge
+CARRY_TURN=0.18    # seconds before it is sent back to its resting spot. Later
+                   # than this and the turn is gentler, because the throw has
+                   # more of its speed spent by then.
+CARRY_UNPIN=0.70   # seconds after that before the pin is released. Long enough
+                   # for the workspace slide to reach zero, so unpinning cannot
+                   # snap the window by whatever offset was left.
+CARRY_DIR=1        # 1  = lead the switch, flying toward the arriving workspace
+                   # -1 = lag behind it, drifting out with the old workspace
 
+STATE="${XDG_RUNTIME_DIR:-/tmp}/workspace-switch-carry"
+
+move=0
+if [ "$1" = "--move" ]; then
+    move=1
+    shift
+fi
 dir="$1"
 current=$(hyprctl activeworkspace -j | jq '.id')
 workspaces=$(hyprctl workspaces -j | jq '[.[].id] | sort')
 
-if [ "$dir" = "+1" ]; then
+if [ "$move" = 1 ]; then
+    # Moving a window walks workspace numbers one at a time (1..10), so an
+    # empty workspace in between is a valid destination, not skipped.
+    if [ "$dir" = "+1" ]; then
+        target=$((current + 1))
+    else
+        target=$((current - 1))
+    fi
+    if [ "$target" -lt 1 ] || [ "$target" -gt 10 ]; then
+        target=""
+    fi
+elif [ "$dir" = "+1" ]; then
     target=$(echo "$workspaces" | jq --argjson c "$current" '[.[] | select(. > $c)] | first // empty')
 else
     target=$(echo "$workspaces" | jq --argjson c "$current" '[.[] | select(. < $c)] | last // empty')
 fi
 
-# The two config managers need opposite calls, and which one is live is fixed
-# at compositor startup:
-#   lua     -> `dispatch` evaluates its argument as Lua, so `dispatch workspace N`
-#              is a syntax error; `eval` is the working form.
-#   hyprlang-> `eval` is rejected ("only supported with the lua config manager");
-#              `dispatch workspace N` is the working form.
-# Try eval first and fall back, so this works either side of a .conf -> .lua
-# migration without needing to know which session it is.
-if [ -n "$target" ]; then
+[ -n "$target" ] || exit 0
+
+# hyprctl exits 0 even when the Lua raises, so judge it by the reply instead.
+lua() { [ "$(hyprctl eval "$1" 2>/dev/null | head -1)" = "ok" ]; }
+
+unpin() {
+    [ -n "$1" ] || return 0
+    lua "return hl.dispatch(hl.dsp.window.pin({ action = 'disable', window = 'address:$1' }))"
+}
+
+# Drop our own state file, never one a newer run has already claimed.
+clear_state() {
+    p=""
+    read -r p _ < "$STATE" 2>/dev/null
+    [ "$p" = "$$" ] && rm -f "$STATE"
+    return 0
+}
+
+# A carry still in flight from an earlier press: stop it and put that window
+# back to normal before starting a new one, so nothing is ever left pinned and
+# the old run cannot unpin the window this run is about to carry.
+release_previous() {
+    [ -f "$STATE" ] || return 0
+    old_pid=""
+    old_addr=""
+    read -r old_pid old_addr < "$STATE" 2>/dev/null
+    rm -f "$STATE"
+    if [ -n "$old_pid" ] && kill -0 "$old_pid" 2>/dev/null; then
+        kill "$old_pid" 2>/dev/null
+        i=0
+        while kill -0 "$old_pid" 2>/dev/null && [ "$i" -lt 25 ]; do
+            sleep 0.01
+            i=$((i + 1))
+        done
+        kill -0 "$old_pid" 2>/dev/null && kill -9 "$old_pid" 2>/dev/null
+    fi
+    unpin "$old_addr"
+}
+
+# ---------------------------------------------------------------- plain switch
+if [ "$move" != 1 ]; then
+    # `hyprctl dispatch` only takes Lua under the Lua config manager, and `eval`
+    # is rejected under hyprlang, so try eval first and fall back. That keeps
+    # this working either side of a .conf -> .lua migration.
     if [ "$(hyprctl eval "hl.dispatch(hl.dsp.focus({ workspace = $target }))" 2>/dev/null | head -1)" != "ok" ]; then
         hyprctl dispatch workspace "$target" >/dev/null
     fi
+    exit 0
 fi
+
+# ----------------------------------------------------------------- carry a win
+release_previous
+
+win=$(hyprctl activewindow -j 2>/dev/null)
+addr=$(printf '%s' "$win" | jq -r '.address // empty')
+[ -n "$addr" ] || exit 0
+
+# Pinning requires a floating, non-fullscreen window. Anything else gets the
+# stock move, which is still correct, just without the flight.
+eligible=$(printf '%s' "$win" | jq -r 'if (.floating == true and (.fullscreen // 0) == 0) then "yes" else "no" end')
+if [ "$eligible" != "yes" ]; then
+    if [ "$(hyprctl eval "hl.dispatch(hl.dsp.window.move({ workspace = $target, follow = true }))" 2>/dev/null | head -1)" != "ok" ]; then
+        hyprctl dispatch movetoworkspace "$target" >/dev/null
+    fi
+    exit 0
+fi
+
+mon_id=$(printf '%s' "$win" | jq -r '.monitor')
+geom=$(hyprctl monitors -j | jq -r --argjson i "$mon_id" --argjson w "$win" '
+    .[] | select(.id == $i)
+    | [ $w.at[0], $w.at[1], $w.size[0], .x, (.width / .scale) ]
+    | @tsv')
+[ -n "$geom" ] || exit 0
+
+# The destination workspace slides in from the right when its number is higher,
+# from the left when it is lower. CARRY_DIR = 1 throws the window that same way
+# (it leads the switch), -1 throws it the opposite way (it lags behind).
+if [ "$dir" = "+1" ]; then side=1; else side=-1; fi
+
+throw_x=$(printf '%s\n' "$geom" | awk -v side="$side" -v cdir="$CARRY_DIR" \
+    -v lead="$CARRY_LEAD" -v minf="$CARRY_MIN" '
+{
+    win_x = $1; win_w = $3; mon_x = $4; mon_w = $5;
+    s = side * cdir;
+    want = lead * mon_w;
+    floor = minf * mon_w;
+    # Room left before the window would leave the screen on that side.
+    avail = (s > 0) ? (mon_x + mon_w) - (win_x + win_w) : win_x - mon_x;
+    if (avail < 0) avail = 0;
+    d = (want < avail) ? want : avail;
+    if (d < floor) d = floor;
+    printf "%d", win_x + s * d;
+}')
+home_x=$(printf '%s\n' "$geom" | cut -f1)
+home_y=$(printf '%s\n' "$geom" | cut -f2)
+
+printf '%s %s\n' "$$" "$addr" > "$STATE"
+trap 'unpin "$addr"; clear_state' INT TERM
+
+# Phase 1: pin, throw, and start the workspace switch on the same tick.
+if ! lua "hl.dispatch(hl.dsp.window.pin({ action = 'enable', window = 'address:$addr' }))
+          hl.dispatch(hl.dsp.window.move({ x = $throw_x, y = $home_y, window = 'address:$addr' }))
+          return hl.dispatch(hl.dsp.focus({ workspace = $target }))"; then
+    unpin "$addr"
+    clear_state
+    exit 1
+fi
+
+# Phase 2: bring it back to its resting spot while the workspace is still
+# sliding, so the two settle together.
+sleep "$CARRY_TURN"
+lua "return hl.dispatch(hl.dsp.window.move({ x = $home_x, y = $home_y, window = 'address:$addr' }))"
+
+# Phase 3: the workspace slide is over, so the pin can go without a jump.
+sleep "$CARRY_UNPIN"
+unpin "$addr"
+
+# Unpinning re-runs the layout for the window, which can leave it a few pixels
+# off. Everything has settled by now, so this is either a no-op or an
+# imperceptible correction, and it stops the window walking over many moves.
+lua "return hl.dispatch(hl.dsp.window.move({ x = $home_x, y = $home_y, window = 'address:$addr' }))"
+clear_state

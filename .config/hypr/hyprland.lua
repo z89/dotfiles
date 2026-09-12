@@ -100,8 +100,7 @@ hl.on("hyprland.start", function()
     hl.exec_cmd("mullvad-vpn")
     hl.exec_cmd("sleep 3 && spotify --remote-debugging-port=9332")
     hl.exec_cmd("sleep 6 && discord")
-    hl.exec_cmd("sleep 9 && notion-app")
-    -- claude-desktop and chatgpt are launched on demand, not at boot.
+    -- notion-app, claude-desktop and chatgpt are launched on demand, not at boot.
 
     -- Anything ~/.config/hypr/local.lua wants started with the session.
     for _, cmd in ipairs(local_conf.autostart or {}) do
@@ -244,12 +243,23 @@ hl.curve("easy",  { type = "spring", mass = 1, stiffness = 238.1191, dampening =
 hl.curve("snappy",{ type = "spring", mass = 1, stiffness = 320, dampening = 30 })
 hl.curve("gentle",  { type = "spring", mass = 1, stiffness = 110, dampening = 20 })
 hl.curve("swift",   { type = "spring", mass = 1, stiffness = 400, dampening = 32 }) -- ~210 ms settle, half of gentle
+-- Slightly overdamped (zeta 1.02), so it cannot overshoot or ring no matter how
+-- much velocity it inherits. Hyprland keeps a spring's velocity when a goal
+-- changes mid-flight, and the old shell window carry (still the fallback in
+-- ~/.local/bin/workspace-switch) reversed direction mid-flight, which made an
+-- underdamped curve bounce into place at the end. Used by windowsMove below. The
+-- Lua carry in carry.lua drives positions itself and does not use this curve.
+hl.curve("settle",  { type = "spring", mass = 1, stiffness = 200, dampening = 29 })
 
 hl.animation({ leaf = "global",        enabled = true, speed = 10,   bezier = "default" })
 hl.animation({ leaf = "border",        enabled = true, speed = 5.39, bezier = "easeOutQuint" })
 hl.animation({ leaf = "windows",       enabled = true, speed = 4.79, spring = "snappy" })
 hl.animation({ leaf = "windowsIn",     enabled = true, speed = 4.1,  spring = "snappy",          style = "popin 87%" })
 hl.animation({ leaf = "windowsOut",    enabled = true, speed = 1.49, bezier = "linear",          style = "popin 87%" })
+-- Position moves only (carrying a window between workspaces, move-window binds).
+-- Inherited "snappy" from windows above, which overshoots on a mid-flight
+-- reversal; "settle" decelerates into place instead.
+hl.animation({ leaf = "windowsMove",   enabled = true, speed = 4,    spring = "settle" })
 hl.animation({ leaf = "fadeIn",        enabled = true, speed = 1.73, bezier = "almostLinear" })
 hl.animation({ leaf = "fadeOut",       enabled = true, speed = 1.46, bezier = "almostLinear" })
 hl.animation({ leaf = "fade",          enabled = true, speed = 3.03, bezier = "quick" })
@@ -294,8 +304,6 @@ hl.device({
 
 local mainMod = "SUPER" -- Sets "Windows" key as main modifier
 
--- Open HyprPanel dashboard on Super + Ctrl
-hl.bind(mainMod .. " + Control_L", hl.dsp.exec_cmd("dms ipc call control-center toggle"), { desc = "Control Centre" })
 hl.bind(mainMod .. " + N",         hl.dsp.exec_cmd("dms ipc call notifications toggle"), { desc = "Notification Centre" })
 hl.bind(mainMod .. " + SHIFT + V", hl.dsp.exec_cmd("dms ipc call clipboard toggle"),     { desc = "Clipboard History" })
 hl.bind(mainMod .. " + Escape",    hl.dsp.exec_cmd("dms ipc call powermenu toggle"),     { desc = "Power Menu" })
@@ -314,8 +322,8 @@ hl.bind(mainMod .. " + slash",          hl.dsp.exec_cmd("~/.local/bin/keybind-ch
 hl.bind(mainMod .. " + W",              hl.dsp.exec_cmd("dms ipc call dash open wallpaper"), { desc = "Wallpaper Picker" })
 hl.bind(mainMod .. " + SHIFT + W",      hl.dsp.exec_cmd("~/.local/bin/theme-switch --next"), { desc = "Next Wallpaper/Theme" })
 hl.bind(mainMod .. " + ALT + L",        hl.dsp.exec_cmd("dms ipc call lock lock"),          { desc = "Lock Screen" })
-hl.bind(mainMod .. " + SHIFT + period", hl.dsp.exec_cmd("playerctl -p spotify next"),       { desc = "Spotify Next" })
-hl.bind(mainMod .. " + SHIFT + comma",  hl.dsp.exec_cmd("playerctl -p spotify previous"),   { desc = "Spotify Previous" })
+hl.bind(mainMod .. " + CTRL + period", hl.dsp.exec_cmd("playerctl -p spotify next"),       { desc = "Spotify Next" })
+hl.bind(mainMod .. " + CTRL + comma",   hl.dsp.exec_cmd("playerctl -p spotify previous"),   { desc = "Spotify Previous" })
 hl.bind(mainMod .. " + SHIFT + S",      hl.dsp.exec_cmd("playerctl -p spotify play-pause"), { desc = "Spotify Play/Pause" })
 
 -- Cycle through windows and raise to top
@@ -327,7 +335,7 @@ end, { desc = "Cycle Windows" })
 hl.bind(mainMod .. " + P",         hl.dsp.window.pseudo(),                      { desc = "Pseudo (dwindle)" })
 hl.bind(mainMod .. " + SHIFT + P", hl.dsp.exec_cmd("hyprpicker -a -f hex"),     { desc = "Color Picker" })
 hl.bind(mainMod .. " + V",         hl.dsp.layout("togglesplit"),                { desc = "Toggle Split (dwindle)" })
-hl.bind(mainMod .. " + S",         hl.dsp.focus({ workspace = 8 }),             { desc = "Spotify Workspace" })
+hl.bind(mainMod .. " + S",         hl.dsp.focus({ workspace = 9 }),             { desc = "Spotify Workspace" })
 -- Was: hyprctl --batch "dispatch resizeactive exact …; dispatch centerwindow".
 -- `hyprctl dispatch` only accepts Lua expressions under a Lua config, so this
 -- is now native. resize({ exact = true }) is verified to set an absolute size.
@@ -354,10 +362,10 @@ hl.bind(mainMod .. " + SHIFT + L", hl.dsp.window.move({ direction = "right" }), 
 
 -- Switch workspaces with mainMod + [0-9]
 -- Move active window to a workspace with mainMod + SHIFT + [0-9]
+-- (the SHIFT variant is bound below, next to the other carry keys, so it can animate)
 for i = 1, 10 do
     local key = i % 10 -- 10 maps to key 0
-    hl.bind(mainMod .. " + " .. key,         hl.dsp.focus({ workspace = i }))
-    hl.bind(mainMod .. " + SHIFT + " .. key, hl.dsp.window.move({ workspace = i }))
+    hl.bind(mainMod .. " + " .. key, hl.dsp.focus({ workspace = i }))
 end
 
 -- Scroll through existing workspaces with mainMod + scroll (no wrap)
@@ -367,6 +375,48 @@ hl.bind(mainMod .. " + mouse_up",   hl.dsp.exec_cmd("~/.local/bin/workspace-swit
 -- Switch workspaces with mainMod + </> (no wrap)
 hl.bind(mainMod .. " + period", hl.dsp.exec_cmd("~/.local/bin/workspace-switch +1"), { desc = "Next Workspace" })
 hl.bind(mainMod .. " + comma",  hl.dsp.exec_cmd("~/.local/bin/workspace-switch -1"), { desc = "Previous Workspace" })
+-- Carry the active window to the numerically next/previous workspace with a visible
+-- flight: ~/.config/hypr/carry.lua pins the live window, drives it with its own spring
+-- physics from a 2 ms timer paced against /proc/uptime (the timer slows to 4-5 ms under
+-- the slide's redraw load), and lands it on the destination with a read-back position
+-- correction before its animations are re-enabled (tunables at the top of that file;
+-- flight log in $XDG_RUNTIME_DIR/carry.log). carry.lua itself is not watched: a change
+-- to it needs a config reload. Loaded with io + load rather than require, like the files above, and
+-- guarded so a broken module can never take the config down: if it fails to load the
+-- keys fall back to the shell carry in workspace-switch. Undo the whole rewrite with
+-- ~/.cache/carry-backup/carry-revert.
+local carry
+do
+    local f = io.open(os.getenv("HOME") .. "/.config/hypr/carry.lua", "r")
+    if f then
+        local chunk, err = load(f:read("*a"), "@carry.lua")
+        f:close()
+        if not chunk then
+            print("hyprland.lua: carry.lua failed to compile: " .. tostring(err))
+        else
+            local ok, m = pcall(chunk)
+            if ok and type(m) == "table" and type(m.press) == "function" then
+                local sok, serr = pcall(m.setup)
+                if sok then carry = m else print("hyprland.lua: carry.setup failed: " .. tostring(serr)) end
+            else
+                print("hyprland.lua: carry.lua failed to load: " .. tostring(m))
+            end
+        end
+    end
+end
+if carry then
+    hl.bind(mainMod .. " + SHIFT + period", function() carry.press(1) end,  { desc = "Move Window to Next Workspace" })
+    hl.bind(mainMod .. " + SHIFT + comma",  function() carry.press(-1) end, { desc = "Move Window to Previous Workspace" })
+    for i = 1, 10 do
+        hl.bind(mainMod .. " + SHIFT + " .. (i % 10), function() carry.press_to(i) end, { desc = "Move Window to Workspace " .. i })
+    end
+else
+    hl.bind(mainMod .. " + SHIFT + period", hl.dsp.exec_cmd("~/.local/bin/workspace-switch --move +1"), { desc = "Move Window to Next Workspace" })
+    hl.bind(mainMod .. " + SHIFT + comma",  hl.dsp.exec_cmd("~/.local/bin/workspace-switch --move -1"), { desc = "Move Window to Previous Workspace" })
+    for i = 1, 10 do
+        hl.bind(mainMod .. " + SHIFT + " .. (i % 10), hl.dsp.window.move({ workspace = i }))
+    end
+end
 
 -- Move/resize windows with mainMod + LMB/RMB and dragging
 hl.bind(mainMod .. " + mouse:272", hl.dsp.window.drag(),   { mouse = true })
@@ -474,7 +524,7 @@ hl.window_rule({
     name  = "mullvad-workspace",
     match = { class = "^(mullvad-vpn|Mullvad VPN)$" },
 
-    workspace = "5 silent",
+    workspace = "8 silent",
 })
 
 hl.window_rule({
@@ -543,22 +593,18 @@ hl.window_rule({
     name  = "spotify-workspace",
     match = { class = "^([Ss]potify)$" },
 
-    workspace = "8 silent",
+    workspace = "9 silent",
 })
 
 hl.window_rule({
     name  = "discord-workspace",
     match = { class = "^(discord)$" },
 
-    workspace = "9 silent",
+    workspace = "10 silent",
 })
 
-hl.window_rule({
-    name  = "notion-workspace",
-    match = { class = "^([Nn]otion|notion-app|notion-app-electron)$" },
-
-    workspace = "7 silent",
-})
+-- Notion has no workspace rule and is not autostarted; it opens on the active
+-- workspace when launched by hand.
 
 -- Claude Desktop deliberately has NO workspace rule. It is launched on demand and
 -- should open on the active workspace; relaunching it while it is open jumps to
