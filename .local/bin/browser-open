@@ -1,0 +1,58 @@
+#!/usr/bin/env bash
+# browser-open: open URLs in a Chromium window on the CURRENT workspace.
+#
+#   browser-open <url> [url...]
+#
+# Chromium is single-instance: `chromium URL` hands the URL to the running
+# process, which puts it in a new tab of the window it last saw focused. That
+# window is often on another workspace, so the link opens out of sight.
+#
+# Behaviour:
+#   * A normal Chromium window (class "chromium", not a crx_ web-app window)
+#     is on the active workspace: focus the most recently used one, then pass
+#     the URL in. Chromium's "last active window" is now that window, so the
+#     tab lands there.
+#   * None on the active workspace: `chromium --new-window URL`. New windows
+#     map on the active workspace (no workspace rule for chromium in
+#     hyprland.lua), and Hyprland focuses them.
+#
+# Wired in by ~/.local/share/applications/browser-open.desktop, the default
+# handler for x-scheme-handler/http and https in ~/.config/mimeapps.list.
+# Must be referenced by FULL PATH there: dms.service and xdg-desktop-portal run
+# with a PATH that lacks ~/.local/bin. Revert by pointing those two mimeapps
+# lines back at chromium.desktop.
+set -u
+
+BROWSER_BIN=${BROWSER_BIN:-/usr/bin/chromium}
+CLASS_RE='^([Cc]hromium|chromium-browser)$'
+
+if (( $# == 0 )) || [[ $1 == -h || $1 == --help ]]; then
+    sed -n '2,4p' "$0" >&2
+    exit 2
+fi
+
+# Outside Hyprland (tty, ssh, tests) just hand off.
+if [[ -z ${HYPRLAND_INSTANCE_SIGNATURE:-} ]] || ! command -v hyprctl >/dev/null; then
+    exec "$BROWSER_BIN" "$@"
+fi
+
+ws=$(hyprctl activeworkspace -j 2>/dev/null | jq -r '.id // empty')
+target=
+if [[ -n $ws ]]; then
+    target=$(hyprctl clients -j 2>/dev/null | jq -r --arg re "$CLASS_RE" --argjson ws "$ws" \
+        '[.[] | select(.mapped) | select(.workspace.id == $ws) | select(.class | test($re))]
+         | sort_by(.focusHistoryID) | .[0].address // empty')
+fi
+
+if [[ -n $target ]]; then
+    active=$(hyprctl activewindow -j 2>/dev/null | jq -r '.address // empty')
+    if [[ $active != "$target" ]]; then
+        hyprctl dispatch focuswindow "address:$target" >/dev/null 2>&1
+        # Let the keyboard-enter reach Chromium before the URL does, so its
+        # "last active window" bookkeeping has moved to the focused window.
+        sleep 0.15
+    fi
+    exec "$BROWSER_BIN" "$@"
+fi
+
+exec "$BROWSER_BIN" --new-window "$@"

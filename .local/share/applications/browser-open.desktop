@@ -1,0 +1,11 @@
+[Desktop Entry]
+Version=1.0
+Type=Application
+Name=Browser (current workspace)
+Comment=Open links in a Chromium window on the active Hyprland workspace
+Exec=/home/archie/.local/bin/browser-open %U
+Icon=chromium
+Terminal=false
+NoDisplay=true
+StartupNotify=false
+MimeType=x-scheme-handler/http;x-scheme-handler/https;
