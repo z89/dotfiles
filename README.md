@@ -3,6 +3,34 @@
 a collection of my dotfiles for my arch setup: Hyprland, DankMaterialShell (DMS), kitty, and the scripts that keep the
 whole desktop recoloured from the current wallpaper.
 
+## Highlights
+
+The custom-built parts of this setup, as opposed to configuration of things that already existed:
+
+- **Window carry animation** (`~/.config/hypr/carry.lua`). Hyprland has no animation for sending a window to another
+  workspace: the window simply disappears from one and reappears on the next. This adds one. `Super + Shift + period`
+  and `comma` move the active window to the next or previous workspace, `Super + Shift + 1` to `0` send it to a
+  specific one, and in both cases it now travels there. The module pins the live window so it floats above the
+  workspace slide, turns off its own animations so every position write lands instantly, and drives it from a 2 ms Lua
+  timer with two cascaded springs: the window leans away, the new workspace slides in underneath it, and it settles
+  back into the exact spot it started from. The timer is paced against `/proc/uptime`, because it slows to 4-5 ms
+  under the redraw load of a full-screen slide and a fixed step made the flight run at less than half speed. Unpinning
+  can leave the window a pixel off, so a short landing phase reads the position back and corrects it before animations
+  are switched on again. Pressing again mid-flight chains to the next workspace, but only once the arriving workspace
+  has covered the middle of the window; before that the press is ignored, so a key repeat cannot queue up a stack of
+  switches. It is plain Lua inside Hyprland's own config runtime, with no daemon, no patched compositor and no
+  external process. Tunables are at the top of the file, there is a mock-backend test harness for the physics and the
+  state machine, and if the module ever fails to load the keys fall back to the old shell carry.
+- **Wallpaper-driven theme pipeline**. Matugen templates plus `theme-apply` fade kitty, GTK, Spotify, Notion, Hyprland
+  borders and the portal onto a new palette on the same frame, in about 400 ms from clicking a wallpaper (section 6).
+- **Patched DMS shell**. `dms-shell-patch` rebuilds DankMaterialShell with a wider launcher, a compact notification
+  card, a lock-screen crossfade and synchronised palette fades, and re-applies itself after an upgrade (section 4).
+- **DMS plugins**: [auris](https://github.com/z89/auris) for AirPods and [ember](https://github.com/z89/ember) for the
+  night light, both in their own repos, plus the `persona` avatar widget which lives here (section 5).
+- **Desktop glue**: `focus-or-launch` jumps to an app's existing window instead of starting a second copy,
+  `browser-open` puts new links in a browser window on the workspace you are actually on, and `luks-boot-setup` makes
+  the disk unlock fast, touch-only and styled like the rest of the desktop (sections 8, 9 and 11).
+
 ## Rebuilding the desktop
 
 Arch Linux, Hyprland (`~/.config/hypr/hyprland.lua`) and DankMaterialShell (DMS) as the bar, launcher, lock screen and
@@ -55,7 +83,7 @@ sign-off and nothing starts them.
    `xdg-mime default chromium.desktop x-scheme-handler/http x-scheme-handler/https`.
 10. **Desktop helpers** in `~/.local/bin/`, bound in `hyprland.lua`: `screenshot` (grim + slurp + satty; Print copies an area,
     Shift + Print opens it for annotation, satty config in `~/.config/satty/`), `workspace-switch` (Super + comma / period,
-    plus Shift to move the window; no wrapping), `keybind-cheatsheet` (Super + slash, lists the bindings in rofi) and
+    no wrapping; its `--move` window carry is now only the fallback for `carry.lua` above), `keybind-cheatsheet` (Super + slash, lists the bindings in rofi) and
     `hyprsunset-auto` (night light via hyprsunset and sunwait, checked by its timer every 15 minutes).
 11. **Boot and login**: `sudo luks-boot-setup` makes the LUKS unlock fast and DMS-styled: a 2 s FIDO2 wait before the
     passphrase prompt, no root-device timeout while typing, the passphrase keyslot tried first, and the `dank-unlock`
