@@ -80,6 +80,7 @@
 !.local/bin/dms-shell-patch
 !.local/bin/dms-run-patched
 !.local/bin/agent-run
+!.local/bin/browser-open
 !.local/bin/hyprsunset-auto
 !.local/bin/hyprsunset-detect
 !.local/bin/theme-switch
@@ -105,6 +106,7 @@
 !.local/share/applications/com.obsproject.Studio.desktop
 !.local/share/applications/org.qbittorrent.qBittorrent.desktop
 !.local/share/applications/net.nokyan.Resources.desktop
+!.local/share/applications/browser-open.desktop
 !.local/share/nautilus-python/
 .local/share/nautilus-python/*
 !.local/share/nautilus-python/extensions/
