@@ -383,8 +383,8 @@ hl.bind(mainMod .. " + comma",  hl.dsp.exec_cmd("~/.local/bin/workspace-switch -
 -- flight log in $XDG_RUNTIME_DIR/carry.log). carry.lua itself is not watched: a change
 -- to it needs a config reload. Loaded with io + load rather than require, like the files above, and
 -- guarded so a broken module can never take the config down: if it fails to load the
--- keys fall back to the shell carry in workspace-switch. Undo the whole rewrite with
--- ~/.cache/carry-backup/carry-revert.
+-- keys fall back to the shell carry in workspace-switch. To undo the whole thing,
+-- revert the commit that added carry.lua: the keys go back to the stock dispatcher.
 local carry
 do
     local f = io.open(os.getenv("HOME") .. "/.config/hypr/carry.lua", "r")
