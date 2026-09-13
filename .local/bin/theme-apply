@@ -506,8 +506,10 @@ def step_fade():
         return
     if border_changes:
         # one push; Hyprland's "border" animation eases the change itself
-        _hypr_request("[[BATCH]]" + ";".join(
-            "keyword general:col.%s rgb(%s)" % (w, h[1:]) for w, h in border_changes.items()))
+        err = _hypr_config_eval({"general:col.%s" % w: "rgb(%s)" % h[1:]
+                                 for w, h in border_changes.items()})
+        if err:
+            log("fade", "border push rejected: %s" % err)
     socks = _kitty_sockets() if new else {}
     old = {pid: _kitty_live_colors(sk) for pid, sk in socks.items()}
     keys = {pid: sorted(k for k in new if k in o and o[k] != new[k]) for pid, o in old.items()}
@@ -981,8 +983,30 @@ def _hypr_colour_keywords(text):
     return out
 
 
+def _hypr_config_eval(keys):
+    """Set live options with `eval hl.config({...})`. The Lua config manager drops
+    `keyword` requests without an error, so colours pushed that way never landed.
+    keys maps "group:groupbar:col.active" style names to colour strings. Returns
+    None when Hyprland answers ok, else its reply."""
+    tree = {}
+    for name, value in keys.items():
+        *parents, leaf = re.split(r"[:.]", name)
+        node = tree
+        for p in parents:
+            node = node.setdefault(p, {})
+        node[leaf] = value
+
+    def lua(node):
+        return "{ " + ", ".join(
+            "%s = %s" % (k, lua(v) if isinstance(v, dict) else '"%s"' % v)
+            for k, v in sorted(node.items())) + " }"
+
+    reply = _hypr_request("eval hl.config(%s)" % lua(tree)).strip()
+    return None if reply == "ok" else (reply or "no reply")
+
+
 def step_hypr():
-    """Push the group colours DMS rendered into colors.lua as live keywords. No
+    """Push the group colours DMS rendered into colors.lua live through eval. No
     hyprctl reload: hyprland.lua reads the colour files without registering them
     for autoreload, and a reload re-creates the headless output and stalls the
     shell. general:col.* is left to the fade (borders.lua wins there)."""
@@ -1000,11 +1024,15 @@ def step_hypr():
         log("hypr", "would push %d group colour keyword(s)" % len(keys))
         return
     if keys:
-        _hypr_request("[[BATCH]]" + ";".join("keyword %s %s" % kv for kv in sorted(keys.items())))
+        err = _hypr_config_eval(keys)
+        if err:
+            # no stamp, so the next run retries
+            log("hypr", "group colour push rejected: %s" % err)
+            return
     os.makedirs(STATE_DIR, exist_ok=True)
     with open(HYPR_STAMP, "a"):
         os.utime(HYPR_STAMP, None)
-    log("hypr", "pushed %d group colour keyword(s), no reload" % len(keys))
+    log("hypr", "pushed %d group colour(s) via eval, no reload" % len(keys))
 
 
 # ----------------------------------------------------------------- f. portal
