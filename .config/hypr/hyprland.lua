@@ -419,6 +419,17 @@ else
 end
 
 -- Move/resize windows with mainMod + LMB/RMB and dragging
+-- Hand off before the native mouse bind records its drag origin. Keep the native
+-- dispatchers intact so Hyprland still handles release and ends the drag normally.
+if carry then
+    for _, button in ipairs({ 272, 273 }) do
+        hl.bind(mainMod .. " + mouse:" .. button, function() carry.manual_control(button, true) end,
+            { non_consuming = true })
+        -- Release Super first is valid too; always release the carry's mouse hold.
+        hl.bind("mouse:" .. button, function() carry.manual_control(button, false) end,
+            { release = true, ignore_mods = true, non_consuming = true })
+    end
+end
 hl.bind(mainMod .. " + mouse:272", hl.dsp.window.drag(),   { mouse = true })
 hl.bind(mainMod .. " + mouse:273", hl.dsp.window.resize(), { mouse = true })
 

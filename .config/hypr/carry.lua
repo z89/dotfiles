@@ -21,11 +21,25 @@ How it does it
   costlier to move) integrates the physics and writes one absolute, whole-pixel position
   per tick.
 
-  At the end of the flight the window is put back at its exact home position while
-  no_anim is still set (so the correction is instant and invisible), then unpinned, moved
-  home once more (unpinning re-runs the floating layout and can nudge it), and no_anim is
-  cleared. Home never moves: the window ends the switch where it began, only on a
-  different workspace.
+  Once both springs have settled, the window is unpinned. The workspace slide's remaining
+  displacement AND velocity must be subpixel: unpinning makes its render offset apply to
+  the window, even with no_anim set. The same callback restores the floating stack order.
+  A short landing phase then watches for delayed layout work before clearing no_anim.
+  Home never moves: the window ends where it began, only on a different workspace.
+
+Manual move/resize
+  Super + mouse press bindings call manual_control() before Hyprland starts its native
+  drag or resize. This stops the timer, releases the carry's pin and no_anim override,
+  and abandons the old home position. Neither the flight nor landing may write another
+  correction once the mouse takes over. Carry keys are ignored until both mouse buttons
+  are released; the next flight records the window's new position as home.
+
+Workspace navigation
+  Only carry.press()/press_to() changes the flight's destination. If ordinary navigation
+  drags the pinned window to another workspace, release the pin and move just that window
+  silently back to its destination. The same springs continue there, unpinned, while the
+  user browses elsewhere. A workspace event handles this before the next frame; the timer
+  and landing paths also check the destination in case an event was missed.
 
 Single-monitor assumption
   Pinning, unpinning and cross-workspace focus are all monitor-local in Hyprland. A
@@ -41,12 +55,19 @@ Single-monitor assumption
 
 Physics
   Two cascaded damped springs, in screen pixels, integrated with the closed-form spring
-  step used by hyprutils (exact for any dt, never unstable; there is no sub-millisecond
-  wall clock in this runtime, so the step is a fixed dt derived from the timer period).
+  step used by hyprutils, paced by the adaptive clock described below.
   A "handle" h chases a target offset T; the window offset o chases the handle. The
   cascade is what gives the soft start: the window cannot jerk, because the thing it
   follows starts at rest too. T is `side * A` for the first turn_ms of the switch and 0
-  afterwards, so the window leans out and is then pulled home.
+  afterwards, so the window leans out and is then pulled home with a tiny rebound.
+  Accepted switches close together in the same direction smoothly increase the throw
+  and reduce damping. Reversing brakes that boost smoothly while retaining velocity.
+  This response decays after the last press; position and velocity are never reset or
+  kicked, including on reversal. Ignored presses add no energy.
+  Isolated switches use a brief nudge based on window width, capped in logical pixels,
+  instead of borrowing the monitor-wide throw. Their critically damped return stays
+  close to home. This softening fades out with rapid input in either direction, so
+  braking on reversal keeps its established spring response.
 
 Tunables (M.config)
   throw          fraction of monitor width to lean, before edge clamping
@@ -59,11 +80,20 @@ Tunables (M.config)
   handle_omega   stiffness of the handle spring: higher starts the throw sharper
   window_omega   stiffness of the window spring following the handle
   window_zeta    damping ratio of that spring: 1 = no bounce, below 1 = soft bounce
+  single.throw/max_throw_px  fraction of window width and absolute cap for a quiet nudge
+  single.turn_ms/window_zeta  shorter outward pull and damping for its return
+  single.activity_full      input activity at which single-switch softening has faded
+  inertia.throw              monitor-relative room considered for rapid chains
+  inertia.window_throw/max_throw_px  window-relative cap on their outward pull
+  inertia.window_zeta        damping approached during the fastest chains
+  inertia.fast_ms/slow_ms    accepted press intervals for full/no extra energy
+  inertia.response_ms       smoothing time for the change in spring character
+  inertia.decay_ms          time constant for that extra energy to fade after input
   tick_ms        timer period; tick_ms_xwayland is used for XWayland windows
   tick_scale     time scaling for slow-motion inspection (1 = real time)
   settle_px/vel  how close to home and how slow the window must be to call it done
-  slide_done     how far through the workspace slide the switch must be to call it done
-  max_flight_ms  watchdog: a flight is force-ended after this long. Enforced twice, on
+  slide_settle_px maximum remaining workspace spring excursion in physical screen pixels
+  max_flight_ms  watchdog: force-end this long after the last accepted switch. Enforced on
                  integrated tick time and on a coarse os.time() wall clock, because a
                  coalesced or throttled timer makes tick time run slower than real time
                  and a window must never stay pinned because ticks stopped arriving.
@@ -78,8 +108,9 @@ Tunables (M.config)
   clock_prior_ticks  weight of the previous flight's period estimate, in ticks
   max_step_ms    largest single physics step, so a compositor stall cannot teleport
   land_stable_ticks  landing: consecutive ticks the window must read back at home
+  land_min_ticks     landing: minimum observation window before no_anim is cleared
   land_max_ticks     landing: give up (and clear no_anim anyway) after this many ticks
-  slide          the workspace slide spring being matched, for the chaining rule
+  slide          the workspace slide spring being matched, for chaining and pin release
   chain_rule     "middle" (see below) or a number 0..1 slide-progress threshold
   min_ws/max_ws  workspace range the keybinds may reach
 
@@ -98,15 +129,20 @@ Chaining rule
 local M = {}
 
 M.config = {
-  throw = 0.30, min_throw = 0.12, edge_margin = 8, lead = 1,
-  turn_ms = 130,
+  throw = 0.09, min_throw = 0.06, edge_margin = 8, lead = 1,
+  turn_ms = 110,
   handle_omega = 18,
-  window_omega = 14, window_zeta = 1.0,
+  window_omega = 12, window_zeta = 0.90,
+  single = { throw = 0.06, max_throw_px = 80, turn_ms = 100,
+             window_zeta = 1.0, activity_full = 0.35 },
+  inertia = { throw = 0.15, window_throw = 0.09, max_throw_px = 100,
+              window_zeta = 0.72, fast_ms = 200, slow_ms = 600,
+              response_ms = 90, decay_ms = 1200 },
   tick_ms = 2, tick_ms_xwayland = 4, tick_scale = 1.0,
-  settle_px = 0.5, settle_vel = 8, slide_done = 0.995,
+  settle_px = 0.5, settle_vel = 8, slide_settle_px = 0.25,
   max_flight_ms = 3000,
   clock = true, clock_gain = 0.03, clock_prior_ticks = 25, max_step_ms = 12,
-  land_stable_ticks = 3, land_max_ticks = 40,
+  land_stable_ticks = 3, land_min_ticks = 32, land_max_ticks = 96,
   slide = { mass = 1, stiffness = 110, damping = 20 },
   chain_rule = "middle",
   min_ws = 1, max_ws = 10,
@@ -169,6 +205,18 @@ local function slide_progress(t, slide)
 end
 
 M.physics = { spring_step = spring_step, slide_progress = slide_progress }
+
+-- Pinning bypasses the workspace render offset; local window coordinates do not
+-- include it. A percentage threshold leaves tens of pixels on a wide monitor. Spring
+-- energy bounds ALL remaining excursion, including rebound after the first crossing
+-- of zero: E = (v/omega)^2 + x^2 only decreases with nonnegative damping.
+local function slide_tail(t, slide)
+  local mass = math.max(slide.mass or 1, 0.0001)
+  local omega = sqrt(math.max(slide.stiffness or 1, 0.0001) / mass)
+  local zeta = math.max(slide.damping or 0, 0) / (2 * mass * omega)
+  local x, v = spring_step(1, 0, 0, omega, zeta, t)
+  return sqrt(x * x + (v / omega) ^ 2)
+end
 
 local function clamp(v, lo, hi) if v < lo then return lo elseif v > hi then return hi else return v end end
 local function round(v) return floor(v + 0.5) end
@@ -285,8 +333,9 @@ local function default_backend()
       active_window = function() return nil end,
       get_window = function() return nil end,
       workspace_monitor_id = function() return nil end,
-      pin = noop, set_no_anim = noop, move_to = noop,
-      focus_workspace = noop, move_window_to_workspace_follow = noop,
+      active_workspace_id = function() return nil end,
+      pin = noop, set_no_anim = noop, move_to = noop, raise_window = noop,
+      focus_workspace = noop, move_window_to_workspace_follow = noop, move_window_to_workspace = noop,
       timer = function() return { set_enabled = noop, is_enabled = function() return false end } end,
       on = noop, log = log,
     }
@@ -295,6 +344,11 @@ local function default_backend()
   return {
     active_window = function() return norm_window(hl.get_active_window()) end,
     get_window = function(addr) return norm_window(hl.get_window(sel(addr))) end,
+    active_workspace_id = function(monitor)
+      local ws = hl.get_active_workspace(monitor)
+      return ws and tonumber(ws.id)
+    end,
+    workspace_gap = function() return tonumber((hl.get_config("general:gaps_workspaces"))) or 0 end,
     -- nil means "no such workspace yet", which is fine: it will be created on the
     -- current monitor. A number that is not the window's monitor means the carry
     -- cannot work and the caller should fall back to the stock move.
@@ -314,9 +368,15 @@ local function default_backend()
     move_to = function(addr, x, y)
       hl.dispatch(hl.dsp.window.move({ x = x, y = y, window = sel(addr) }))
     end,
+    raise_window = function(addr)
+      hl.dispatch(hl.dsp.window.alter_zorder({ mode = "top", window = sel(addr) }))
+    end,
     focus_workspace = function(id) hl.dispatch(hl.dsp.focus({ workspace = id })) end,
     move_window_to_workspace_follow = function(id)
       hl.dispatch(hl.dsp.window.move({ workspace = id, follow = true }))
+    end,
+    move_window_to_workspace = function(addr, id)
+      hl.dispatch(hl.dsp.window.move({ window = sel(addr), workspace = id, follow = false }))
     end,
     timer = function(cb, ms) return hl.timer(cb, { timeout = ms, type = "repeat" }) end,
     clock_ms = read_uptime_ms,
@@ -337,6 +397,7 @@ local st = { phase = "idle" }
 -- flight: creating a timer per flight leaks one per keypress, and re-running the config
 -- would stack another set of handlers on every reload.
 local timer, subs = nil, {}
+local manual_buttons = {}
 
 -- Measured timer period per nominal period, carried from one flight to the next so the
 -- clock estimate starts close instead of from the nominal value every time.
@@ -363,11 +424,42 @@ local function drop_state()
   stop_timer()
 end
 
+-- Mouse control takes ownership before the native drag/resize dispatcher runs. Do not
+-- call finish()/land(): both can move the window back to its pre-flight home, and the
+-- landing bias mistakes deliberate mouse movement for a layout error. Stop all writes
+-- first, then release only the overrides still owned by this carry. Native mouse input
+-- chooses the position from here on, including any layout adjustment caused by unpin.
+function M.manual_control(button, pressed)
+  if button ~= 272 and button ~= 273 then return end
+  if not pressed then manual_buttons[button] = nil; return end
+  manual_buttons[button] = true
+  if st.phase == "idle" then return end
+
+  local be, addr = M.backend, st.addr
+  -- A mouse action elsewhere must not cancel a hidden carry. When its workspace is
+  -- visible, keep the original immediate handoff: native drag hit-tests the pointer,
+  -- which may be over the carried window before keyboard focus has caught up.
+  if be and be.active_workspace_id and st.mon then
+    local ok, viewed = pcall(be.active_workspace_id, st.mon.id)
+    if ok and viewed and viewed ~= st.dest then return end
+  end
+  local pinned_by_carry = st.phase == "flying"
+  reset_state()
+  stop_timer()
+  if not be then return end
+
+  local ok, w = pcall(be.get_window, addr)
+  if ok and not w then return end
+  if pinned_by_carry then pcall(be.pin, addr, false) end
+  pcall(be.set_no_anim, addr, false)
+  pcall(be.log, "carry: handed window to manual control")
+end
+
 -- Throw amplitude for `side`, clamped so the window can never stop intersecting its
 -- monitor. Room is measured from where the window is now (a chained press starts from a
 -- displaced window) and additionally capped so that home + lead * side * A is still on
 -- the monitor, which is the position actually written.
-local function throw_amp(side)
+local function throw_amp(side, fraction)
   local cfg, mon = M.config, st.mon
   if not mon then return 0 end
   local lead = math.max(abs(cfg.lead or 1), 1e-6)
@@ -381,7 +473,7 @@ local function throw_amp(side)
     room_home = st.home_x - mon.x - cfg.edge_margin
   end
   local avail = math.min(room_now, room_home) / lead
-  local a = clamp(cfg.throw * mon.width, 0, math.max(avail, 0))
+  local a = clamp((fraction or cfg.throw) * mon.width, 0, math.max(avail, 0))
   local floor_a = math.max(math.min(cfg.min_throw * mon.width, avail), 0)
   return math.max(a, floor_a)
 end
@@ -401,6 +493,32 @@ local function crossed(p)
   return (mon.x + mon.width * p) > mid
 end
 
+-- Keep workspace ownership separate from whichever workspace the user is viewing.
+-- Call after unpinning: Hyprland's unpin itself assigns the active workspace.
+local function restore_workspace(addr, dest)
+  local be = M.backend
+  local w = be.get_window(addr)
+  if w and w.workspace_id ~= dest then
+    be.move_window_to_workspace(addr, dest)
+    w = be.get_window(addr)
+    if w and w.workspace_id ~= dest then error("could not restore carry destination") end
+  end
+  return w
+end
+
+local function detach_from_navigation(w)
+  local be = M.backend
+  st.detached = true
+  if w.pinned then be.pin(st.addr, false) end
+  w = restore_workspace(st.addr, st.dest)
+  if w then
+    -- Unpin/move may re-fit the floating layout. Keep the current physical trajectory,
+    -- including its velocity, rather than jumping to the final home position.
+    be.move_to(st.addr, round(st.home_x + M.config.lead * st.o), round(st.home_y))
+  end
+  return w
+end
+
 -- End a flight now: timer off, window home, unpinned, no_anim cleared. Idempotent (the
 -- state is cleared first, so a re-entrant call sees idle) and never raises, including
 -- when the window has already gone.
@@ -410,17 +528,16 @@ end
 -- fullscreen (pinWindow returns an error in that state), and a single guarded sequence
 -- would then skip clearing no_anim and leave the window animation-less forever.
 --
--- Unpinning re-runs the floating layout for the window (assignToSpace, then a work-area
--- fit), and that can move it by a pixel after this function's exact-home write. Writing
--- home blind a second time did not cure it: the window still ended one pixel off and
--- visibly hopped there once no_anim was cleared. So finish() only puts the window down
--- and unpins it; the timer then runs a short "landing" phase that reads the position
--- back and corrects whatever the layout did, with no_anim still set so each correction
--- is instant and invisible. no_anim is cleared only once the window reads back at home.
+-- Normal completion waits for the workspace render offset to settle before unpinning.
+-- A space reassignment can also re-fit the floating layout, so repeat the home write
+-- in the same callback. The timer then watches through several compositor frames for
+-- delayed layout work before clearing no_anim.
 function M.finish(reason)
   if st.phase ~= "flying" then return end
   local be, addr = M.backend, st.addr
-  local home_x, home_y = st.home_x, st.home_y
+  local home_x, home_y, dest = st.home_x, st.home_y, st.dest
+  local mon = st.mon
+  local owned_pin = not st.detached
   if st.dt_nom and st.period_est and (st.ticks or 0) >= 20 then
     learned_period[st.dt_nom] = st.period_est
   end
@@ -438,10 +555,17 @@ function M.finish(reason)
   end
   -- exact home while no_anim is still set, so this lands as one instant correction
   pcall(be.move_to, addr, home_x, home_y)
-  pcall(be.pin, addr, false)
+  if owned_pin then pcall(be.pin, addr, false) end
+  pcall(restore_workspace, addr, dest)
+  -- Unpin/space assignment can synchronously re-fit a floating window. Correct it in
+  -- this same callback so no frame can observe the layout's intermediate position.
+  pcall(be.move_to, addr, home_x, home_y)
+  if owned_pin and be.raise_window then pcall(be.raise_window, addr) end
 
   st.phase = "landing"
   st.addr, st.home_x, st.home_y = addr, home_x, home_y
+  st.dest = dest
+  st.mon = mon
   st.land_ticks, st.land_stable = 0, 0
   st.land_bias_x, st.land_bias_y = 0, 0
   -- the timer is still armed from the flight; landing_body takes over on the next tick
@@ -453,12 +577,12 @@ end
 function M.land(reason)
   if st.phase ~= "landing" then return end
   local be, addr = M.backend, st.addr
-  local home_x, home_y = st.home_x, st.home_y
+  local home_x, home_y, dest = st.home_x, st.home_y, st.dest
   local bias_x, bias_y = st.land_bias_x, st.land_bias_y
   reset_state()
   stop_timer()
   if not be then return end
-  local ok, w = pcall(be.get_window, addr)
+  local ok, w = pcall(restore_workspace, addr, dest)
   if ok and w == nil then return end
   if ok and w and w.floating and (abs(w.x - home_x) >= 0.5 or abs(w.y - home_y) >= 0.5) then
     pcall(be.move_to, addr, home_x + bias_x, home_y + bias_y)
@@ -471,11 +595,12 @@ end
 -- home AND has held still since the previous tick means the compositor has applied our
 -- last write and still disagrees, so the residual is folded into a bias and written
 -- again. A reading that is still changing is left alone (the write is in transit). Once
--- the window reads back at home for land_stable_ticks in a row, no_anim is cleared.
+-- the window reads back at home for land_stable_ticks in a row, and the minimum
+-- observation window has elapsed, no_anim is cleared.
 local function landing_body()
   local cfg, be = M.config, M.backend
   st.land_ticks = st.land_ticks + 1
-  local w = be.get_window(st.addr)
+  local w = restore_workspace(st.addr, st.dest)
   if not w then return drop_state() end
 
   local dx, dy = w.x - st.home_x, w.y - st.home_y
@@ -491,7 +616,7 @@ local function landing_body()
   end
   st.land_lx, st.land_ly = w.x, w.y
 
-  if st.land_stable >= cfg.land_stable_ticks then
+  if st.land_stable >= cfg.land_stable_ticks and st.land_ticks >= cfg.land_min_ticks then
     be.set_no_anim(st.addr, false)
     reset_state()
     stop_timer()
@@ -501,29 +626,6 @@ local function landing_body()
     reset_state()
     stop_timer()
   end
-end
-
--- Whole-pixel position writes. The compositor lays windows out on the pixel grid, so
--- sub-pixel writes buy nothing, but naive rounding at a 2 ms tick injects a one pixel
--- beat (500 px/s of apparent velocity noise) that swamps the real per-tick velocity
--- change of about 130 px/s. The written step is therefore slew limited to one pixel of
--- change per tick: the physics never asks for more than about 0.35 px of step change per
--- tick, so the limiter only ever trims quantisation beats, and any pixel it holds back
--- is given back on the next tick. Deviation from the exact trajectory stays under a
--- pixel, and finish() writes the exact home position regardless.
-local function quantise(exact)
-  local want = round(exact)
-  if st.last_px then
-    local step = want - st.last_px
-    local prev = st.last_step or step
-    if step > prev + 1 then step = prev + 1 elseif step < prev - 1 then step = prev - 1 end
-    want = st.last_px + step
-    st.last_step = step
-  else
-    st.last_step = 0
-  end
-  st.last_px = want
-  return want
 end
 
 -- Advance integrated time by one step. With a clock, the step is the estimated real
@@ -536,6 +638,7 @@ local function advance_time()
   st.ticks = st.ticks + 1
   if st.real0 then
     local now = M.backend.clock_ms()
+    st.real_now = now
     if now then
       local real = now - st.real0
       local n = cfg.clock_prior_ticks
@@ -551,25 +654,68 @@ local function advance_time()
   st.t = st.t + st.dt
 end
 
+-- The native workspace animation runs on wall time, independently of our smoothed
+-- physics clock (and tick_scale). Timestamp AFTER dispatch so time spent switching
+-- cannot make us release early. /proc/uptime truncates to 10 ms; subtract one quantum
+-- from elapsed time to obtain a conservative lower bound.
+local function mark_slide_start()
+  st.slide_start_ms, st.slide_real0 = st.sim_ms, nil
+  if st.real0 then st.slide_real0 = M.backend.clock_ms() end
+end
+
+local function slide_settled()
+  local elapsed = (st.sim_ms - st.slide_start_ms) / 1000
+  if st.slide_real0 and st.real_now then
+    elapsed = math.max(0, st.real_now - st.slide_real0 - 10) / 1000
+  end
+  local span = (st.mon.width + st.workspace_gap) * st.mon.scale
+  return slide_tail(elapsed, M.config.slide) * span <= M.config.slide_settle_px
+end
+
 local function tick_body()
   local cfg, be = M.config, M.backend
   advance_time()
 
   local w = be.get_window(st.addr)
-  if not w or not w.floating or w.fullscreen ~= 0 or not w.pinned then
+  if w and w.workspace_id ~= st.dest then w = detach_from_navigation(w) end
+  if not w or not w.floating or w.fullscreen ~= 0 or (not w.pinned and not st.detached) then
     return M.finish("window changed")
   end
 
   local since = st.t - st.t_press
-  local turn = cfg.turn_ms / 1000
-  local target = (since < turn) and (st.side * st.A) or 0
+  local inertia = cfg.inertia
+  local decay = exp(-st.dt * 1000 / inertia.decay_ms)
+  local response = 1 - exp(-st.dt * 1000 / inertia.response_ms)
+  st.inertia_target = st.inertia_target * decay
+  st.inertia = st.inertia + (st.inertia_target - st.inertia) * response
+  st.activity_target = st.activity_target * decay
+  st.activity = st.activity + (st.activity_target - st.activity) * response
+  local amplitude = st.A + (st.A_fast - st.A) * st.inertia
+  local damping = cfg.window_zeta + (inertia.window_zeta - cfg.window_zeta) * st.inertia
+  -- Quiet an isolated switch without weakening an established rapid chain. Smoothstep
+  -- joins both ends without a change in slope; h/hv/o/ov continue through the blend.
+  local chain = clamp(st.activity / cfg.single.activity_full, 0, 1)
+  chain = chain * chain * (3 - 2 * chain)
+  -- Bound the initial nudge by the window itself, not an ultrawide monitor. Limit the
+  -- driving target before integration so both springs retain their natural motion.
+  local nudge = math.min(amplitude, st.w * cfg.single.throw, cfg.single.max_throw_px)
+  local rapid = math.min(amplitude, st.w * inertia.window_throw, inertia.max_throw_px)
+  amplitude = nudge + (rapid - nudge) * chain
+  local turn = (cfg.single.turn_ms + (cfg.turn_ms - cfg.single.turn_ms) * chain) / 1000
+  damping = damping + (cfg.single.window_zeta - cfg.window_zeta) * (1 - chain)
+  -- Suppress recoil close to an edge instead of clipping the trajectory mid-motion.
+  damping = 1 + (damping - 1) * st.rebound_blend
+  local target = (since < turn) and (st.side * amplitude) or 0
 
   st.h, st.hv = spring_step(st.h, st.hv, target, cfg.handle_omega, 1.0, st.dt)
-  st.o, st.ov = spring_step(st.o, st.ov, st.h, cfg.window_omega, cfg.window_zeta, st.dt)
-  be.move_to(st.addr, quantise(st.home_x + cfg.lead * st.o), round(st.home_y))
+  st.o, st.ov = spring_step(st.o, st.ov, st.h, cfg.window_omega, damping, st.dt)
+  -- Round the physical position independently. A fixed per-tick step limiter feeds
+  -- its own rounding error back into motion and can oscillate wildly at slower tick
+  -- rates. The springs provide continuity; this bounds pixel error to half a pixel.
+  be.move_to(st.addr, round(st.home_x + cfg.lead * st.o), round(st.home_y))
 
   if since > turn and abs(st.o) < cfg.settle_px and abs(st.ov) < cfg.settle_vel
-     and slide_progress(since, cfg.slide) >= cfg.slide_done then
+     and slide_settled() then
     return M.finish("settled")
   end
   if (st.t - st.t_start) * 1000 > cfg.max_flight_ms then
@@ -620,11 +766,18 @@ local function begin_flight(w, target, dir)
   st.addr = w.address
   st.home_x, st.home_y, st.w, st.win_h = w.x, w.y, w.w, w.h
   st.mon = w.monitor
+  st.workspace_gap = be.workspace_gap and math.max(0, be.workspace_gap()) or 0
   st.dest, st.side = target, dir
   st.t, st.t_press, st.t_start = 0, 0, 0
   st.t_wall = os.time()
   st.xwayland = w.xwayland
   st.A = throw_amp(dir)
+  st.A_fast = throw_amp(dir, cfg.inertia.throw)
+  st.inertia, st.inertia_target, st.last_press_ms = 0, 0, 0
+  st.activity, st.activity_target = 0, 0
+  local home_room = math.min(w.x - w.monitor.x, w.monitor.x + w.monitor.width - w.x - w.w) - cfg.edge_margin
+  -- Fade out rebound within 2% of the monitor edge; retain the same smooth throw.
+  st.rebound_blend = clamp(home_room / (0.02 * w.monitor.width), 0, 1)
   st.dt_nom, st.dt = ms, ms / 1000 * cfg.tick_scale
   st.ticks, st.sim_ms = 0, 0
   st.period_prior = learned_period[ms] or ms
@@ -642,6 +795,7 @@ local function begin_flight(w, target, dir)
   be.pin(st.addr, true)
   be.set_no_anim(st.addr, true)
   be.focus_workspace(target)
+  mark_slide_start()
   arm_timer(ms)
 end
 
@@ -672,6 +826,7 @@ end
 -- direction is derived from where the target sits relative to the workspace being
 -- left. A jump of several workspaces is one slide in Hyprland, so it is one flight here.
 local function go(dir, target)
+  if next(manual_buttons) then return end
   if not M.backend then M.setup() end
   local cfg, be = M.config, M.backend
 
@@ -690,11 +845,31 @@ local function go(dir, target)
     target = target or st.dest + dir
     if target == st.dest or target < cfg.min_ws or target > cfg.max_ws then return end
     dir = target > st.dest and 1 or -1
+    -- Use elapsed time, not press count: a slow sequence stays gentle. This only sets
+    -- a bounded target; tick_body smooths the response without changing any velocity.
+    local inertia = cfg.inertia
+    local gap_ms = st.sim_ms - st.last_press_ms
+    local cadence = clamp((inertia.slow_ms - gap_ms) / (inertia.slow_ms - inertia.fast_ms), 0, 1)
+    st.inertia_target = dir == st.side and math.max(st.inertia_target, cadence) or 0
+    -- A reversal brakes directional momentum, but still counts as rapid input when
+    -- choosing between the quiet single-switch and full-strength chain response.
+    st.activity_target = math.max(st.activity_target, cadence)
+    st.last_press_ms = st.sim_ms
+    -- Active input renews the watchdog: a long chain must not be snapped home just
+    -- because the first switch was three seconds ago. A stalled last switch is bounded.
+    st.t_start, st.t_wall = st.t, os.time()
     -- Keep h, hv, o, ov: the window bends into the new direction instead of restarting.
     st.dest, st.side = target, dir
     st.t_press = st.t
     st.A = throw_amp(dir)
+    st.A_fast = throw_amp(dir, cfg.inertia.throw)
+    if st.detached then
+      -- Only a new carry command may take ownership of workspace travel again.
+      be.pin(st.addr, true)
+      st.detached = false
+    end
     be.focus_workspace(target)
+    mark_slide_start()
     return
   end
 
@@ -743,6 +918,18 @@ end
 function M.setup(backend)
   M.backend = backend or default_backend()
   local be = M.backend
+
+  subs[#subs + 1] = be.on("workspace.active", function()
+    if st.phase ~= "flying" then return end
+    local ok, err = pcall(function()
+      local w = be.get_window(st.addr)
+      if not w then return drop_state() end
+      if w.workspace_id ~= st.dest then detach_from_navigation(w) end
+    end)
+    -- Keep the timer available to retry a failed event-time correction. Its normal
+    -- guarded cleanup and watchdog still apply; navigation never restarts the flight.
+    if not ok then pcall(be.log, "carry: workspace correction: " .. tostring(err)) end
+  end)
 
   -- The carried window vanished: drop everything without dispatching at a dead address.
   -- An unreadable payload must never be treated as "not ours" and must never end the

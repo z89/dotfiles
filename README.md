@@ -12,15 +12,19 @@ The custom-built parts of this setup, as opposed to configuration of things that
   and `comma` move the active window to the next or previous workspace, `Super + Shift + 1` to `0` send it to a
   specific one, and in both cases it now travels there. The module pins the live window so it floats above the
   workspace slide, turns off its own animations so every position write lands instantly, and drives it from a 2 ms Lua
-  timer with two cascaded springs: the window leans away, the new workspace slides in underneath it, and it settles
-  back into the exact spot it started from. The timer is paced against `/proc/uptime`, because it slows to 4-5 ms
-  under the redraw load of a full-screen slide and a fixed step made the flight run at less than half speed. Unpinning
-  can leave the window a pixel off, so a short landing phase reads the position back and corrects it before animations
-  are switched on again. Pressing again mid-flight chains to the next workspace, but only once the arriving workspace
+  timer with two cascaded springs: a single switch gives a small nudge, rapid chains build a little more momentum,
+  and the window settles back into the exact spot it started from. The timer is paced against `/proc/uptime`, because
+  it slows to 4-5 ms under the redraw load of a full-screen slide and a fixed step made the flight run at less than half
+  speed. The pin stays until the workspace spring's remaining excursion is subpixel, preventing its render offset
+  from snapping the window sideways on release. The floating stack order is restored in the same callback, and a
+  short landing phase checks the position before normal animations resume. Pressing again mid-flight chains to the
+  next workspace, but only once the arriving workspace
   has covered the middle of the window; before that the press is ignored, so a key repeat cannot queue up a stack of
-  switches. It is plain Lua inside Hyprland's own config runtime, with no daemon, no patched compositor and no
-  external process. Tunables are at the top of the file, there is a mock-backend test harness for the physics and the
-  state machine, and if the module ever fails to load the keys fall back to the old shell carry.
+  switches. Ordinary workspace navigation leaves the carried window on its destination; Super + drag or resize takes
+  control immediately. It is plain Lua inside Hyprland's own config runtime, with no daemon, no patched compositor
+  and no external process. Tunables are at the top of the file, [offline regression tests](.config/hypr/tests/README.md)
+  cover the physics, state machine and rendered landing, and if the module ever fails to load the keys fall back to
+  the old shell carry.
 - **Wallpaper-driven theme pipeline**. Matugen templates plus `theme-apply` fade kitty, GTK, Spotify, Notion, Hyprland
   borders and the portal onto a new palette on the same frame, in about 400 ms from clicking a wallpaper (section 6).
 - **Patched DMS shell**. `dms-shell-patch` rebuilds DankMaterialShell with a wider launcher, a compact notification
