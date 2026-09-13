@@ -1,6 +1,9 @@
 [Unit]
 Description=Reload running apps after a theme (matugen) regeneration
 # Triggered by theme-apply.path; no Install section on purpose.
+# No start limit: a burst of wallpaper switches (6 in 8s) hit the default 5/10s,
+# which failed theme-apply.path for good and froze the Hyprland borders.
+StartLimitIntervalSec=0
 
 [Service]
 Type=oneshot
