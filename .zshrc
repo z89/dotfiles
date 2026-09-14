@@ -99,3 +99,7 @@ export PATH="$PATH:$HOME/.local/bin"
 claude() { agent-run claude "$@"; }
 codex()  { agent-run codex  "$@"; }
 
+
+# >>> Codex installer >>>
+export PATH="/home/archie/.local/bin:$PATH"
+# <<< Codex installer <<<

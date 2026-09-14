@@ -7,6 +7,53 @@
   "showBatteryPercent": false,
   "controlCenterShowAudioPercent": true,
   "controlCenterShowMicPercent": true,
+  "controlCenterWidgets": [
+    {
+      "id": "volumeSlider",
+      "enabled": true,
+      "width": 50
+    },
+    {
+      "id": "brightnessSlider",
+      "enabled": true,
+      "width": 50
+    },
+    {
+      "id": "wifi",
+      "enabled": true,
+      "width": 25
+    },
+    {
+      "id": "audioInput",
+      "enabled": true,
+      "width": 25
+    },
+    {
+      "id": "nightMode",
+      "enabled": true,
+      "width": 25
+    },
+    {
+      "id": "darkMode",
+      "enabled": true,
+      "width": 25
+    },
+    {
+      "id": "bluetooth",
+      "enabled": true,
+      "width": 50
+    },
+    {
+      "id": "audioOutput",
+      "enabled": true,
+      "width": 50
+    },
+    {
+      "id": "builtin_tailscale",
+      "enabled": true,
+      "width": 100
+    }
+  ],
   "appIdSubstitutions": [],
   "greeterAutoLogin": true,
   "spotlightModalViewMode": "grid",
@@ -14,6 +61,7 @@
   "appDrawerSectionViewModes": {
     "apps": "list"
   },
+  "networkPreference": "wifi",
   "cursorSettings": {
     "theme": "System Default",
     "size": 24,
@@ -32,6 +80,7 @@
   },
   "fontFamily": "Inter",
   "monoFontFamily": "JetBrainsMono Nerd Font",
+  "notepadSlideoutSide": "bottom",
   "acMonitorTimeout": 1200,
   "acLockTimeout": 900,
   "batteryNotifyCritical": false,
@@ -74,6 +123,7 @@
           "id": "clock",
           "clockDateOrder": "dateFirst"
         },
+        "roam",
         "controlCenterButton",
         "notificationButton",
         "persona"
