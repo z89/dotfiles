@@ -5,7 +5,8 @@
 # Patches: launcher size, launcher centred between the bar edge and the opposite screen edge, Spotlight bar width,
 # lock-screen crossfade, compact notification popup card, synced palette/wallpaper fades,
 # volume percent at the head of the control centre pill, bar date as "Thu 10th Sept",
-# a polished keybind cheatsheet, and a bottom-centred Notepad slideout suitable for ultrawide displays.
+# a polished keybind cheatsheet, a bottom-centred Notepad slideout suitable for ultrawide displays,
+# and notification clicks that bring the sending kitty window forward (with ~/.config/hypr/notify-focus.lua).
 # Re-run after every dms upgrade; dms-run-patched does this automatically.
 set -euo pipefail
 
@@ -1181,6 +1182,88 @@ PY5
 }
 [[ "$NOTEPAD_BOTTOM" == 1 ]] && apply_notepad_bottom
 
+# ---- Notification click raises the sender (optional) ------------------------------
+# Claude Code posts notifications through kitty (OSC 99). Clicking one makes kitty ask
+# Hyprland to activate the OS window that printed it, but misc.focus_on_activate is off,
+# so Hyprland only marks that window urgent. Every place DMS invokes a notification
+# action (popup card, popup buttons, notification centre, keyboard navigation, Dank
+# Island) now goes through NotificationService.invokeAction, which reports the click
+# with `hyprctl eval` before invoking. ~/.config/hypr/notify-focus.lua pairs the report
+# with kitty's urgent event, switches to the window's workspace and raises it above the
+# other floating windows. Without that module the eval returns nil and clicks are stock.
+# Runs after the notification card block, whose popup it edits. Nothing is written
+# unless every anchor matches.
+NOTIFY_FOCUS=${NOTIFY_FOCUS:-1}             # 0 disables the block
+
+apply_notify_focus() {
+    if ! python3 - "$tmp" <<'PYNF'
+import os, sys
+tmp = sys.argv[1]
+
+svc_anchor = "    function dismissNotification(wrapper) {\n"
+svc_add = """    // dms-shell-patch: report a notification action click to Hyprland before invoking it,
+    // so ~/.config/hypr/notify-focus.lua can bring forward the window the sender activates.
+    function invokeAction(action, appName) {
+        try {
+            const app = String(appName ?? "").replace(/[^A-Za-z0-9._ -]/g, "");
+            Quickshell.execDetached(["hyprctl", "eval", `return notify_focus and notify_focus.clicked("${app}")`]);
+        } catch (e) {
+            console.warn("NotificationService: click report failed:", e);
+        }
+        action.invoke();
+    }
+
+"""
+
+# (file, old, new, expected count). Each replacement is one statement, so braceless ifs
+# at the call sites keep their meaning.
+sites = [
+    ("Services/NotificationService.qml", svc_anchor, svc_add + svc_anchor, 1),
+    ("Modules/Notifications/Popup/NotificationPopup.qml",
+     "notificationData.actions[0].invoke();",
+     "NotificationService.invokeAction(notificationData.actions[0], notificationData?.appName);", 2),
+    ("Modules/Notifications/Popup/NotificationPopup.qml",
+     "modelData.invoke();",
+     "NotificationService.invokeAction(modelData, notificationData?.appName);", 1),
+    ("Modules/Notifications/Center/NotificationCard.qml",
+     "modelData.invoke();",
+     "NotificationService.invokeAction(modelData, notificationGroup?.appName);", 2),
+    ("Modules/Notifications/Center/NotificationKeyboardController.qml",
+     "action.invoke();",
+     "NotificationService.invokeAction(action, group?.appName);", 1),
+    ("Modules/DankIsland/IslandNotificationSource.qml",
+     "actions[0].invoke();",
+     "NotificationService.invokeAction(actions[0], currentWrapper?.appName);", 1),
+]
+
+texts = {}
+for rel, old, new, count in sites:
+    p = os.path.join(tmp, rel)
+    s = texts.get(rel)
+    if s is None:
+        s = open(p).read()
+    got = s.count(old)
+    assert got == count, f"{rel}: {old!r} found {got}x, expected {count}"
+    texts[rel] = s.replace(old, new)
+
+svc = texts["Services/NotificationService.qml"]
+assert "\nimport Quickshell\n" in svc, "NotificationService.qml imports Quickshell"
+for rel, s in texts.items():
+    if rel != "Services/NotificationService.qml":
+        assert "\nimport qs.Services\n" in s, f"{rel} imports qs.Services"
+    assert ".invoke();" not in s.replace("        action.invoke();\n    }", ""), f"{rel}: unrouted invoke left"
+
+for rel, s in texts.items():
+    open(os.path.join(tmp, rel), "w").write(s)
+PYNF
+    then
+        echo "dms-shell-patch: notification click raise skipped: upstream QML anchors changed" >&2
+        NOTIFY_FOCUS=0
+        return
+    fi
+}
+[[ "$NOTIFY_FOCUS" == 1 ]] && apply_notify_focus
+
 # ---- Polished keybind cheatsheet (optional) --------------------------------------
 # Replace the stock cheatsheet content with the local DMS-themed card layout. Guard
 # the surrounding component contract so an incompatible upstream change falls back
@@ -1230,4 +1313,5 @@ pctmsg="leading volume percent"; [[ "$AUDIO_PCT_LEAD" == 1 ]] || pctmsg="stock v
 clkmsg="ordinal bar date"; [[ "$CLOCK_ORDINAL" == 1 ]] || clkmsg="stock bar date"
 notepadmsg="bottom Notepad ${NOTEPAD_BOTTOM_WIDTH}px wide"; [[ "$NOTEPAD_BOTTOM" == 1 ]] || notepadmsg="stock Notepad slideout"
 keybindmsg="polished keybind menu"; [[ "$KEYBIND_MENU" == 1 ]] || keybindmsg="stock keybind menu"
-echo "dms-shell-patch: built $OUT from $(cat "$OUT/VERSION") (launcher ${FULL_WIDTH}x${FULL_HEIGHT}, spotlight bar ${SPOT_WIDTH}px wide, $lockmsg, $notifmsg, $syncmsg, $pctmsg, $clkmsg, $keybindmsg, $notepadmsg)"
+nfmsg="notification click raises sender"; [[ "$NOTIFY_FOCUS" == 1 ]] || nfmsg="stock notification click"
+echo "dms-shell-patch: built $OUT from $(cat "$OUT/VERSION") (launcher ${FULL_WIDTH}x${FULL_HEIGHT}, spotlight bar ${SPOT_WIDTH}px wide, $lockmsg, $notifmsg, $syncmsg, $pctmsg, $clkmsg, $keybindmsg, $notepadmsg, $nfmsg)"

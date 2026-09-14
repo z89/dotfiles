@@ -22,3 +22,10 @@ single suite with `lua5.5 .config/hypr/tests/test_carry_render.lua`, for example
 The core suite optionally writes trajectory CSVs to the current directory when
 `DUMP=1`; leave it unset for an artifact-free run. Live visual testing is separate
 and requires desktop-control approval.
+
+## Notification focus
+
+`test_notify_focus.lua` covers `notify-focus.lua`, which pairs a DMS notification
+click (reported through `hyprctl eval`) with kitty's `window.urgent` event and
+brings that window forward. It runs with its own small mock and the same
+`run.sh`; set `NOTIFY_FOCUS=/absolute/path/to/notify-focus.lua` to test another copy.
