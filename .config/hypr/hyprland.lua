@@ -319,6 +319,9 @@ hl.bind(mainMod .. " + space",          hl.dsp.exec_cmd("dms ipc call notificati
 hl.bind(mainMod .. " + D",              hl.dsp.exec_cmd("dms ipc call spotlight toggle"),   { desc = "App Launcher" })
 hl.bind(mainMod .. " + SHIFT + R",      hl.dsp.exec_cmd('hyprctl reload && notify-send -u low -t 2000 "Hyprland" "Config reloaded"'), { desc = "Reload Config" })
 hl.bind(mainMod .. " + slash",          hl.dsp.exec_cmd("~/.local/bin/keybind-cheatsheet"), { desc = "Keybind Cheatsheet" })
+-- synopsis (mission control): bind, layer rule, render_unfocused rule
+local synopsis = load(io.open(os.getenv("HOME") .. "/.config/hypr/synopsis.lua"):read("a"))()
+synopsis.setup({ mod = mainMod })
 hl.bind(mainMod .. " + W",              hl.dsp.exec_cmd("dms ipc call dash open wallpaper"), { desc = "Wallpaper Picker" })
 hl.bind(mainMod .. " + SHIFT + W",      hl.dsp.exec_cmd("~/.local/bin/theme-switch --next"), { desc = "Next Wallpaper/Theme" })
 hl.bind(mainMod .. " + ALT + L",        hl.dsp.exec_cmd("dms ipc call lock lock"),          { desc = "Lock Screen" })
