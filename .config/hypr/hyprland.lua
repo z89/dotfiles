@@ -421,6 +421,31 @@ else
     end
 end
 
+-- Clicking a kitty notification (Claude Code posts through kitty) focuses the window that
+-- sent it, switching workspace when needed and raising it above the other floating windows.
+-- misc.focus_on_activate stays off, so kitty's activation request only marks the window
+-- urgent; the patched DMS reports the click with `hyprctl eval` and
+-- ~/.config/hypr/notify-focus.lua pairs the two. Loaded and guarded like carry.lua: a broken
+-- module leaves clicks stock, and a change to it needs a config reload.
+do
+    local f = io.open(os.getenv("HOME") .. "/.config/hypr/notify-focus.lua", "r")
+    if f then
+        local chunk, err = load(f:read("*a"), "@notify-focus.lua")
+        f:close()
+        if not chunk then
+            print("hyprland.lua: notify-focus.lua failed to compile: " .. tostring(err))
+        else
+            local ok, m = pcall(chunk)
+            if ok and type(m) == "table" and type(m.setup) == "function" then
+                local sok, serr = pcall(m.setup)
+                if not sok then print("hyprland.lua: notify-focus.setup failed: " .. tostring(serr)) end
+            else
+                print("hyprland.lua: notify-focus.lua failed to load: " .. tostring(m))
+            end
+        end
+    end
+end
+
 -- Move/resize windows with mainMod + LMB/RMB and dragging
 -- Hand off before the native mouse bind records its drag origin. Keep the native
 -- dispatchers intact so Hyprland still handles release and ends the drag normally.

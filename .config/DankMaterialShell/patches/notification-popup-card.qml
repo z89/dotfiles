@@ -352,8 +352,13 @@
 
                         MouseArea {
                             anchors.fill: parent
-                            cursorShape: (parent.hoveredLink || win.bodyClickInvokesAction || bodyText.hasMoreText || win.descriptionExpanded) ? Qt.PointingHandCursor : Qt.ArrowCursor
+                            readonly property bool hasAction: (notificationData?.actions?.length ?? 0) > 0
+                            cursorShape: (parent.hoveredLink || hasAction || bodyText.hasMoreText || win.descriptionExpanded) ? Qt.PointingHandCursor : Qt.ArrowCursor
 
+                            // This area covers the body text, so it swallows the click the card
+                            // area underneath would handle. Text that cannot expand acts like
+                            // the rest of the card: the default action runs (a kitty
+                            // notification focuses its window) and the card closes.
                             onClicked: mouse => {
                                 if (parent.hoveredLink || win.exiting)
                                     return;
@@ -361,8 +366,14 @@
                                     win.invokeDefaultAction();
                                     return;
                                 }
-                                if (bodyText.hasMoreText || win.descriptionExpanded)
+                                if (bodyText.hasMoreText || win.descriptionExpanded) {
                                     win.descriptionExpanded = !win.descriptionExpanded;
+                                    return;
+                                }
+                                if (hasAction)
+                                    win.invokeDefaultAction();
+                                else
+                                    dismissPopupReliably();
                             }
 
                             propagateComposedEvents: false
