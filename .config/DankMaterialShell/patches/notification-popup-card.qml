@@ -46,11 +46,18 @@
                 function onHoveredChanged() {
                     if (!notificationData || win.exiting || win._isDestroying)
                         return;
+                    // Pause/resume with the remaining time (wrapper helpers added by
+                    // dms-shell-patch's notification timing block); stock restarted from full.
                     if (cardHoverHandler.hovered) {
-                        if (notificationData.timer)
+                        if (notificationData.pauseTimer)
+                            notificationData.pauseTimer();
+                        else if (notificationData.timer)
                             notificationData.timer.stop();
                     } else if (!win.contextMenuActive && notificationData.popup && notificationData.timer) {
-                        notificationData.timer.restart();
+                        if (notificationData.resumeTimer)
+                            notificationData.resumeTimer();
+                        else
+                            notificationData.timer.restart();
                     }
                 }
             }
@@ -79,20 +86,35 @@
                     id: progressAnim
                     target: timeoutBar
                     property: "progress"
-                    from: 1
                     to: 0
-                    duration: (notificationData && notificationData.timer && notificationData.timer.interval > 0) ? notificationData.timer.interval : 5000
-                    running: timeoutBar.active && notificationData && notificationData.timer && notificationData.timer.running && !win.exiting
                     easing.type: Easing.Linear
                 }
+
+                // The bar mirrors the wrapper's dismiss timer exactly. Every time the timer
+                // starts, the bar picks up at the fraction still remaining (1 on a fresh
+                // start, less after a hover pause) and drains over the remaining interval;
+                // when the timer stops, the bar freezes where it is. Uses timerStartedAt and
+                // timerFullMs from the wrapper when present, otherwise behaves like stock.
+                function sync() {
+                    progressAnim.stop();
+                    const t = notificationData ? notificationData.timer : null;
+                    if (!t || !timeoutBar.active || !t.running || win.exiting)
+                        return;
+                    const full = (notificationData.timerFullMs > 0) ? notificationData.timerFullMs : t.interval;
+                    const startedAt = notificationData.timerStartedAt > 0 ? notificationData.timerStartedAt : Date.now();
+                    const remaining = Math.max(0, t.interval - Math.max(0, Date.now() - startedAt));
+                    timeoutBar.progress = full > 0 ? Math.min(1, remaining / full) : 1;
+                    progressAnim.from = timeoutBar.progress;
+                    progressAnim.duration = remaining;
+                    progressAnim.restart();
+                }
+                Component.onCompleted: sync()
+                onActiveChanged: sync()
 
                 Connections {
                     target: timeoutBar.active ? notificationData.timer : null
                     function onRunningChanged() {
-                        if (notificationData && notificationData.timer && notificationData.timer.running && !win.exiting) {
-                            timeoutBar.progress = 1;
-                            progressAnim.restart();
-                        }
+                        timeoutBar.sync();
                     }
                 }
             }
@@ -382,7 +404,7 @@
                 z: 20
 
                 Repeater {
-                    model: notificationData ? (notificationData.actions || []) : []
+                    model: win.buttonActions
 
                     Rectangle {
                         property bool isHovered: false
@@ -401,7 +423,7 @@
                         StyledText {
                             id: actionText
 
-                            text: modelData.text || "Open"
+                            text: (modelData.text || "").trim() || "Open"
                             color: Theme.primary
                             font.pixelSize: Theme.fontSizeSmall
                             font.weight: Font.Medium

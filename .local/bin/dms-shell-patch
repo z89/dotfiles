@@ -4,7 +4,8 @@
 # Output: ~/.local/share/dms-shell-patched (used via DMS_SHELL_DIR by dms-run-patched).
 # Patches: launcher size, launcher centred between the bar edge and the opposite screen edge, Spotlight bar width,
 # lock-screen crossfade, compact notification popup card, synced palette/wallpaper fades,
-# volume percent at the head of the control centre pill, bar date as "Thu 10th Sept".
+# volume percent at the head of the control centre pill, bar date as "Thu 10th Sept",
+# a polished keybind cheatsheet, and a bottom-centred Notepad slideout suitable for ultrawide displays.
 # Re-run after every dms upgrade; dms-run-patched does this automatically.
 set -euo pipefail
 
@@ -399,7 +400,10 @@ props = """    // dms-shell-patch: compact banner card geometry. Card body fragm
     readonly property real metaFontSize: Theme.fontSizeSmall
     readonly property real bodyLineRatio: 1.2
     readonly property int collapsedBodyLines: compactMode ? 1 : 2
-    readonly property bool hasActions: (notificationData?.actions?.length ?? 0) > 0
+    // Actions rendered as pills. The freedesktop "default" action is the click-on-card
+    // action, not a button (kitty sends it with a single-space label), so it is hidden.
+    readonly property var buttonActions: Array.prototype.filter.call(notificationData?.actions ?? [], a => a.identifier !== "default")
+    readonly property bool hasActions: buttonActions.length > 0
     readonly property string titleText: {
         const s = (notificationData?.summary ?? "").trim();
         return s.length > 0 ? s : (notificationData?.appName ?? "");
@@ -959,6 +963,249 @@ PY4
 }
 [[ "$CLOCK_ORDINAL" == 1 ]] && apply_clock_ordinal
 
+# ---- Bottom-centred Notepad slideout (optional) ----------------------------------
+# Stock DMS only supports left/right slideouts. Add a generic "bottom" orientation
+# to DankSlideout and expose it in the Notepad settings. The bottom panel is capped
+# at 1600px wide so its controls stay near the centre of an ultrawide display.
+NOTEPAD_BOTTOM=${NOTEPAD_BOTTOM:-1}
+NOTEPAD_BOTTOM_WIDTH=${NOTEPAD_BOTTOM_WIDTH:-1600}
+
+notepad_bottom_files=(Widgets/DankSlideout.qml Modules/Notepad/NotepadSettings.qml)
+notepad_bottom_skip() {
+    echo "dms-shell-patch: bottom Notepad skipped: $1" >&2
+    local f
+    for f in "${notepad_bottom_files[@]}"; do cp -a "$src/$f" "$tmp/$f"; done
+    NOTEPAD_BOTTOM=0
+}
+apply_notepad_bottom() {
+    if ! NOTEPAD_BOTTOM_WIDTH="$NOTEPAD_BOTTOM_WIDTH" python3 - "$tmp" <<'PY5'
+import os, sys
+
+tmp = sys.argv[1]
+bottom_width = int(os.environ["NOTEPAD_BOTTOM_WIDTH"])
+
+def edit(rel, old, new):
+    path = os.path.join(tmp, rel)
+    text = open(path).read()
+    assert text.count(old) == 1, f"{rel}: expected one patch anchor"
+    open(path, "w").write(text.replace(old, new))
+
+slideout = "Widgets/DankSlideout.qml"
+edit(slideout,
+'''    property real expandedWidthValue: 960
+    property real edgeGap: 0
+    property string slideEdge: "right"
+    readonly property bool slideFromLeft: slideEdge === "left"
+    readonly property real surfaceOriginX: slideFromLeft ? 0 : Math.max(0, (modelData?.width ?? width) - width)
+''',
+f'''    property real expandedWidthValue: 960
+    property real bottomPanelWidth: {bottom_width}
+    property real edgeGap: 0
+    property string slideEdge: "right"
+    readonly property bool slideFromLeft: slideEdge === "left"
+    readonly property bool slideFromBottom: slideEdge === "bottom"
+    readonly property real surfaceOriginX: slideFromBottom ? 0 : (slideFromLeft ? 0 : Math.max(0, (modelData?.width ?? width) - width))
+    readonly property real surfaceOriginY: slideFromBottom ? Math.max(0, (modelData?.height ?? height) - height) : 0
+''')
+edit(slideout,
+'''        const globalX = surfaceOriginX + topLeft.x;
+        return gx >= globalX - padding && gx < globalX + slideContainer.width + padding && gy >= topLeft.y - padding && gy < topLeft.y + slideContainer.height + padding;
+''',
+'''        const globalX = surfaceOriginX + topLeft.x;
+        const globalY = surfaceOriginY + topLeft.y;
+        return gx >= globalX - padding && gx < globalX + slideContainer.width + padding && gy >= globalY - padding && gy < globalY + slideContainer.height + padding;
+''')
+edit(slideout,
+'''    anchors.top: true
+    anchors.bottom: true
+    anchors.right: !root.slideFromLeft
+    anchors.left: root.slideFromLeft
+
+    implicitWidth: expandable ? expandedWidthValue : slideoutWidth
+    implicitHeight: modelData ? modelData.height : 800
+''',
+'''    anchors.top: !root.slideFromBottom
+    anchors.bottom: true
+    anchors.right: root.slideFromBottom || !root.slideFromLeft
+    anchors.left: root.slideFromBottom || root.slideFromLeft
+
+    implicitWidth: root.slideFromBottom ? (modelData ? modelData.width : root.bottomPanelWidth) : (expandable && expandedWidth ? expandedWidthValue : slideoutWidth)
+    implicitHeight: root.slideFromBottom ? (expandable && expandedWidth ? expandedWidthValue : slideoutWidth) : (modelData ? modelData.height : 800)
+''')
+edit(slideout,
+'''        onHoverMoved: (sceneX, sceneY) => PopoutManager.updateHoverCursor(root.surfaceOriginX + sceneX, sceneY)
+''',
+'''        onHoverMoved: (sceneX, sceneY) => PopoutManager.updateHoverCursor(root.surfaceOriginX + sceneX, root.surfaceOriginY + sceneY)
+''')
+edit(slideout,
+'''    readonly property real alignedWidth: Theme.px(expandable && expandedWidth ? expandedWidthValue : slideoutWidth, dpr)
+    onAlignedWidthChanged: widthSpring.retarget(alignedWidth)
+    readonly property real alignedHeight: Theme.px(modelData ? modelData.height : 800, dpr)
+    readonly property real alignedEdgeGap: Theme.px(edgeGap, dpr)
+    readonly property real slideoutSlideSnapX: Theme.snap(slideContainer.slideOffset, dpr)
+
+    mask: Region {
+        item: Rectangle {
+            x: root.slideFromLeft ? root.alignedEdgeGap : (root.width - slideContainer.width - root.alignedEdgeGap)
+            y: root.alignedEdgeGap
+            width: slideContainer.width
+            height: root.height - root.alignedEdgeGap * 2
+        }
+    }
+''',
+'''    readonly property real alignedPanelSize: Theme.px(expandable && expandedWidth ? expandedWidthValue : slideoutWidth, dpr)
+    onAlignedPanelSizeChanged: sizeSpring.retarget(alignedPanelSize)
+    readonly property real alignedWidth: Theme.px(modelData ? modelData.width : bottomPanelWidth, dpr)
+    readonly property real alignedHeight: Theme.px(modelData ? modelData.height : 800, dpr)
+    readonly property real alignedBottomPanelWidth: Theme.px(bottomPanelWidth, dpr)
+    readonly property real alignedEdgeGap: Theme.px(edgeGap, dpr)
+    readonly property real slideoutSlideSnap: Theme.snap(slideContainer.slideOffset, dpr)
+
+    mask: Region {
+        item: Rectangle {
+            x: root.slideFromBottom ? (root.width - slideContainer.width) / 2 : (root.slideFromLeft ? root.alignedEdgeGap : (root.width - slideContainer.width - root.alignedEdgeGap))
+            y: root.slideFromBottom ? (root.height - slideContainer.height - root.alignedEdgeGap) : root.alignedEdgeGap
+            width: slideContainer.width
+            height: slideContainer.height
+        }
+    }
+''')
+edit(slideout,
+'''        anchors.top: parent.top
+        anchors.bottom: parent.bottom
+        anchors.right: root.slideFromLeft ? undefined : parent.right
+        anchors.left: root.slideFromLeft ? parent.left : undefined
+        anchors.topMargin: root.alignedEdgeGap
+        anchors.bottomMargin: root.alignedEdgeGap
+        anchors.rightMargin: root.alignedEdgeGap
+        anchors.leftMargin: root.alignedEdgeGap
+''',
+'''        anchors.top: root.slideFromBottom ? undefined : parent.top
+        anchors.bottom: parent.bottom
+        anchors.right: root.slideFromBottom || root.slideFromLeft ? undefined : parent.right
+        anchors.left: root.slideFromBottom || !root.slideFromLeft ? undefined : parent.left
+        anchors.horizontalCenter: root.slideFromBottom ? parent.horizontalCenter : undefined
+        anchors.topMargin: root.slideFromBottom ? 0 : root.alignedEdgeGap
+        anchors.bottomMargin: root.alignedEdgeGap
+        anchors.rightMargin: root.slideFromBottom ? 0 : root.alignedEdgeGap
+        anchors.leftMargin: root.slideFromBottom ? 0 : root.alignedEdgeGap
+''')
+edit(slideout,
+'''            value: root.slideFromLeft ? -root.alignedWidth : root.alignedWidth
+
+            Component.onCompleted: snapTo(root.slideFromLeft ? -root.alignedWidth : root.alignedWidth)
+''',
+'''            value: root.slideFromBottom ? root.alignedPanelSize : (root.slideFromLeft ? -root.alignedPanelSize : root.alignedPanelSize)
+
+            Component.onCompleted: snapTo(root.slideFromBottom ? root.alignedPanelSize : (root.slideFromLeft ? -root.alignedPanelSize : root.alignedPanelSize))
+''')
+edit(slideout,
+'''        SpringMotion {
+            id: widthSpring
+''',
+'''        SpringMotion {
+            id: sizeSpring
+''')
+edit(slideout,
+'''            value: root.alignedWidth
+
+            Component.onCompleted: snapTo(root.alignedWidth)
+''',
+'''            value: root.alignedPanelSize
+
+            Component.onCompleted: snapTo(root.alignedPanelSize)
+''')
+edit(slideout,
+'''        width: widthSpring.value
+        height: root.alignedHeight - root.alignedEdgeGap * 2
+''',
+'''        width: root.slideFromBottom ? Math.min(root.alignedBottomPanelWidth, root.alignedWidth - root.alignedEdgeGap * 2) : sizeSpring.value
+        height: root.slideFromBottom ? sizeSpring.value : root.alignedHeight - root.alignedEdgeGap * 2
+''')
+edit(slideout,
+'''                const target = root.isVisible ? 0 : (root.slideFromLeft ? -slideContainer.width : slideContainer.width);
+''',
+'''                const target = root.isVisible ? 0 : (root.slideFromBottom ? slideContainer.height : (root.slideFromLeft ? -slideContainer.width : slideContainer.width));
+''')
+edit(slideout,
+'''            anchors.top: parent.top
+            anchors.bottom: parent.bottom
+            width: parent.width
+            x: root.slideoutSlideSnapX
+''',
+'''            anchors.top: root.slideFromBottom ? undefined : parent.top
+            anchors.bottom: root.slideFromBottom ? undefined : parent.bottom
+            width: parent.width
+            height: parent.height
+            x: root.slideFromBottom ? 0 : root.slideoutSlideSnap
+            y: root.slideFromBottom ? root.slideoutSlideSnap : 0
+''')
+edit(slideout,
+'''                                angle: 90
+''',
+'''                                angle: root.slideFromBottom ? 0 : 90
+''')
+edit(slideout,
+'''        blurX: root.slideoutBlurActive ? slideContainer.x + root.slideoutSlideSnapX : 0
+        blurY: root.slideoutBlurActive ? slideContainer.y : 0
+''',
+'''        blurX: root.slideoutBlurActive ? slideContainer.x + (root.slideFromBottom ? 0 : root.slideoutSlideSnap) : 0
+        blurY: root.slideoutBlurActive ? slideContainer.y + (root.slideFromBottom ? root.slideoutSlideSnap : 0) : 0
+''')
+
+settings = "Modules/Notepad/NotepadSettings.qml"
+edit(settings,
+'''                                model: [I18n.tr("Right"), I18n.tr("Left")]
+                                size: "small"
+                                currentIndex: SettingsData.notepadSlideoutSide === "left" ? 1 : 0
+                                onSelectionChanged: (index, selected) => {
+                                    if (!selected)
+                                        return;
+                                    SettingsData.notepadSlideoutSide = index === 1 ? "left" : "right";
+                                }
+''',
+'''                                model: [I18n.tr("Bottom"), I18n.tr("Right"), I18n.tr("Left")]
+                                size: "small"
+                                currentIndex: SettingsData.notepadSlideoutSide === "left" ? 2 : (SettingsData.notepadSlideoutSide === "right" ? 1 : 0)
+                                onSelectionChanged: (index, selected) => {
+                                    if (!selected)
+                                        return;
+                                    SettingsData.notepadSlideoutSide = index === 2 ? "left" : (index === 1 ? "right" : "bottom");
+                                }
+''')
+PY5
+    then
+        notepad_bottom_skip "upstream QML anchors changed"
+        return
+    fi
+}
+[[ "$NOTEPAD_BOTTOM" == 1 ]] && apply_notepad_bottom
+
+# ---- Polished keybind cheatsheet (optional) --------------------------------------
+# Replace the stock cheatsheet content with the local DMS-themed card layout. Guard
+# the surrounding component contract so an incompatible upstream change falls back
+# to the stock view instead of installing a broken modal.
+KEYBIND_MENU=${KEYBIND_MENU:-1}
+KEYBIND_TEMPLATE=${DMS_KEYBIND_TEMPLATE:-$HOME/.config/DankMaterialShell/patches/keybinds-content.qml}
+apply_keybind_menu() {
+    local target=$tmp/Modals/KeybindsContent.qml
+    if [[ ! -f "$KEYBIND_TEMPLATE" ]]; then
+        echo "dms-shell-patch: polished keybind menu skipped: template missing" >&2
+        KEYBIND_MENU=0
+        return
+    fi
+    if ! grep -qF 'property alias searchField: searchField' "$target" \
+        || ! grep -qF 'signal closeRequested' "$target" \
+        || ! grep -qF 'signal floatingToggleRequested' "$target" \
+        || ! grep -qF 'KeybindsService.cheatsheet.binds' "$target"; then
+        echo "dms-shell-patch: polished keybind menu skipped: upstream component contract changed" >&2
+        KEYBIND_MENU=0
+        return
+    fi
+    cp -a "$KEYBIND_TEMPLATE" "$target"
+}
+[[ "$KEYBIND_MENU" == 1 ]] && apply_keybind_menu
+
 echo "$BIN_SHA" > "$tmp/.dms-binary-sha256"
 # Swap by rename, never delete in place: a running Quickshell watches the loaded
 # files and hot-reloads on change; deleting them under it aborts the shell (seen
@@ -981,4 +1228,6 @@ notifmsg="compact notification card"; [[ "$NOTIF_CARD_PATCH" == 1 ]] || notifmsg
 syncmsg="theme sync ${THEME_FADE_MS}ms"; [[ "$THEME_SYNC" == 1 ]] || syncmsg="theme sync off"
 pctmsg="leading volume percent"; [[ "$AUDIO_PCT_LEAD" == 1 ]] || pctmsg="stock volume percent"
 clkmsg="ordinal bar date"; [[ "$CLOCK_ORDINAL" == 1 ]] || clkmsg="stock bar date"
-echo "dms-shell-patch: built $OUT from $(cat "$OUT/VERSION") (launcher ${FULL_WIDTH}x${FULL_HEIGHT}, spotlight bar ${SPOT_WIDTH}px wide, $lockmsg, $notifmsg, $syncmsg, $pctmsg, $clkmsg)"
+notepadmsg="bottom Notepad ${NOTEPAD_BOTTOM_WIDTH}px wide"; [[ "$NOTEPAD_BOTTOM" == 1 ]] || notepadmsg="stock Notepad slideout"
+keybindmsg="polished keybind menu"; [[ "$KEYBIND_MENU" == 1 ]] || keybindmsg="stock keybind menu"
+echo "dms-shell-patch: built $OUT from $(cat "$OUT/VERSION") (launcher ${FULL_WIDTH}x${FULL_HEIGHT}, spotlight bar ${SPOT_WIDTH}px wide, $lockmsg, $notifmsg, $syncmsg, $pctmsg, $clkmsg, $keybindmsg, $notepadmsg)"

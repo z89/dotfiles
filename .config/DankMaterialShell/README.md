@@ -10,7 +10,7 @@ tree, icon overlays) is rebuilt from the tracked files below; nothing under `~/.
 
 | Area | Files |
 |---|---|
-| DMS config | `settings.json`, `plugin_settings.json`, `plugins/persona/`, `patches/notification-popup-card.qml` |
+| DMS config | `settings.json`, `plugin_settings.json`, `plugins/persona/`, `patches/notification-popup-card.qml`, `patches/keybinds-content.qml` |
 | Patched shell | `~/.local/bin/dms-shell-patch` (builder), `~/.local/bin/dms-run-patched` (ExecStart wrapper), `~/.local/bin/dms-shim/gsettings` |
 | Theme pipeline | `~/.local/bin/theme-apply`, `~/.local/bin/palette-gen`, `~/.local/bin/theme-switch`, `~/.local/bin/papirus-dank-build`, `~/.local/bin/app-relaunch` |
 | matugen | `~/.config/matugen/config.toml` and `templates/` (gtk, hypr colours and borders, satty, kitty and friends) |
