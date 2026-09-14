@@ -161,3 +161,9 @@ __pycache__/
 !.local/bin/airpods-mic
 !.local/bin/dotfiles-sync
 !/system/
+
+# Shared desktop guard code; approval records stay in the runtime directory.
+!.local/lib/
+.local/lib/*
+!.local/lib/desktop-guard/
+!.local/bin/desktop-guard
