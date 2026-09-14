@@ -13,5 +13,10 @@
   "persona": {
     "enabled": true,
     "themedBackdrop": false
+  },
+  "roam": {
+    "enabled": true,
+    "cliCommand": "/home/archie/.local/bin/roam",
+    "terminalCommand": "/usr/bin/kitty"
   }
 }
