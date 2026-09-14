@@ -8,7 +8,8 @@ only inspects the first word loses to `cd x && terraform destroy`.
 This module does the one thing every command guard needs and nothing else: it
 enumerates the positions in a command line where a binary is actually being
 *invoked*. It is quote-aware, so text inside a quoted argument is never mistaken
-for a command; it steps over `VAR=value` prefixes and wrappers (`sudo`, `env`,
+for a command; it steps over `VAR=value` prefixes, shell keywords (`do`,
+`then`, `if`) and wrappers (`sudo`, `env`,
 `timeout`, `xargs`...); and it descends into nested shells, so `bash -c '...'`
 and `$(...)` are walked rather than guessed at.
 
@@ -36,6 +37,9 @@ MAX_DEPTH = 4
 _PUNCT = "();<>|&`"
 
 ASSIGN = re.compile(r"[A-Za-z_][A-Za-z0-9_]*=.*", re.S)
+# `<<EOF`, `<<-'EOF'`, `<<"EOF"` — but never the `<<<` herestring.
+HEREDOC = re.compile(
+    r"(?<!<)<<-?[ \t]*(?:(?:'([^']+)')|(?:\"([^\"]+)\")|([A-Za-z_][A-Za-z0-9_]*))")
 NUMERIC = re.compile(r"[0-9]+(?:\.[0-9]+)?[smhd]?")
 
 # Commands that run another command given as their arguments.
@@ -60,6 +64,14 @@ WRAPPER_VALUE_FLAGS = {
     "stdbuf": {"-i", "-o", "-e"},
 }
 
+# Shell keywords occupy the position a command name would, so a binary run as
+# the body of a loop or conditional (`for x in 1 2; do hyprctl ...; done`) is
+# only visible if they are stepped over first.
+KEYWORDS = {
+    "do", "done", "then", "fi", "else", "elif", "if", "while", "until", "for",
+    "select", "case", "esac", "function", "!", "coproc", "{", "}",
+}
+
 SHELLS = {"bash", "sh", "zsh", "dash", "ksh", "ash", "busybox"}
 
 # Interpreters whose inline-code flag carries something this module cannot
@@ -78,10 +90,7 @@ def _is_separator(token):
 
 def _tokenize(command):
     """Tokenize like a shell would. Returns (tokens, ok)."""
-    # Newlines separate commands, but only when they are not holding a heredoc
-    # body together. A heredoc body is data the shell never executes, so leaving
-    # its lines glued to the `cat` invocation is the correct reading, not a gap.
-    text = command if "<<" in command else command.replace("\n", " ; ")
+    text = command.replace("\n", " ; ")
     lexer = shlex.shlex(text, posix=True, punctuation_chars=_PUNCT)
     lexer.whitespace_split = True
     try:
@@ -90,6 +99,72 @@ def _tokenize(command):
         # Unbalanced quote. Fall back to a naive split so a caller can still
         # apply a coarse check, and tell it the parse was not trustworthy.
         return text.replace("'", " ").replace('"', " ").split(), False
+
+
+def _heredoc_fate(text):
+    """What the shell will do with a heredoc body: run it, read it, or neither.
+
+    Decided from every command on the line that opened it, so `cat <<EOF | bash`
+    is read as a script even though `cat` is what holds the heredoc.
+    """
+    line = text.rsplit("\n", 1)[-1]
+    tokens, _ = _tokenize(line)
+    consumers = []
+    for segment in _split_segments(tokens):
+        for token in segment:
+            if ASSIGN.fullmatch(token):
+                continue
+            base = token.rsplit("/", 1)[-1]
+            if base in WRAPPERS or base in KEYWORDS:
+                continue
+            consumers.append(base)
+            break
+    if any(base in SHELLS for base in consumers):
+        return "shell"
+    if any(base in INTERPRETERS for base in consumers):
+        return "code"
+    return "data"
+
+
+def _extract_heredocs(command):
+    """Lift heredoc bodies out of a command line.
+
+    A heredoc body is not a command line: `cat <<'EOF' … EOF` writing a document
+    that happens to mention `hyprctl` is not running hyprctl. Left in the token
+    stream, every word of that body sits where a command name could be, and any
+    guard reading command positions fires on prose. So bodies come out here and
+    are classified by what actually consumes them:
+
+      shell  (`bash <<EOF`, `cat <<EOF | sh`)  walked as commands
+      code   (`python3 - <<PY`)                returned as a code blob to
+                                               pattern-match, as `python3 -c`
+                                               already is
+      data   (`cat > file <<EOF`, `jq <<EOF`)  dropped; nothing executes it
+
+    Returns (command_without_bodies, [(fate, body), ...]).
+    """
+    bodies, text = [], command
+    while True:
+        match = HEREDOC.search(text)
+        if not match:
+            return text, bodies
+        delimiter = match.group(1) or match.group(2) or match.group(3)
+        fate = _heredoc_fate(text[:match.start()])
+        newline = text.find("\n", match.end())
+        tail = text[match.end():newline] if newline != -1 else text[match.end():]
+        head = text[:match.start()] + tail
+        if newline == -1:
+            text = head
+            continue
+        rest = text[newline + 1:]
+        terminator = re.compile(r"^[\t ]*" + re.escape(delimiter) + r"[\t ]*$", re.M)
+        end = terminator.search(rest)
+        if end:
+            bodies.append((fate, rest[:end.start()]))
+            text = head + "\n" + rest[end.end():]
+        else:
+            bodies.append((fate, rest))
+            text = head
 
 
 def _split_segments(tokens):
@@ -137,6 +212,9 @@ def _walk_segment(tokens, depth, found, code_blobs):
     index, count = 0, len(tokens)
     while index < count:
         token = tokens[index]
+        if token in KEYWORDS:
+            index += 1
+            continue
         if ASSIGN.fullmatch(token):
             index += 1
             continue
@@ -173,6 +251,12 @@ def _walk_segment(tokens, depth, found, code_blobs):
 
 
 def _walk(command, depth, found, code_blobs):
+    command, heredocs = _extract_heredocs(command)
+    for fate, body in heredocs:
+        if fate == "shell" and depth < MAX_DEPTH:
+            _walk(body, depth + 1, found, code_blobs)
+        elif fate == "code":
+            code_blobs.append(body)
     tokens, ok = _tokenize(command)
     if not ok:
         code_blobs.append(command)
