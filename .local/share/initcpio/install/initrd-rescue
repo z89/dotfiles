@@ -1,0 +1,224 @@
+#!/bin/bash
+# initrd-rescue — make a failed unlock recoverable without a power cycle.
+#
+# Two problems this fixes, both verified on this machine:
+#
+#   1. systemd only runs the console password agent when plymouth is NOT running
+#      (ConditionPathExists=!/run/plymouth/pid in systemd-ask-password-console.path). If
+#      plymouthd dies *after* that condition was evaluated, the agent never comes back: the
+#      screen freezes on plymouth's last frame, keystrokes go nowhere, and because the root
+#      device job has no timeout the boot waits forever. The watchdog below notices plymouth
+#      dying while a password request is outstanding and hands the request to the console
+#      agent within half a second, so the passphrase prompt simply reappears as plain text.
+#
+#   2. /etc/shadow inside the initramfs holds `root:*`, so if emergency.target is ever
+#      reached sulogin refuses with "Cannot open access to console, the root account is
+#      locked" and hands over nothing. The drop-in below sets SYSTEMD_SULOGIN_FORCE=1 so the
+#      shell actually opens, replaces the unbounded `plymouth --wait quit` (which can block
+#      the shell for the full 90 s start timeout when plymouthd is wedged) with a bounded
+#      teardown, and lifts the start timeout so the shell is never killed while it is in use.
+#
+# Escalation is crash-triggered, never time-triggered: nothing here can fire while a prompt
+# is on screen and someone is typing into it. The watchdog only acts when there is no agent
+# able to serve a pending request, or when the root device never appears after the unlock has
+# already completed. It never reboots on its own.
+#
+# Kernel command line: rd.rescue=0 disables the watchdog,
+# rd.rescue.rootwait=<s> changes the post-unlock grace period for the root device (default 45).
+
+build() {
+    add_binary systemctl
+    add_binary systemd-tty-ask-password-agent
+    add_dir /usr/local/bin
+
+    # ---- the watchdog -------------------------------------------------------------------
+    cat > "$BUILDROOT/usr/local/bin/initrd-rescue-watch" <<'WATCH'
+#!/bin/sh
+# Watch for an unlock that can no longer be completed, and restore a way to finish it.
+rootwait=45
+for arg in $(cat /proc/cmdline); do
+    case $arg in
+        rd.rescue=0) exit 0 ;;
+        rd.rescue.rootwait=*) rootwait=${arg#*=} ;;
+    esac
+done
+case $rootwait in ''|*[!0-9]*) rootwait=45 ;; esac
+
+log() { echo "initrd-rescue: $*"; }
+uptime_s() { cut -d' ' -f1 /proc/uptime; }
+ge() { awk -v a="$1" -v b="$2" 'BEGIN { exit !(a >= b) }'; }
+
+pending() {
+    for f in /run/systemd/ask-password/ask.*; do
+        [ -e "$f" ] && return 0
+    done
+    return 1
+}
+ply_alive() {
+    p=$(cat /run/plymouth/pid 2>/dev/null) || return 1
+    [ -n "$p" ] || return 1
+    kill -0 "$p" 2>/dev/null
+}
+root_device() {
+    # the last root= on the command line wins, same as the kernel
+    dev=""
+    for arg in $(cat /proc/cmdline); do
+        case $arg in root=*) dev=${arg#root=} ;; esac
+    done
+    printf '%s' "$dev"
+}
+
+saw_plymouth=0
+failed_over=0
+failover_at=""
+unlocked_at=""
+rootdev=$(root_device)
+
+while :; do
+    sleep 0.5
+
+    # The real root is mounted: this boot is past anything we can help with.
+    if awk '$2 == "/sysroot" { found = 1 } END { exit !found }' /proc/self/mounts 2>/dev/null; then
+        exit 0
+    fi
+
+    if ply_alive; then
+        saw_plymouth=1
+    elif [ "$saw_plymouth" = 1 ] && [ "$failed_over" = 0 ] && pending; then
+        # Plymouth died holding the only prompt. Clear the stale pid file so the console
+        # agent's condition passes, then start it: the passphrase prompt comes back as text.
+        log "plymouth is gone with a password request pending, switching to the console prompt"
+        rm -f /run/plymouth/pid
+        # Plymouth's last frame is still on the screen; clear it so the text prompt is not
+        # appended to a dead splash.
+        # /dev/console follows the last console= on the command line, which is the serial
+        # port here, so clear the visible virtual terminal as well.
+        for t in /dev/tty0 /dev/tty1 /dev/console; do
+            [ -w "$t" ] || continue
+            printf '\033[H\033[2J\033[3J' > "$t" 2>/dev/null
+            printf 'The graphical unlock screen stopped responding. Type the passphrase here.\n\n' > "$t" 2>/dev/null
+        done
+        systemctl reset-failed plymouth-start.service 2>/dev/null
+        systemctl start --no-block systemd-ask-password-console.path 2>/dev/null
+        systemctl start --no-block systemd-ask-password-console.service 2>/dev/null
+        failed_over=1
+        failover_at=$(uptime_s)
+    fi
+
+    # If the console agent could not take over within five seconds, there is no way left to
+    # answer the prompt.
+    # Only then open the emergency shell. A working agent, however slowly it is being typed
+    # into, keeps this branch shut.
+    if [ "$failed_over" = 1 ] && pending && ge "$(uptime_s)" "$(awk -v a="$failover_at" 'BEGIN { print a + 5 }')"; then
+        if ! systemctl is-active --quiet systemd-ask-password-console.service; then
+            log "no password agent could be started, opening the emergency shell"
+            systemctl start --no-block emergency.target 2>/dev/null
+            exit 0
+        fi
+    fi
+
+    # The volume is open but the root device never showed up (LVM or fsck trouble). Nobody is
+    # typing at this point, so a grace period here cannot interrupt anyone.
+    if [ -n "$rootdev" ] && [ -e /dev/mapper/cryptlvm ]; then
+        if [ -z "$unlocked_at" ]; then
+            unlocked_at=$(uptime_s)
+        elif [ ! -e "$rootdev" ] && ge "$(uptime_s)" "$(awk -v a="$unlocked_at" -v w="$rootwait" 'BEGIN { print a + w }')"; then
+            log "$rootdev has not appeared ${rootwait}s after the unlock, opening the emergency shell"
+            systemctl start --no-block emergency.target 2>/dev/null
+            exit 0
+        fi
+    fi
+done
+WATCH
+    chmod 755 "$BUILDROOT/usr/local/bin/initrd-rescue-watch"
+
+    # ---- helper offered inside the emergency shell ---------------------------------------
+    cat > "$BUILDROOT/usr/bin/unlock" <<'UNLOCK'
+#!/bin/sh
+# Answer whatever password request is outstanding, on this terminal.
+pending() {
+    for f in /run/systemd/ask-password/ask.*; do
+        [ -e "$f" ] && return 0
+    done
+    return 1
+}
+pending || { echo "nothing is waiting for a passphrase"; exit 1; }
+systemd-tty-ask-password-agent --query
+rc=$?
+if pending; then
+    echo "still locked; run 'unlock' again to retry"
+    exit $rc
+fi
+echo "Unlocked. Continuing boot."
+# Leaving the shell is what lets systemd carry on, exactly as typing 'exit' would. If the
+# signal does not land for any reason the message below still tells the user what to do.
+kill -HUP "$PPID" 2>/dev/null || true
+echo "(if this shell is still here, press Control + D to continue)"
+UNLOCK
+    chmod 755 "$BUILDROOT/usr/bin/unlock"
+
+    # ---- make the emergency shell open, and open quickly ---------------------------------
+    cat > "$BUILDROOT/usr/local/bin/initrd-rescue-pre" <<'PRE'
+#!/bin/sh
+# Bounded replacement for `plymouth --wait quit`, which blocks until plymouth answers and so
+# can hold the emergency shell back for the whole start timeout when plymouthd is wedged.
+if [ -e /run/plymouth/pid ]; then
+    plymouth quit 2>/dev/null &
+    sleep 1
+    kill -9 "$(cat /run/plymouth/pid 2>/dev/null)" 2>/dev/null
+    rm -f /run/plymouth/pid
+fi
+echo
+echo "  The root disk is still locked. Press Enter, then run:  unlock"
+echo "  It asks for the passphrase and the boot resumes by itself once it is accepted."
+echo
+exit 0
+PRE
+    chmod 755 "$BUILDROOT/usr/local/bin/initrd-rescue-pre"
+
+    local conf='[Service]
+# The initramfs has a locked root account, so sulogin would refuse to open a shell at all.
+Environment=SYSTEMD_SULOGIN_FORCE=1
+# Replace the unbounded plymouth teardown so the shell appears immediately.
+ExecStartPre=
+ExecStartPre=-/usr/local/bin/initrd-rescue-pre
+# Never kill the shell while someone is using it.
+TimeoutStartSec=infinity
+TimeoutStopSec=infinity
+'
+    local u
+    for u in emergency rescue; do
+        mkdir -p "$BUILDROOT/etc/systemd/system/$u.service.d"
+        printf '%s' "$conf" > "$BUILDROOT/etc/systemd/system/$u.service.d/initrd-rescue.conf"
+    done
+
+    # ---- the watchdog unit ---------------------------------------------------------------
+    cat > "$BUILDROOT/usr/lib/systemd/system/initrd-rescue.service" <<'UNIT'
+[Unit]
+Description=Keep a way to finish the unlock if plymouth or the root device fails
+DefaultDependencies=no
+ConditionKernelCommandLine=!rd.rescue=0
+After=systemd-udev-trigger.service
+Before=cryptsetup.target
+Conflicts=initrd-switch-root.target
+Before=initrd-switch-root.target
+
+[Service]
+Type=simple
+ExecStart=/usr/local/bin/initrd-rescue-watch
+StandardOutput=journal+console
+StandardError=journal+console
+UNIT
+    mkdir -p "$BUILDROOT/usr/lib/systemd/system/sysinit.target.wants"
+    ln -sf ../initrd-rescue.service \
+        "$BUILDROOT/usr/lib/systemd/system/sysinit.target.wants/initrd-rescue.service"
+}
+
+help() {
+    cat <<HELPEOF
+Restores a usable passphrase prompt when the graphical one dies, and makes the initramfs
+emergency shell actually open (the image ships a locked root account, so sulogin refuses
+without SYSTEMD_SULOGIN_FORCE=1). Escalation is triggered by a crash, never by a timer, so
+it cannot interrupt someone typing. Tunables: rd.rescue=0, rd.rescue.rootwait=<seconds>.
+HELPEOF
+}

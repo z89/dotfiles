@@ -24,7 +24,15 @@
 #   5. fido2-smart mkinitcpio hook (~/.local/share/initcpio/install/fido2-smart): wraps
 #      systemd-cryptsetup so the FIDO2 token is only tried when it is actually plugged in
 #      (USB enumeration is watched, not timed), and the passphrase prompt appears at once
-#      otherwise. Removes the token-timeout wait from every keyless boot.
+#      otherwise. With the key present it makes one touch-only attempt (headless, capped at
+#      15 s) and falls back to the plain passphrase prompt if that does not unlock.
+#   6. initrd-rescue mkinitcpio hook: if plymouth dies mid-unlock the console passphrase
+#      prompt is restored within half a second, and the initramfs emergency shell is made
+#      openable (the image ships a locked root account) and quick. Crash-triggered only.
+#   7. FIDO2 keyslot flags: systemd-cryptenroll enrols with a PIN requirement by default.
+#      If the token metadata says PIN or user verification is required, the slot is
+#      re-enrolled touch-only (needs the key plugged in; asks the passphrase and the key's
+#      PIN once) and the old FIDO2 slot is wiped.
 #
 # Idempotent: every step checks before it writes. Header changes are preceded by a LUKS
 # header backup in /root/luks-header-backup/. Nothing here touches the running session.
@@ -74,10 +82,25 @@ note() { echo "-> $*"; }
 
 # 1. crypttab.initramfs -----------------------------------------------------------------
 want="$MAPPER    UUID=$LUKS_UUID    -    $CRYPTTAB_OPTS"
-if [[ "$(grep -vE '^\s*(#|$)' /etc/crypttab.initramfs 2>/dev/null || true)" != "$want" ]]; then
-  note "crypttab.initramfs: $CRYPTTAB_OPTS"
+ct=/etc/crypttab.initramfs
+# Only the $MAPPER line is managed here. Any other volume the user has added keeps its own
+# line: rewriting the whole file would silently drop it and the next boot would never
+# unlock it.
+cur=$(awk -v m="$MAPPER" '$1 == m { print; exit }' "$ct" 2>/dev/null || true)
+if [[ $cur != "$want" ]]; then
+  note "crypttab.initramfs: $MAPPER -> $CRYPTTAB_OPTS"
   if (( ! dry )); then
-    printf '# Managed by luks-boot-setup (dotfiles). FIDO2 is tried once, before the passphrase;\n# token-timeout bounds that wait. Root job timeout is lifted via rootflags= in GRUB.\n%s\n' "$want" > /etc/crypttab.initramfs
+    cp -a "$ct" "$ct.bak-$(date +%Y%m%d%H%M%S)" 2>/dev/null || true
+    if [[ -n $cur ]]; then
+      awk -v m="$MAPPER" -v w="$want" '$1 == m { print w; next } { print }' "$ct" > "$ct.new"
+    else
+      { [[ -f $ct ]] && cat "$ct"; printf '%s\n' "$want"; } > "$ct.new"
+    fi
+    # Sanity: the managed line must be present exactly once and no other line may vanish.
+    if [[ $(awk -v m="$MAPPER" '$1 == m' "$ct.new" | wc -l) != 1 ]]; then
+      echo "  STOP: refusing to write $ct (managed line not unique)"; rm -f "$ct.new"; exit 1
+    fi
+    mv "$ct.new" "$ct"; chmod 600 "$ct"
   fi
   changed=1
 else
@@ -105,11 +128,11 @@ fi
 
 # 2b. mkinitcpio HOOKS: Arch wiki asks for plymouth before sd-encrypt ------------------
 mk=/etc/mkinitcpio.conf
-if grep -qE '^HOOKS=.*sd-encrypt.* plymouth' "$mk"; then
+if grep -qE '^HOOKS=.*\bsd-encrypt\b.* \bplymouth\b' "$mk"; then
   note "mkinitcpio.conf: move plymouth hook before sd-encrypt"
   if (( ! dry )); then
     cp -a "$mk" "$mk.bak-$(date +%Y%m%d%H%M%S)"
-    sed -i -E '/^HOOKS=/{s/ plymouth//;s/ sd-encrypt/ plymouth sd-encrypt/}' "$mk"
+    sed -i -E '/^HOOKS=/{s/ plymouth\b//;s/ sd-encrypt\b/ plymouth sd-encrypt/}' "$mk"
     grep -E '^HOOKS=' "$mk"
   fi
   changed=1
@@ -119,7 +142,7 @@ fi
 
 # 2c. custom mkinitcpio hooks from dotfiles ------------------------------------------------
 #   fido2-smart     after sd-encrypt : FIDO2 only when the token is plugged in, else passphrase at once
-#   windows-escape  after plymouth   : F12 on the unlock screen reboots into Windows (BootNext)
+#   windows-escape  after plymouth   : hold Super on the unlock screen to reboot into Windows
 install_hook() {
   local name=$1 after=$2 src="$home/.local/share/initcpio/install/$1" dst="/etc/initcpio/install/$1"
   if [[ ! -f $src ]]; then note "$src missing; hook $name not installed"; return; fi
@@ -142,6 +165,7 @@ install_hook() {
     note "mkinitcpio HOOKS already has $name"
   fi
 }
+install_hook initrd-rescue sd-encrypt
 install_hook fido2-smart sd-encrypt
 install_hook windows-escape plymouth
 HINT="Hold the Windows key to boot Windows"
@@ -168,16 +192,68 @@ print(passw[0] if passw else "-", fido[0] if fido else "-")
 PY
 )"
   echo "  keyslots: passphrase=$pass_slot fido2=$fido_slot"
-  python3 - "$meta" <<'PY'
+  fido_flags() {  # prints "touch" | "reenrol" | "none" and describes each systemd-fido2 token
+    python3 - "$meta" <<'PY'
 import json, sys
 m = json.loads(sys.argv[1])
-for t in m.get("tokens", {}).values():
-    if t.get("type") != "systemd-fido2":
-        continue
+toks = [t for t in m.get("tokens", {}).values() if t.get("type") == "systemd-fido2"]
+state = "none"
+for t in toks:
     pin = t.get("fido2-clientPin-required"); up = t.get("fido2-up-required"); uv = t.get("fido2-uv-required")
-    print(f"  fido2 token: PIN required={pin} touch required={up} user-verification={uv}")
-    print("  boot with the key plugged in: " + ("PIN prompt, then " if pin else "") + ("touch the key" if up else "unlocks without touch"))
+    print(f"  fido2 token: PIN required={pin} touch required={up} user-verification={uv}", file=sys.stderr)
+    ok = pin is False and up is True and not uv
+    state = "touch" if ok and state != "reenrol" else "reenrol"
+print(state)
 PY
+  }
+  fido_plugged_in() {
+    local h
+    for h in /sys/class/hidraw/hidraw*; do
+      [[ -e $h ]] || continue
+      udevadm info -q property -p "$h" 2>/dev/null | grep -qx 'ID_FIDO_TOKEN=1' && return 0
+    done
+    return 1
+  }
+  fido_state=$(fido_flags)
+  case $fido_state in
+    touch)  note "fido2 keyslot is touch-only (no PIN, no user verification)" ;;
+    none)   note "no fido2 keyslot enrolled; the key would need: systemd-cryptenroll $dev --fido2-device=auto --fido2-with-client-pin=no" ;;
+    reenrol)
+      # systemd-cryptenroll defaults to --fido2-with-client-pin=yes, which makes every keyed
+      # boot stop for the PIN. Enrol a fresh touch-only credential and wipe the old FIDO2
+      # slot(s); --wipe-slot runs after a successful enrolment and keeps the new slot
+      # (systemd-cryptenroll(1)). The key's own PIN is still asked once here, because the
+      # authenticator requires it to *create* a credential, never again at boot.
+      # --wipe-slot=fido2 would remove EVERY fido2 slot, including a second, backup security
+      # key. Wipe the exact slots seen in the dump instead, and name them before doing it.
+      old_fido_slots=$(python3 -c "import json,sys; m=json.loads(sys.argv[1]); print(','.join(sorted({s for t in m.get('tokens',{}).values() if t.get('type')=='systemd-fido2' for s in t.get('keyslots',[])}, key=int)))" "$meta")
+      if fido_plugged_in; then
+        note "re-enrolling the fido2 keyslot touch-only: enter the LUKS passphrase, the key's PIN once, then touch the key"
+        echo "  this will replace fido2 keyslot(s): ${old_fido_slots:-none}"
+        echo "  if a second security key is enrolled on this disk, it will stop working; Control + C now to abort"
+        if (( ! dry )); then
+          backup_header
+          systemd-cryptenroll "$dev" --fido2-device=auto --fido2-with-client-pin=no \
+            --fido2-with-user-presence=yes --fido2-with-user-verification=no \
+            ${old_fido_slots:+--wipe-slot="$old_fido_slots"}
+          meta=$(cryptsetup luksDump --dump-json-metadata "$dev")
+          # Lockout guard: a passphrase slot must still exist before we go anywhere near a reboot.
+          if ! python3 -c "import json,sys; m=json.loads(sys.argv[1]); t={s for k in m.get('tokens',{}).values() for s in k.get('keyslots',[])}; sys.exit(0 if [s for s in m['keyslots'] if s not in t] else 1)" "$meta"; then
+            echo "  STOP: no passphrase keyslot left on $dev after re-enrolment. Do not reboot."
+            echo "  Restore the header from the backup printed above with:"
+            echo "    cryptsetup luksHeaderRestore $dev --header-backup-file <file>"
+            exit 1
+          fi
+          if [[ $(fido_flags) != touch ]]; then
+            echo "  WARNING: the new enrolment still needs PIN/UV. The key most likely enforces"
+            echo "  'always user verification'; turn that off (ykman fido config toggle-always-uv)"
+            echo "  and rerun this script."
+          fi
+        fi
+      else
+        note "fido2 keyslot needs a PIN or UV at boot; plug the YubiKey in and rerun to re-enrol it touch-only"
+      fi ;;
+  esac
   if [[ $pass_slot != - ]]; then
     prio=$(python3 -c "import json,sys;print(json.loads(sys.argv[1])['keyslots']['$pass_slot'].get('priority','normal'))" "$meta")
     if [[ $prio != prefer ]]; then
@@ -229,13 +305,82 @@ if (( grub_changed )); then
   run grub-mkconfig -o /boot/grub/grub.cfg
 fi
 if (( changed )); then
+  # Neither preset builds a -fallback image, so a broken initramfs would leave no second GRUB
+  # entry to boot. Keep the last known-good images next to them: at the GRUB menu press "e",
+  # append .bak to the initrd line and press Control + X to boot the previous image.
+  # Neither preset builds a -fallback image and grub.cfg has no second entry, so the .bak
+  # copies are the only way back. Rotate one ONLY when the image on disk was not produced by
+  # this script: otherwise a second run would overwrite the last known-good backup with the
+  # output of the previous run. The stamp also makes the backup follow kernel updates, so a
+  # .bak is never left holding modules for a kernel that no longer exists.
+  stamp=/boot/.luks-boot-setup.sha256
+  note "refreshing the *.img.bak safety copies"
+  for img in /boot/initramfs-linux.img /boot/initramfs-linux-lts.img; do
+    [[ -f $img ]] || continue
+    ours=$(awk -v i="$img" '$2 == i { print $1 }' "$stamp" 2>/dev/null || true)
+    now=$(sha256sum "$img" | cut -d" " -f1)
+    if [[ -n $ours && $ours == "$now" ]]; then
+      echo "  keeping $img.bak (current image was built by this script)"
+    else
+      run cp -a "$img" "$img.bak"
+      echo "  $img.bak <- current image"
+    fi
+  done
+
   note "mkinitcpio -P"
-  if (( dry )); then echo "  would: mkinitcpio -P"; else mkinitcpio -P 2>&1 | grep -E 'error|warning|Image generation' || true; fi
+  if (( dry )); then
+    echo "  would: mkinitcpio -P"
+  else
+    log=$(mktemp)
+    # mkinitcpio prints fatal lines as '==> ERROR:' and, when only a build hook fails, still
+    # writes an image and reports the failure solely through its exit status. Both are checked.
+    if ! mkinitcpio -P >"$log" 2>&1; then
+      echo
+      echo "  STOP: mkinitcpio failed. The images on /boot may be incomplete. DO NOT REBOOT."
+      grep -iE '^==> ERROR|error|warning' "$log" | head -20 | sed "s/^/    /"
+      echo
+      echo "  Restore the previous images and try again:"
+      for img in /boot/initramfs-linux.img /boot/initramfs-linux-lts.img; do
+        [[ -f $img.bak ]] && echo "    cp -a $img.bak $img"
+      done
+      echo "  Full log: $log"
+      exit 1
+    fi
+    grep -iE 'warning|Image generation' "$log" | tail -6 | sed "s/^/  /"
+    rm -f "$log"
+
+    # The exit status can still be 0 while a hook silently produced nothing useful, so check
+    # that what the hooks are supposed to install is actually inside each image.
+    miss=0
+    for img in /boot/initramfs-linux.img /boot/initramfs-linux-lts.img; do
+      [[ -f $img ]] || continue
+      for want in usr/local/bin/cryptsetup-fido2-smart usr/local/bin/boot-windows \
+                  usr/local/bin/windows-escape-evdev usr/local/bin/initrd-rescue-watch \
+                  usr/bin/unlock \
+                  etc/systemd/system/emergency.service.d/initrd-rescue.conf; do
+        lsinitcpio "$img" 2>/dev/null | grep -qx "$want" || { echo "  MISSING in $img: $want"; miss=1; }
+      done
+    done
+    if (( miss )); then
+      echo
+      echo "  STOP: the new images are missing files the hooks should have installed."
+      echo "  Restore with the cp commands above and do not reboot until this is resolved."
+      exit 1
+    fi
+    note "verified: both images carry the fido2-smart wrapper, the Windows escape and the rescue watchdog"
+    : > "$stamp"; chmod 600 "$stamp"
+    for img in /boot/initramfs-linux.img /boot/initramfs-linux-lts.img; do
+      [[ -f $img ]] && printf '%s %s\n' "$(sha256sum "$img" | cut -d" " -f1)" "$img" >> "$stamp"
+    done
+  fi
 fi
 
 echo
 echo "Done. Next boot: no key plugged in -> passphrase prompt as soon as USB has enumerated (~2.5 s uptime);"
-echo "      key plugged in before power-on -> FIDO2 unlock (PIN/touch as enrolled), no passphrase."
+echo "      key plugged in before power-on -> touch the key (no PIN, no passphrase); untouched for 15 s -> passphrase prompt;
+      key plugged in while the prompt is up -> touch it or keep typing, whichever you reach for first wins."
 echo "Log line to look for: fido2-smart: ... (journalctl -b | grep fido2-smart)"
+echo "If the new initramfs ever fails to boot: at the GRUB menu press e, add .bak to the"
+echo "      initrd line (initramfs-linux.img.bak) and press Control + X."
 echo "Check the timeline after a boot with:"
 echo "  journalctl -b -o short-monotonic | grep -E 'systemd-cryptsetup\\[|Cryptography Setup'"
