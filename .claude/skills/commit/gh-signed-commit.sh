@@ -69,6 +69,24 @@ REPO_NAME="${SLUG#*/}"
 [ "$REPO_OWNER" = "$AGENT_GH_OWNER" ] ||
   die "repository owner '$REPO_OWNER' does not match selected App profile '$AGENT_GH_OWNER'"
 
+# A branch that has never been published has no remote ref for the API to build on. Create it at
+# the merge-base with the remote default branch, which the remote holds by construction, so every
+# local commit after that point is published below. Operator-authored commits in that range still
+# refuse at the author check, so this can never silently rebuild the operator's own work as the bot.
+LSR_RC=0
+git ls-remote --exit-code --heads "$REMOTE" "refs/heads/$BRANCH" >/dev/null 2>&1 || LSR_RC=$?
+if [ "$LSR_RC" -eq 2 ]; then
+  DEFAULT_BRANCH="$(gh api "repos/$REPO_OWNER/$REPO_NAME" --jq '.default_branch')" ||
+    die "could not read the default branch of $SLUG"
+  git fetch --quiet "$REMOTE" "$DEFAULT_BRANCH" || die "could not fetch $REMOTE/$DEFAULT_BRANCH"
+  BASE_OID="$(git merge-base "$BRANCH" "$REMOTE/$DEFAULT_BRANCH")" ||
+    die "$BRANCH shares no history with $REMOTE/$DEFAULT_BRANCH"
+  say "$REMOTE/$BRANCH does not exist; creating it at $(git rev-parse --short "$BASE_OID"), the merge-base with $DEFAULT_BRANCH"
+  gh api "repos/$REPO_OWNER/$REPO_NAME/git/refs" -f ref="refs/heads/$BRANCH" -f sha="$BASE_OID" >/dev/null ||
+    die "could not create $REMOTE/$BRANCH"
+elif [ "$LSR_RC" -ne 0 ]; then
+  die "could not query $REMOTE for $BRANCH (exit $LSR_RC)"
+fi
 git fetch --quiet "$REMOTE" "$BRANCH" || die "could not fetch $REMOTE/$BRANCH"
 
 COMMITS="$(git rev-list --reverse "$REMOTE/$BRANCH..$BRANCH")"
