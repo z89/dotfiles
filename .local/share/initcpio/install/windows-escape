@@ -6,7 +6,7 @@
 # and the machine reboots straight into Windows. boot-windows looks up the firmware boot entry
 # labelled "Windows Boot Manager", writes it to the one-shot BootNext variable with efibootmgr,
 # and forces a reboot. UEFI honours BootNext exactly once, so GRUB and this unlock screen are
-# skipped on that boot only. Nothing is mounted read-write at that point, so the forced reboot
+# skipped on that boot only. boot-windows refuses once /sysroot is mounted, so the forced reboot
 # is safe even mid-passphrase.
 #
 # Why an evdev watcher and not `plymouth watch-keystroke`: plymouthd routes every key to the
@@ -38,6 +38,15 @@ build() {
     cat > "$BUILDROOT/usr/local/bin/boot-windows" <<'SCRIPT'
 #!/bin/sh
 # boot-windows — set BootNext to the Windows firmware entry and reboot (windows-escape hook).
+# A forced reboot skips every unmount and journal flush. That is safe only while the real
+# root is still untouched. Once /sysroot is mounted (the kernel command line carries "rw",
+# and systemd-fsck may be repairing it), refuse: the escape is for the unlock screen only.
+if awk '$2 == "/sysroot" { found = 1 } END { exit !found }' /proc/self/mounts 2>/dev/null; then
+    echo "boot-windows: /sysroot is already mounted, refusing to force a reboot" >&2
+    plymouth display-message --text="Too late to switch to Windows" 2>/dev/null
+    exit 1
+fi
+
 label="Windows Boot Manager"
 for arg in $(cat /proc/cmdline); do
     case $arg in rd.windows-escape.label=*) label=${arg#*=} ;; esac
@@ -96,9 +105,22 @@ static void scan(void) {
         int iskbd = (ev[EV_KEY / 64] >> (EV_KEY % 64) & 1) && (keys[KEY_F12 / 64] >> (KEY_F12 % 64) & 1);
         if (!iskbd) { close(fd); continue; }
         fds[nfd] = fd; snprintf(names[nfd], 32, "%s", e->d_name); nfd++;
+        char nm[64] = "?"; ioctl(fd, EVIOCGNAME(sizeof nm), nm);
+        printf("windows-escape: watching /dev/input/%s (%s)\n", e->d_name, nm); fflush(stdout);
     }
     closedir(d);
 }
+/* Is the watched key still held on device index i, according to the device itself? */
+static int down_i = -1;
+static int key_is_down(int i, int f12) {
+    if (i < 0 || i >= nfd) return 0;
+    unsigned long ks[(KEY_MAX + 63) / 64] = {0};
+    if (ioctl(fds[i], EVIOCGKEY(sizeof ks), ks) < 0) return 1; /* cannot ask: trust the events */
+    if (f12) return (ks[KEY_F12 / 64] >> (KEY_F12 % 64)) & 1;
+    return ((ks[KEY_LEFTMETA / 64] >> (KEY_LEFTMETA % 64)) & 1)
+        || ((ks[KEY_RIGHTMETA / 64] >> (KEY_RIGHTMETA % 64)) & 1);
+}
+
 static double now_ms(void) { struct timespec t; clock_gettime(CLOCK_MONOTONIC, &t); return t.tv_sec * 1000.0 + t.tv_nsec / 1e6; }
 
 int main(int argc, char **argv) {
@@ -111,16 +133,27 @@ int main(int argc, char **argv) {
         int timeout = down >= 0 ? 50 : 2000;
         int r = poll(pf, nfd, timeout);
         if (r > 0) for (int i = 0; i < nfd; i++) {
-            if (pf[i].revents & (POLLERR | POLLHUP | POLLNVAL)) { close(fds[i]); fds[i] = fds[nfd - 1]; strcpy(names[i], names[nfd - 1]); nfd--; i--; continue; }
+            if (pf[i].revents & (POLLERR | POLLHUP | POLLNVAL)) {
+                /* The keyboard went away mid-hold (USB re-enumeration, a KVM switch). Its
+                 * release event will never arrive, so drop the pending hold with it. */
+                if (down_i == i) { down = -1; fired = 0; }
+                close(fds[i]); fds[i] = fds[nfd - 1]; strcpy(names[i], names[nfd - 1]); nfd--; i--; continue;
+            }
             if (!(pf[i].revents & POLLIN)) continue;
             struct input_event ev[16]; ssize_t n = read(fds[i], ev, sizeof ev);
             for (ssize_t k = 0; k < (ssize_t)(n / sizeof ev[0]); k++) {
                 if (ev[k].type != EV_KEY) continue;
                 int match = f12 ? ev[k].code == KEY_F12 : (ev[k].code == KEY_LEFTMETA || ev[k].code == KEY_RIGHTMETA);
                 if (!match) continue;
-                if (ev[k].value == 1) down = now_ms();          /* press */
-                else if (ev[k].value == 0) { down = -1; fired = 0; } /* release: reset */
+                if (ev[k].value == 1) { down = now_ms(); down_i = i; } /* press */
+                else if (ev[k].value == 0) { down = -1; fired = 0; }    /* release: reset */
             }
+        }
+        /* Latched state is not enough: if a release event is ever lost the timer would fire on
+         * its own and reboot an unattended machine. Ask the device whether the key is still
+         * physically down before doing anything irreversible. */
+        if (down >= 0 && !fired && now_ms() - down >= hold && !key_is_down(down_i, f12)) {
+            down = -1;
         }
         if (down >= 0 && !fired && now_ms() - down >= hold) {
             fired = 1; printf("windows-escape: key held %.0f ms, running %s\n", hold, cmd); fflush(stdout);

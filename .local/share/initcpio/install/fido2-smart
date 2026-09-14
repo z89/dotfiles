@@ -11,12 +11,25 @@
 # Fix: replace the generated unit's ExecStart with a wrapper that decides *before* calling
 # systemd-cryptsetup. It watches USB enumeration (per-port `state` in sysfs plus the udev
 # queue) and looks for a hidraw device tagged ID_FIDO_TOKEN=1 by udev's fido_id helper.
-#   token present  -> systemd-cryptsetup with fido2-device=auto (touch / PIN as enrolled)
+#   token present  -> touch-only FIDO2 attempt (headless=true, tries=1, capped at TOUCH s),
+#                     then the plain passphrase prompt if that attempt did not unlock
 #   no token       -> systemd-cryptsetup without any FIDO2 option: passphrase prompt at once
+#
+# The passphrase prompt then stays live while the wrapper keeps watching for the key, so
+# plugging it in at any point during the prompt starts a touch-only attempt *alongside* the
+# prompt: whichever you reach for first wins, and the loser is torn down. systemd-cryptsetup
+# cannot do this itself, because it blocks inside ask-password with nothing watching USB
+# (systemd #24940). Nothing you have typed is ever discarded, and an untouched key simply
+# times out and leaves the prompt where it was.
 # The decision is bounded: it accepts "no token" once USB ports have settled and uptime has
 # passed FLOOR seconds (directly attached devices enumerate by ~2 s, hub-attached by ~2.6 s on
 # this board), and gives up unconditionally at CAP seconds. Both are overridable from the
-# kernel command line: rd.fido2smart.floor=2.5 rd.fido2smart.cap=4.5 (seconds of uptime).
+# kernel command line: rd.fido2smart.floor=2.5 rd.fido2smart.cap=4.5 (seconds of uptime),
+# rd.fido2smart.touch=15 (seconds allowed for the touch; 0 skips FIDO2 for that boot, and
+# also turns off the late-insertion watch). Test aids: rd.fido2smart.force=1 pretends a token
+# is present at the start, rd.fido2smart.faketoken=<s> pretends one appears at that uptime.
+# The FIDO2 keyslot itself must be enrolled touch-only (systemd-cryptenroll
+# --fido2-with-client-pin=no); luks-boot-setup checks and re-enrols it.
 #
 # The crypttab entry keeps its fido2-device=auto option as the documented intent and as the
 # fallback should this hook ever be missing from the image (behaviour then degrades to the
@@ -54,19 +67,35 @@ base=$(printf '%s' "$opts" | awk 'BEGIN { RS = ","; ORS = "" }
     { sub(/\n$/, "") }
     $0 != "" && $0 !~ /^(fido2-device|token-timeout)=/ { printf "%s%s", (n++ ? "," : ""), $0 }')
 
-floor=2.5; cap=4.5
+floor=2.5; cap=4.5; touch=15; force=0; faketoken=; stub=0
 for arg in $(cat /proc/cmdline); do
     case $arg in
         rd.fido2smart.floor=*) floor=${arg#*=} ;;
         rd.fido2smart.cap=*)   cap=${arg#*=} ;;
+        rd.fido2smart.touch=*) touch=${arg#*=} ;;
+        rd.fido2smart.force=1) force=1 ;;
+        rd.fido2smart.faketoken=*) faketoken=${arg#*=} ;;
+        rd.fido2smart.stub=1) stub=1 ;;
     esac
 done
+
+# A tunable that is not a plain number would make every numeric comparison below false and
+# the wait loop would never end. Validate each one and fall back to its default.
+num_ok() { printf '%s' "$1" | awk '{ exit !($0 ~ /^[0-9]+(\.[0-9]+)?$/) }'; }
+num_ok "$floor" || { echo "fido2-smart: ignoring bad rd.fido2smart.floor=$floor" >&2; floor=2.5; }
+num_ok "$cap"   || { echo "fido2-smart: ignoring bad rd.fido2smart.cap=$cap" >&2; cap=4.5; }
+num_ok "$touch" || { echo "fido2-smart: ignoring bad rd.fido2smart.touch=$touch" >&2; touch=15; }
+[ -z "$faketoken" ] || num_ok "$faketoken" || {
+    echo "fido2-smart: ignoring bad rd.fido2smart.faketoken=$faketoken" >&2; faketoken=; }
 
 uptime_s() { cut -d' ' -f1 /proc/uptime; }
 ge() { awk -v a="$1" -v b="$2" 'BEGIN { exit !(a >= b) }'; }
 
 token_present() {
     local h
+    # Test aid: rd.fido2smart.faketoken=<s> makes a token "appear" at that uptime, so the
+    # late-insertion path below can be exercised without a key.
+    if [ -n "$faketoken" ] && ge "$(uptime_s)" "$faketoken"; then return 0; fi
     for h in /sys/class/hidraw/hidraw*; do
         [ -e "$h" ] || continue
         udevadm info -q property -p "$h" 2>/dev/null | grep -qx 'ID_FIDO_TOKEN=1' && return 0
@@ -88,23 +117,196 @@ ports_settled() {
 }
 
 found=0
+loops=0
 while :; do
     udevadm settle -t 1 2>/dev/null
-    if token_present; then found=1; break; fi
     now=$(uptime_s)
+    # Unconditional escape hatch: whatever the tunables or /sys say, never spin for more
+    # than ~10 s. Without this a wedged loop would leave the root device unattached with no
+    # prompt and no timeout to fall back on.
+    loops=$((loops + 1))
+    if [ "$loops" -gt 100 ]; then
+        echo "fido2-smart: detection loop exceeded its hard limit, going to the passphrase" >&2
+        break
+    fi
+    if [ "$force" = 1 ] || token_present; then found=1; break; fi
     if ge "$now" "$cap"; then break; fi
     if ge "$now" "$floor" && ports_settled; then break; fi
     sleep 0.1
 done
 
+# rd.fido2smart.touch=0 disables the FIDO2 attempt for this boot: go straight to the passphrase.
+case $touch in 0|0.0|0s) found=0 ;; esac
+
+# ---------------------------------------------------------------------------------------
+# From here the two methods run as a pair: whichever you reach for first wins. One
+# systemd-cryptsetup invocation cannot do that, because it searches for a token, gives up,
+# and then blocks inside ask-password with nothing left watching USB (systemd #24940). So
+# the passphrase attempt runs as a child while this script keeps watching for the key, and a
+# key appearing cancels the prompt and takes over.
+
+# The passphrase attempt carries no FIDO2 option at all ($base already has them stripped),
+# or systemd-cryptsetup would spend token-timeout looking for a key before prompting. The
+# FIDO2 attempt drops tries/headless/timeout so the ones set here are the ones that apply.
+base_a=$(printf '%s' "$base" | awk 'BEGIN { RS = ","; ORS = "" }
+    { sub(/\n$/, "") }
+    $0 != "" && $0 !~ /^(tries|headless|timeout)=/ { printf "%s%s", (n++ ? "," : ""), $0 }')
+fido_opts="${base_a:+$base_a,}fido2-device=auto,token-timeout=2,headless=true,tries=1"
+
+ply() { command -v plymouth >/dev/null 2>&1 && plymouth "$@" 2>/dev/null; return 0; }
+unlocked() { [ -e "/dev/mapper/$name" ]; }
+# A finished background child stays as a zombie until waited for, so kill -0 cannot tell
+# whether it is still running. Read the state out of /proc instead.
+running() {
+    [ -e "/proc/$1/status" ] || return 1
+    [ "$(awk '/^State:/ { print $2; exit }' "/proc/$1/status" 2>/dev/null)" != Z ]
+}
+
+# Touch-only FIDO2 attempt. headless=true means systemd-cryptsetup never asks for a PIN or a
+# passphrase itself: a credential that demands a PIN, a key that is not touched, or any other
+# failure simply ends the attempt. tries=1 stops it looping into its own passphrase fallback.
+# The attempt is capped at $touch seconds, so a plugged-in but untouched key cannot hold the
+# boot for longer than that.
+try_fido2() {
+    ply display-message --text="Security key detected, touch it to unlock"
+    /usr/lib/systemd/systemd-cryptsetup attach "$name" "$dev" - "$fido_opts" &
+    cpid=$!
+    ( sleep "$touch"; kill "$cpid" 2>/dev/null ) &
+    wpid=$!
+    wait "$cpid"; rc=$?
+    kill "$wpid" 2>/dev/null; wait "$wpid" 2>/dev/null
+    ply display-message --text=""
+    [ "$rc" = 0 ] && return 0
+    # The mapping is created in one step, so if it exists the touch landed exactly as the cap
+    # expired. Treat that as success rather than tearing down a good root device, and never
+    # attach over an existing name: systemd-cryptsetup reports that as success while leaving
+    # an unusable mapping behind.
+    unlocked
+}
+
+apid=
+start_pass() {
+    /usr/lib/systemd/systemd-cryptsetup attach "$name" "$dev" "$pass" "$base" &
+    apid=$!
+}
+
+# Take the passphrase prompt off the screen once something else has unlocked the volume.
+# Killing the asker is not enough on its own: a killed process does not clean up after
+# itself, and while its request file is still there the agent keeps the prompt on the splash.
+# Both agents pass that file to their ask_password call as a flag file and abort the query
+# the moment it disappears, so removing it is what actually clears the screen.
+stop_pass() {
+    [ -n "$apid" ] || return 0
+    kill "$apid" 2>/dev/null
+    wait "$apid" 2>/dev/null
+    for f in /run/systemd/ask-password/ask.*; do
+        [ -e "$f" ] || continue
+        grep -qx "PID=$apid" "$f" 2>/dev/null && rm -f "$f"
+    done
+    apid=
+}
+
+# The FIDO2 attempt runs *beside* the prompt rather than replacing it. Cancelling the prompt
+# first would be the obvious design and it does not work: plymouthd drops the query happily
+# enough, but it never re-enters password mode for the next request, so a prompt put back
+# after a failed touch is drawn but dead, and the passphrase typed into it goes nowhere
+# (measured in QEMU, 2026-09-13). Leaving the prompt alone also means nothing is ever lost:
+# a passphrase already being typed, or already submitted and deriving its key, is unaffected
+# by a key being plugged in.
+fpid=
+fdeadline=
+start_fido2() {
+    ply display-message --text="Security key detected, touch it to unlock"
+    if [ "$stub" = 1 ]; then
+        # Test aid: a key that is plugged in and never touched, to exercise the cap below.
+        sleep 600 &
+    else
+        /usr/lib/systemd/systemd-cryptsetup attach "$name" "$dev" - "$fido_opts" &
+    fi
+    fpid=$!
+    fdeadline=$(awk -v a="$(uptime_s)" -v t="$touch" 'BEGIN { print a + t }')
+}
+end_fido2() {
+    [ -n "$fpid" ] || return 0
+    kill "$fpid" 2>/dev/null
+    wait "$fpid" 2>/dev/null
+    fpid=
+    ply display-message --text=""
+}
+
+tried=0
 if [ "$found" = 1 ]; then
-    opts="${base:+$base,}fido2-device=auto,token-timeout=2"
-    echo "fido2-smart: FIDO2 token present at ${now:-0}s, unlocking $name with it"
+    echo "fido2-smart: FIDO2 token present at ${now}s, waiting up to ${touch}s for a touch"
+    if try_fido2; then
+        echo "fido2-smart: $name unlocked with the FIDO2 token"
+        exit 0
+    fi
+    echo "fido2-smart: FIDO2 attempt did not unlock $name, asking for the passphrase"
+    tried=1
 else
-    opts=$base
     echo "fido2-smart: no FIDO2 token by ${now}s, asking for the passphrase of $name"
 fi
-exec /usr/lib/systemd/systemd-cryptsetup attach "$name" "$dev" "$pass" "$opts"
+
+# Watch for a key plugged in while the prompt is up. rd.fido2smart.touch=0 turns FIDO2 off
+# for the boot, and the force test flag has no real token behind it.
+watch=1
+case $touch in 0|0.0|0s) watch=0 ;; esac
+[ "$force" = 1 ] && watch=0
+
+prc=0
+start_pass
+while :; do
+    # The passphrase attempt finished. Success needs no further work; failure is reported
+    # only once any FIDO2 attempt still in flight has had its turn.
+    if [ -n "$apid" ] && ! running "$apid"; then
+        wait "$apid"; prc=$?
+        apid=
+        if unlocked; then
+            end_fido2
+            exit 0
+        fi
+        if [ -z "$fpid" ]; then
+            # Out of tries. Exit the way systemd-cryptsetup would have, so the unit fails
+            # identically and initrd-rescue can offer the emergency shell.
+            exit "$prc"
+        fi
+    fi
+
+    # Something unlocked the volume: whichever attempt lost is no longer wanted.
+    if unlocked; then
+        end_fido2
+        stop_pass
+        exit 0
+    fi
+
+    if [ -n "$fpid" ]; then
+        if ! running "$fpid"; then
+            wait "$fpid" 2>/dev/null
+            fpid=
+            ply display-message --text=""
+            unlocked && { stop_pass; exit 0; }
+            echo "fido2-smart: the FIDO2 attempt did not unlock $name, the passphrase prompt is still open"
+            tried=1
+            [ -n "$apid" ] || exit "$prc"
+        elif ge "$(uptime_s)" "$fdeadline"; then
+            echo "fido2-smart: no touch within ${touch}s, the passphrase prompt is still open"
+            end_fido2
+            tried=1
+            [ -n "$apid" ] || exit "$prc"
+        fi
+    elif [ "$watch" = 1 ]; then
+        if token_present; then
+            if [ "$tried" = 0 ]; then
+                echo "fido2-smart: FIDO2 token plugged in, waiting up to ${touch}s for a touch"
+                start_fido2
+            fi
+        else
+            # Unplugged again: a fresh insertion is allowed another attempt.
+            tried=0
+        fi
+    fi
+    sleep 0.3
+done
 WRAPPER
     chmod 755 "$BUILDROOT/usr/local/bin/cryptsetup-fido2-smart"
 
@@ -124,6 +326,8 @@ help() {
 Wraps systemd-cryptsetup for every /etc/crypttab.initramfs entry so that a FIDO2 token is
 used only when it is actually plugged in, and the passphrase prompt appears immediately
 otherwise. Must come after 'sd-encrypt' in HOOKS. Tunables on the kernel command line:
-rd.fido2smart.floor=<s> rd.fido2smart.cap=<s>.
+rd.fido2smart.floor=<s> rd.fido2smart.cap=<s> rd.fido2smart.touch=<s>; test aids
+rd.fido2smart.force=1 (pretend a token is present), rd.fido2smart.faketoken=<s> (pretend one
+is plugged in at that uptime) and rd.fido2smart.stub=1 (pretend it is never touched).
 HELPEOF
 }
