@@ -1,0 +1,19 @@
+{
+  "release": "v2-c25d10878a987109",
+  "files": {
+    "core.py": "131153a7ac38e54852ed9c5dffc83dcc25b81d959042df544521b855194b0280",
+    "policy.py": "0707b6d1a60a81f945b56ae40ae49a0f8af9c19e65d080ba0f0c6266f2aa875f",
+    "shellparse.py": "f0bc753c61b60dfee5b182d2878cefbd198df270d27cccb857501782ba46f7dc",
+    "bootstrap.py": "f2d25f3232d6c15993bfa003a1f2a1d1751e517bfc96cacbb4d7154b80d60dfb",
+    "recovery.py": "8641ad566d0f95e98735e77d30b9b2054c6c0b6b32e5b2540b6155351e6a55dd",
+    "test_core.py": "71ffaacdd8e74d26fa8234b396a4e8cd96ce266fac13598b19e1e8a01359cac6",
+    "test_policy.py": "15845dab749a2a3b687b197ad2ebaff5101ab47d81a8732fb43e6c7cfca31921",
+    "test_acceptance.py": "78759ed79aa48147f57f6dd09249867539055d41042a5814c0462a188235b047",
+    "test_deploy.py": "c4cb2193a2ec3e94dc55d43d8bbca2088de5186b7248b6cb238fb43197de2fff",
+    "run_shared_tests.py": "2bdb8c75e5824f8fbc3041cd6ea76b24937af797dad4a7c31851e9006ef4969b",
+    "verify_install.py": "246d18207dc2280ffec2b086559227e03a7db993703c48c10d12e6c2f4442037",
+    "deploy.py": "dd2116bae6fd4d91a1518dd99b67bc5e3c02a2979492fccead53867a3b0f4b3d",
+    "desktop-rules.md": "16ac0de76cfe62f4ab97e64b1b91f685e5bc28cc51dacf0580b918fa0fa6e4fb",
+    "README.md": "c96368983b7f013106a88d805b6da1f5b159a6bac0f162529e269ca357c9ff34"
+  }
+}
