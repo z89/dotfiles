@@ -1,0 +1,199 @@
+#!/usr/bin/env python3
+"""Show Quickshell reload notices as normal desktop notifications.
+
+Quickshell draws its own reload popup (top-left corner, its own style) unless the
+process starts with QS_NO_RELOAD_POPUP=1, which ~/.config/environment.d/70-quickshell.conf
+(systemd services such as dms.service) and ~/.zshenv (terminals and agents) set.
+This service follows every instance log under $XDG_RUNTIME_DIR/quickshell/by-id/
+and posts the same news with notify-send, so DMS shows it like any other
+notification. It covers DMS, synopsis and any other config without touching
+their QML, so nothing needs re-patching after an upgrade.
+"""
+import html
+import os
+import re
+import subprocess
+import threading
+import time
+from datetime import datetime
+
+RUNTIME = os.environ.get("XDG_RUNTIME_DIR") or f"/run/user/{os.getuid()}"
+BASE = os.environ.get("QS_RELOAD_NOTIFY_DIR") or os.path.join(RUNTIME, "quickshell", "by-id")
+NOTIFY = os.environ.get("QS_RELOAD_NOTIFY_CMD") or "notify-send"
+# A reload this soon after launch is start-up churn (a tool writing a file as the
+# instance comes up), not an edit anyone is waiting on.
+GRACE = float(os.environ.get("QS_RELOAD_NOTIFY_GRACE") or "2")
+# DMS keeps critical notifications up until dismissed; failures pass their own
+# expire timeout (ms) so the popup still goes away. The history entry stays.
+FAIL_TIMEOUT_MS = os.environ.get("QS_RELOAD_NOTIFY_FAIL_TIMEOUT") or "10000"
+POLL = 0.5
+FAILURE_SETTLE = 0.3  # error lines follow "Failed to load configuration" within a few ms
+ERROR_LEVELS = {"ERROR", "CRIT", "CRITICAL", "FATAL"}
+
+ANSI = re.compile(r"\x1b\[[0-9;]*m")
+# 2026-09-15 21:51:54.432  INFO: Reloading configuration...
+# 2026-09-15 21:51:54.432  WARN quickshell.io.socket: Socket error ...
+LINE = re.compile(r"^(\d{4}-\d\d-\d\d \d\d:\d\d:\d\d\.\d+)\s+(\w+)(?: [^:]+)?: ?(.*)$")
+GENERIC_DIRS = {"shell", "quickshell", "config", "src", "qml"}
+
+
+def parse_ts(ts):
+    try:
+        return datetime.strptime(ts, "%Y-%m-%d %H:%M:%S.%f")
+    except ValueError:
+        return None
+
+
+def config_name(path):
+    p = path.strip().strip('"')
+    if any(k in p for k in ("dms-shell", "danklinux-shell", "DankMaterialShell")):
+        return "DankMaterialShell"
+    cfg = os.path.expanduser("~/.config/quickshell") + "/"
+    if p.startswith(cfg):
+        return p[len(cfg):].split("/")[0]
+    d = os.path.dirname(p)
+    base = os.path.basename(d)
+    if base in GENERIC_DIRS:
+        base = os.path.basename(os.path.dirname(d))
+    return base or "Quickshell"
+
+
+def notify(args):
+    # Off the poll thread, with retries: DMS may be restarting when a reload lands.
+    def run():
+        for _ in range(4):
+            try:
+                if subprocess.run([NOTIFY, *args], timeout=10,
+                                  stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL).returncode == 0:
+                    return
+            except (OSError, subprocess.TimeoutExpired):
+                pass
+            time.sleep(1)
+
+    threading.Thread(target=run, daemon=True).start()
+
+
+class InstanceLog:
+    def __init__(self, path, offset):
+        self.path = path
+        self.offset = offset
+        self.buf = b""
+        self.name = None
+        self.launched = None
+        self.reloading = None   # timestamp of the pending "Reloading configuration..."
+        self.failure = None     # error lines collected after "Failed to load configuration"
+        self.failure_at = 0.0
+
+    def ensure_meta(self):
+        """Fill name and launch time from the head of the log (instances seen mid-run)."""
+        if self.name is not None:
+            return
+        self.name = "Quickshell"
+        try:
+            with open(self.path, "rb") as f:
+                head = f.read(16384).decode("utf-8", "replace")
+        except OSError:
+            return
+        for line in head.splitlines():
+            m = LINE.match(ANSI.sub("", line))
+            if m and m.group(3).startswith("Launching config:"):
+                self.name = config_name(m.group(3).split(":", 1)[1])
+                self.launched = parse_ts(m.group(1))
+                return
+
+    def handle(self, line):
+        line = ANSI.sub("", line).rstrip("\r")
+        m = LINE.match(line)
+        if not m:
+            if self.failure is not None and line.strip():  # continuation of a multi-line error
+                self.failure.append(line.strip())
+                self.failure_at = time.monotonic()
+            return
+        ts, level, msg = m.groups()
+
+        if self.failure is not None:
+            if level in ERROR_LEVELS and msg != "Failed to load configuration":
+                self.failure.append(msg.strip())
+                self.failure_at = time.monotonic()
+                return
+            self.flush_failure()
+
+        if msg.startswith("Launching config:"):
+            self.name = config_name(msg.split(":", 1)[1])
+            self.launched = parse_ts(ts)
+        elif msg == "Reloading configuration...":
+            self.reloading = parse_ts(ts) or datetime.now()
+        elif msg == "Configuration Loaded":
+            started, self.reloading = self.reloading, None
+            if started is None:  # the initial load prints this too
+                return
+            self.ensure_meta()
+            if self.launched and (started - self.launched).total_seconds() < GRACE:
+                return
+            notify(["-a", "Quickshell", "-u", "normal", "-i", "view-refresh",
+                    "-h", "int:transient:1", f"{self.name} reloaded"])
+        elif msg == "Failed to load configuration":
+            self.reloading = None
+            self.failure = []
+            self.failure_at = time.monotonic()
+
+    def flush_failure(self):
+        lines, self.failure = self.failure or [], None
+        self.ensure_meta()
+        body = html.escape("\n".join(lines)[:1500], quote=False)
+        notify(["-a", "Quickshell", "-u", "critical", "-i", "dialog-error", "-t", FAIL_TIMEOUT_MS,
+                f"{self.name} error", body])
+
+    def poll(self, size):
+        if size < self.offset:  # truncated or replaced
+            self.offset, self.buf = 0, b""
+        if size > self.offset:
+            with open(self.path, "rb") as f:
+                f.seek(self.offset)
+                data = f.read(size - self.offset)
+            self.offset += len(data)
+            *lines, self.buf = (self.buf + data).split(b"\n")
+            for raw in lines:
+                self.handle(raw.decode("utf-8", "replace"))
+        if self.failure is not None and time.monotonic() - self.failure_at > FAILURE_SETTLE:
+            self.flush_failure()
+
+
+def main():
+    logs = {}
+    first_scan = True
+    while True:
+        seen = set()
+        try:
+            with os.scandir(BASE) as it:
+                dirs = [e.path for e in it if e.is_dir(follow_symlinks=False)]
+        except OSError:
+            dirs = []
+        for d in dirs:
+            path = os.path.join(d, "log.log")
+            try:
+                size = os.stat(path).st_size
+            except OSError:
+                continue
+            seen.add(path)
+            log = logs.get(path)
+            if log is None:
+                # Existing logs are history: start at their end. New instances start at 0.
+                log = logs[path] = InstanceLog(path, size if first_scan else 0)
+            try:
+                log.poll(size)
+            except OSError:
+                pass
+        for path in set(logs) - seen:
+            if logs[path].failure is not None:
+                logs[path].flush_failure()
+            del logs[path]
+        first_scan = False
+        time.sleep(POLL)
+
+
+if __name__ == "__main__":
+    try:
+        main()
+    except KeyboardInterrupt:
+        pass

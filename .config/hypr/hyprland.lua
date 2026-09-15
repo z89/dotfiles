@@ -131,6 +131,9 @@ hl.env("QT_QPA_PLATFORMTHEME", "qt5ct")
 
 -- hl.config({ ecosystem = { enforce_permissions = true } })
 
+-- No update-news or donation popups; they bypass DMS notifications.
+hl.config({ ecosystem = { no_update_news = true, no_donation_nag = true } })
+
 -- hl.permission("/usr/(bin|local/bin)/grim", "screencopy", "allow")
 -- hl.permission("/usr/(lib|libexec|lib64)/xdg-desktop-portal-hyprland", "screencopy", "allow")
 -- hl.permission("/usr/(bin|local/bin)/hyprpm", "plugin", "allow")
@@ -317,7 +320,7 @@ hl.bind(mainMod .. " + SHIFT + E",      hl.dsp.exec_cmd(fileManager),           
 hl.bind(mainMod .. " + SHIFT + space",  hl.dsp.window.float({ action = "toggle" }),         { desc = "Toggle Floating" })
 hl.bind(mainMod .. " + space",          hl.dsp.exec_cmd("dms ipc call notifications clearAll"), { desc = "Dismiss Notifications" })
 hl.bind(mainMod .. " + D",              hl.dsp.exec_cmd("dms ipc call spotlight toggle"),   { desc = "App Launcher" })
-hl.bind(mainMod .. " + SHIFT + R",      hl.dsp.exec_cmd('hyprctl reload && notify-send -u low -t 2000 "Hyprland" "Config reloaded"'), { desc = "Reload Config" })
+hl.bind(mainMod .. " + SHIFT + R",      hl.dsp.exec_cmd('hyprctl reload && notify-send -a Hyprland -u low -t 2000 "Hyprland" "Config reloaded"'), { desc = "Reload Config" })
 hl.bind(mainMod .. " + slash",          hl.dsp.exec_cmd("~/.local/bin/keybind-cheatsheet"), { desc = "Keybind Cheatsheet" })
 -- synopsis (mission control): bind, layer rule, render_unfocused rule
 local synopsis = load(io.open(os.getenv("HOME") .. "/.config/hypr/synopsis.lua"):read("a"))()
