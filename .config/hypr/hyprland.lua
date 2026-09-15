@@ -88,10 +88,6 @@ hl.on("hyprland.start", function()
     -- get supervision and restart-on-failure for free. Enable with
     --   systemctl --user enable hyprpolkitagent cliphist (idle/lock/wallpaper are DMS built-ins)
 
-    -- Watchdog owns the hyprpanel lifecycle: spawns it as a child (so gdb can
-    -- attach via ptrace_scope=1), monitors the heartbeat file, and restarts on
-    -- freeze with a circuit breaker. hyprpanel-launch is no longer wired here so
-    -- the watchdog is the sole parent.
     -- Shell: DankMaterialShell via systemd (dms.service, WantedBy graphical-session.target)
 
     -- Electron apps are staggered: four of them launching at once contend for
