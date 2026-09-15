@@ -499,10 +499,6 @@
           },
           {
             "type": "command",
-            "command": "python3 /home/archie/.claude/hooks/hyprpanel-guard.py"
-          },
-          {
-            "type": "command",
             "command": "python3 /home/archie/.claude/hooks/terraform-guard.py"
           },
           {
@@ -516,15 +512,6 @@
           {
             "type": "command",
             "command": "python3 /home/archie/.claude/hooks/git-secret-scan.py"
-          }
-        ]
-      },
-      {
-        "matcher": "Edit|Write|MultiEdit",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "python3 /home/archie/.claude/hooks/hyprpanel-guard.py"
           }
         ]
       }

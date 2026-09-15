@@ -16,7 +16,6 @@ skills/*
 !skills/arch/
 !skills/commit/
 !skills/dotfiles/
-!skills/hyprpanel/
 !skills/terminal/
 
 !hooks/

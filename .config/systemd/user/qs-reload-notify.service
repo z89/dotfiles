@@ -1,0 +1,13 @@
+[Unit]
+Description=Quickshell reload notices through the desktop notification server (DMS)
+Documentation=file://%h/.local/bin/qs-reload-notify
+PartOf=graphical-session.target
+After=graphical-session.target dms.service
+
+[Service]
+ExecStart=%h/.local/bin/qs-reload-notify
+Restart=on-failure
+RestartSec=2
+
+[Install]
+WantedBy=graphical-session.target

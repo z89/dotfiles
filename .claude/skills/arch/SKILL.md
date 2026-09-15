@@ -36,7 +36,7 @@ This file defines the user's system. Load it before any task involving packages,
 ## Desktop Environment
 
 - **WM:** Hyprland — config at `~/.config/hypr/hyprland.lua` (Lua; hyprlang `.conf` is deprecated since 0.55)
-- **Bar / shell:** DankMaterialShell (DMS) via `dms.service` and the patched wrapper `~/.local/bin/dms-run-patched`; settings in `~/.config/DankMaterialShell/settings.json` (HyprPanel is retired, its files remain tracked until sign-off)
+- **Bar / shell:** DankMaterialShell (DMS) via `dms.service` and the patched wrapper `~/.local/bin/dms-run-patched`; settings in `~/.config/DankMaterialShell/settings.json` (HyprPanel was fully removed on 2026-09-16)
 - **Launcher:** wofi
 - **Notifications:** DMS built-in (compact popup card patched via `~/.config/DankMaterialShell/patches/`)
 - **Display:** Wayland-native (Hyprland)
