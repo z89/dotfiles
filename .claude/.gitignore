@@ -16,6 +16,8 @@ skills/*
 !skills/arch/
 !skills/commit/
 !skills/dotfiles/
+!skills/lean/
+!skills/lean-always/
 !skills/terminal/
 
 !hooks/

@@ -102,6 +102,7 @@
         "DP-2"
       ],
       "leftWidgets": [
+        "synopsis",
         "launcherButton",
         "workspaceSwitcher",
         "focusedWindow"

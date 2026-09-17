@@ -544,6 +544,15 @@
             "command": "python3 /home/archie/.claude/hooks/mark-commit-skill.py"
           }
         ]
+      },
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash /home/archie/.claude/hooks/lean-mode.sh",
+            "timeout": 5
+          }
+        ]
       }
     ]
   },
@@ -565,6 +574,9 @@
     },
     "claude-opus-5": {
       "effortLevel": "high"
+    },
+    "claude-sonnet-5": {
+      "effortLevel": "xhigh"
     }
   },
   "autoCompactWindow": 300000,
