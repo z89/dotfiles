@@ -18,5 +18,8 @@
     "enabled": true,
     "cliCommand": "/home/archie/.local/bin/roam",
     "terminalCommand": "/usr/bin/kitty"
+  },
+  "synopsis": {
+    "enabled": true
   }
 }
