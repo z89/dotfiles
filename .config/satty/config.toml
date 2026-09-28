@@ -16,10 +16,10 @@ style = "Medium"
 
 [color-palette]
 palette = [
-    "#ffb1c2",
-    "#ffb599",
+    "#9acbff",
+    "#c2c1f9",
     "#ffb4ab",
-    "#f5b7b2",
-    "#fbe0e4",
-    "#1d1013",
+    "#bac6ea",
+    "#e1e7f2",
+    "#0d141b",
 ]

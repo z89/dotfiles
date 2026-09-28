@@ -558,12 +558,12 @@ hl.window_rule({
     size = "320 568",
 })
 
--- Moonlight: match the macbook stream (2002x1300) so there are no black bars
+-- Moonlight: match the macbook stream (2294x1432) so there are no black bars
 hl.window_rule({
     name  = "moonlight-size",
     match = { class = "^com.moonlight_stream.Moonlight$" },
 
-    size              = "2002 1300",
+    size              = "2294 1432",
     center            = true,
     keep_aspect_ratio = true,
 })
