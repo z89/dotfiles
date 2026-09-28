@@ -41,6 +41,84 @@ trap 'rm -rf "$tmp"' EXIT
 cp -a "$src"/. "$tmp"/
 chmod -R u+w "$tmp"
 
+# Newer DMS ships a grid-based control centre and no longer has the old
+# DankLauncherV2 paths patched below. Build from its stock tree with only the
+# compact control-centre layout until those older patches are ported.
+if [[ -f "$tmp/Modules/ControlCenter/CcMetrics.qml" ]]; then
+    python3 - "$tmp" <<'PY'
+from pathlib import Path
+import sys
+
+root = Path(sys.argv[1])
+metrics = root / "Modules/ControlCenter/CcMetrics.qml"
+text = metrics.read_text()
+for old, new in (
+    ("readonly property real tileHeight: 64", "readonly property real tileHeight: 52"),
+    ("readonly property real headerAvatarSize: 56", "readonly property real headerAvatarSize: 40"),
+):
+    if text.count(old) != 1:
+        raise SystemExit(f"dms-shell-patch: expected one {old!r} in {metrics}")
+    text = text.replace(old, new)
+metrics.write_text(text)
+PY
+
+    # Brightness device ids. The grid control centre matches brightness devices by
+    # display name ("I2C-8"), but BrightnessService keys every device by id
+    # ("ddc:i2c-8"), so the slider drove a device that does not exist: it sat at 50%
+    # and moving it did nothing. Match on id instead. Skipped if upstream changes.
+    if ! python3 - "$tmp" <<'PYBR'
+from pathlib import Path
+import sys
+root = Path(sys.argv[1]) / "Modules/ControlCenter"
+edits = {
+    "Widgets/BrightnessSliderRow.qml": [
+        ("dev => dev.name === pinnedDevice)", "dev => dev.id === pinnedDevice)"),
+        ("dev => dev.name === deviceName)", "dev => dev.id === deviceName)"),
+        ("dev => dev.name === currentDeviceName)", "dev => dev.id === currentDeviceName)"),
+        ("return backlight.name;", "return backlight.id;"),
+        ("return ddc.name;", "return ddc.id;"),
+        ("BrightnessService.devices[0].name;", "BrightnessService.devices[0].id;"),
+        ("dev => dev.name === targetDeviceName)", "dev => dev.id === targetDeviceName)"),
+    ],
+    "Details/BrightnessDetail.qml": [
+        ("d => d.name === pinnedDevice)", "d => d.id === pinnedDevice)"),
+        ("d => d.name === widget.deviceName)", "d => d.id === widget.deviceName)"),
+        ("d => d.name === BrightnessService.currentDevice)", "d => d.id === BrightnessService.currentDevice)"),
+        ("d => d.name === initialDeviceName)", "d => d.id === initialDeviceName)"),
+        ("return backlight.name;", "return backlight.id;"),
+        ("return ddc.name;", "return ddc.id;"),
+        ("return devices[0].name;", "return devices[0].id;"),
+        ('readonly property string deviceName: modelData.name || ""', 'readonly property string deviceName: modelData.id || ""'),
+        ('subtitle: deviceName + " • "', 'subtitle: (modelData.name || deviceName) + " • "'),
+    ],
+}
+out = {}
+for rel, subs in edits.items():
+    f = root / rel
+    text = f.read_text()
+    for old, new in subs:
+        if text.count(old) != 1:
+            raise SystemExit(f"{rel}: expected one {old!r}")
+        text = text.replace(old, new)
+    out[f] = text
+for f, text in out.items():
+    f.write_text(text)
+PYBR
+    then
+        echo "dms-shell-patch: brightness device-id fix skipped: upstream QML changed" >&2
+    fi
+
+    echo "$BIN_SHA" > "$tmp/.dms-binary-sha256"
+    stamp=$(date +%Y%m%d%H%M.%S)
+    find "$tmp" -type f -exec touch -m -t "$stamp" {} +
+    [[ -e "$OUT.prev" ]] && rm -rf "$OUT.prev"
+    [[ -e "$OUT" ]] && mv "$OUT" "$OUT.prev"
+    mv "$tmp" "$OUT"
+    trap - EXIT
+    echo "dms-shell-patch: built $OUT from $(cat "$OUT/VERSION") (compact control centre, modern DMS)"
+    exit 0
+fi
+
 patch_one() { # file, sed-expr, must-match-regex
     local f=$1 expr=$2 must=$3
     grep -qE "$must" "$f" || { echo "dms-shell-patch: pattern not found in ${f#$tmp/}: $must" >&2; exit 2; }
