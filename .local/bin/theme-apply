@@ -70,6 +70,7 @@ GTK_PALETTE_CSS = os.path.join(HOME, ".config/gtk-3.0/palette-colors.css")
 FADE_MS = 500          # keep equal to THEME_FADE_MS in dms-shell-patch (DMS colours + wallpaper)
 FADE_FPS = 30
 SYNC_WAIT_S = 2.5   # longest wait for the DMS palette stamp after a matugen write (covers its wallpaper-decode hold)
+STAMP_MISSED = os.path.join(STATE_DIR, "stamp-missed")   # trigger time of a run that saw no stamp
 FADE_BEZIER = "cubic-bezier(0.33, 1, 0.68, 1)"   # easeOutCubic, same as _ease()
 GTK_FADE_CSS = (
     "\n/* fade engine: colour changes ease over the same curve and duration as kitty */\n"
@@ -107,9 +108,29 @@ def _fade_anchor():
     back to now so nothing ever hangs.  Called once everything that can be
     prepared ahead (palette, GTK theme files, kitty's live colours) is done."""
     trigger = _mtime(GTK3_COLORS)
-    deadline = trigger + SYNC_WAIT_S
+    # A shell that wrote no stamp for the previous palette either (dms-shell-patch did
+    # not apply) is not waited on again: that cost SYNC_WAIT_S on every switch.  A stamp
+    # newer than the missed run means the shell stamps again and the wait comes back.
+    try:
+        with open(STAMP_MISSED) as f:
+            missed = float(f.read())
+    except (OSError, ValueError):
+        missed = 0.0
+    wait = 0.0 if missed and _mtime(PALETTE_STAMP) < missed else SYNC_WAIT_S
+    deadline = trigger + wait
     while (stamp := _mtime(PALETTE_STAMP)) < trigger and time.time() < deadline:
         time.sleep(0.004)
+    try:
+        if stamp < trigger:
+            if not missed or wait:
+                log("fade", "no palette stamp from the shell: unsynced fade, not waiting next time")
+            if not missed:
+                with open(STAMP_MISSED, "w") as f:
+                    f.write(repr(trigger))
+        elif missed:
+            os.unlink(STAMP_MISSED)
+    except OSError:
+        pass
     now = time.time()
     return stamp if 0 <= now - stamp < FADE_MS / 1000.0 else now
 

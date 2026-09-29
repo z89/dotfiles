@@ -1619,3 +1619,15 @@ launchmsg="launcher ${FULL_WIDTH}x${FULL_HEIGHT}, spotlight bar ${SPOT_WIDTH}px 
 [[ $MODERN == 1 ]] && launchmsg="modern DMS: compact control centre, $launchmsg"
 [[ $MODERN == 1 && "$LAUNCHER_SIZE" != 1 ]] && launchmsg="modern DMS: compact control centre, stock launcher"
 echo "dms-shell-patch: built $OUT from $(cat "$OUT/VERSION") ($launchmsg, $lockmsg, $notifmsg, $syncmsg, $pctmsg, $clkmsg, $keybindmsg, $notepadmsg, $nfmsg)"
+
+# Self-test: the theme sync block must be in the built tree. Without it theme-apply falls
+# back to an unsynced fade, so say so on the desktop instead of failing quietly.
+missing=()
+for marker in paletteHeld consumerReady snapshotsPending palette-applied.stamp; do
+    grep -rqF -- "$marker" "$OUT/Common" "$OUT/Modules" || missing+=("$marker")
+done
+if [[ "$THEME_SYNC" != 1 || ${#missing[@]} -gt 0 ]]; then
+    echo "dms-shell-patch: SELF-TEST FAILED: theme sync not in the built shell (missing: ${missing[*]:-block disabled})" >&2
+    notify-send -u critical -a dms-shell-patch "DMS theme sync patch did not apply" \
+        "Theme switches fall back to an unsynced fade. Run dms-shell-patch to see why." 2>/dev/null || true
+fi
