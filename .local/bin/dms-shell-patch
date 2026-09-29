@@ -44,8 +44,10 @@ chmod -R u+w "$tmp"
 # Newer DMS (1.6.0.r131+, "modern") ships a grid-based control centre and no longer
 # has the old DankLauncherV2 paths patched below. On a modern tree the compact
 # control-centre layout and the brightness id fix apply here, then the theme sync
-# block (ported: its anchors are unchanged in 77e6031). Every other block has not
-# been ported yet; modern_off turns it off with a message so the stock files stay.
+# block (ported: its anchors are unchanged in 77e6031). The launcher size, volume
+# percent, ordinal date, bottom Notepad, notification click and keybind blocks are
+# ported too. The lock fade and the notification card were rewritten upstream and are
+# not ported; modern_off turns them off with a message so the stock files stay.
 MODERN=0
 modern_off() { # VAR "block name": disable an unported block on a modern tree, loudly
     [[ $MODERN == 1 ]] || return 0
@@ -126,8 +128,66 @@ patch_one() { # file, sed-expr, must-match-regex
 }
 
 # Launcher and Spotlight sizes. The DankLauncherV2 modal files are gone in modern DMS.
+# There one host (DankLauncherV2ModalHost.qml) draws both the full launcher and Spotlight,
+# and the sizes come from Components/LauncherMetrics.qml: the "compact" (default) size and
+# the Spotlight bar width are rewritten there, Spotlight's results cap in
+# SpotlightLauncherContent.qml (it already stops at the screen edge), and the full
+# launcher's vertical centring in the host. Framed/connected layouts keep their own
+# placement. Skipped with a warning, nothing written, if upstream changed the anchors.
+LAUNCHER_SIZE=1
+apply_launcher_size_modern() {
+    if ! SPOT_WIDTH="$SPOT_WIDTH" SPOT_RESULTS_H="$SPOT_RESULTS_H" FULL_WIDTH="$FULL_WIDTH" FULL_HEIGHT="$FULL_HEIGHT" \
+        python3 - "$tmp" <<'PYLM'
+import os, sys
+root = sys.argv[1] + "/Modals/DankLauncherV2/"
+env = {k: int(os.environ[k]) for k in ("SPOT_WIDTH", "SPOT_RESULTS_H", "FULL_WIDTH", "FULL_HEIGHT")}
+edits = {
+    "Components/LauncherMetrics.qml": [
+        ("readonly property real spotlightWidth: Theme.launcherWidthWide",
+         f"readonly property real spotlightWidth: {env['SPOT_WIDTH']} // dms-shell-patch (stock: Theme.launcherWidthWide)"),
+        ("return Theme.launcherWidthDefault;",
+         f"return {env['FULL_WIDTH']}; // dms-shell-patch (stock: Theme.launcherWidthDefault)"),
+        ("return Theme.launcherHeightDefault;",
+         f"return {env['FULL_HEIGHT']}; // dms-shell-patch (stock: Theme.launcherHeightDefault)"),
+    ],
+    "SpotlightLauncherContent.qml": [
+        ("Math.min(LauncherMetrics.maxResultsHeight, (parentModal?.screenHeight",
+         f"Math.min({env['SPOT_RESULTS_H']}, (parentModal?.screenHeight"),
+    ],
+    "DankLauncherV2ModalHost.qml": [
+        ("        if (!spotlight)\n"
+         "            return (screenHeight - modalHeight) / 2;\n"
+         "        return LauncherMetrics.spotlightY(",
+         "        if (!spotlight) {\n"
+         "            // dms-shell-patch: centre between the bar edge and the opposite screen edge\n"
+         "            const bw = BarWidgetService.getBarWindowForScreen(effectiveScreen?.name ?? \"\");\n"
+         "            const ez = Math.max(0, bw?.exclusiveZone ?? 0);\n"
+         "            const pos = bw?.barConfig?.position ?? SettingsData.Position.Top;\n"
+         "            const top = pos === SettingsData.Position.Top ? ez : 0;\n"
+         "            const bottom = pos === SettingsData.Position.Bottom ? ez : 0;\n"
+         "            return top + Math.max(0, (screenHeight - top - bottom - modalHeight) / 2);\n"
+         "        }\n"
+         "        return LauncherMetrics.spotlightY("),
+    ],
+}
+out = {}
+for rel, subs in edits.items():
+    text = open(root + rel).read()
+    for old, new in subs:
+        assert text.count(old) == 1, rel
+        text = text.replace(old, new)
+    out[rel] = text
+for rel, text in out.items():
+    open(root + rel, "w").write(text)
+PYLM
+    then
+        echo "dms-shell-patch: launcher/Spotlight size skipped: upstream launcher QML changed" >&2
+        LAUNCHER_SIZE=0
+        return
+    fi
+}
 if [[ $MODERN == 1 ]]; then
-    echo "dms-shell-patch: launcher/Spotlight size not ported to modern DMS yet: stock kept" >&2
+    apply_launcher_size_modern
 else
     SPOT=$tmp/Modals/DankLauncherV2
     patch_one "$SPOT/DankLauncherV2ModalSpotlight.qml" \
@@ -999,7 +1059,9 @@ PY3
         return
     fi
 }
-modern_off AUDIO_PCT_LEAD "leading volume percent"
+# Modern DMS (77e6031) kept both anchors and every property the lead readout uses
+# (BarPill widgetThickness/horizontalPadding/barThickness, NumericText reserveText), so
+# the same edit applies to both trees; its assertions still guard an upstream change.
 [[ "$AUDIO_PCT_LEAD" == 1 ]] && apply_audio_pct_lead
 
 # ---- Bar clock date: "Thu 10th Sept" (optional) ------------------------------------
@@ -1122,7 +1184,7 @@ notepad_bottom_skip() {
     NOTEPAD_BOTTOM=0
 }
 apply_notepad_bottom() {
-    if ! NOTEPAD_BOTTOM_WIDTH="$NOTEPAD_BOTTOM_WIDTH" python3 - "$tmp" <<'PY5'
+    if ! NOTEPAD_BOTTOM_WIDTH="$NOTEPAD_BOTTOM_WIDTH" NOTEPAD_MODERN="$MODERN" python3 - "$tmp" <<'PY5'
 import os, sys
 
 tmp = sys.argv[1]
@@ -1181,6 +1243,13 @@ edit(slideout,
 ''',
 '''        onHoverMoved: (sceneX, sceneY) => PopoutManager.updateHoverCursor(root.surfaceOriginX + sceneX, root.surfaceOriginY + sceneY)
 ''')
+modern_visible = '''    onIsVisibleChanged: slideSpring.retarget(isVisible ? 0 : (slideFromLeft ? -slideContainer.width : slideContainer.width))
+
+'''
+if os.environ.get("NOTEPAD_MODERN") == "1":
+    # Modern DMS retargets the slide spring from a root-level handler that sits inside
+    # the size/mask anchor below. Lift it out here; it goes back, patched, further down.
+    edit(slideout, modern_visible, "")
 edit(slideout,
 '''    readonly property real alignedWidth: Theme.px(expandable && expandedWidth ? expandedWidthValue : slideoutWidth, dpr)
     onAlignedWidthChanged: widthSpring.retarget(alignedWidth)
@@ -1266,7 +1335,16 @@ edit(slideout,
 '''        width: root.slideFromBottom ? Math.min(root.alignedBottomPanelWidth, root.alignedWidth - root.alignedEdgeGap * 2) : sizeSpring.value
         height: root.slideFromBottom ? sizeSpring.value : root.alignedHeight - root.alignedEdgeGap * 2
 ''')
-edit(slideout,
+if os.environ.get("NOTEPAD_MODERN") == "1":
+    # The lifted handler returns to its stock place, ahead of the mask, with the bottom
+    # branch the old tree's Connections block gets below.
+    edit(slideout, "    mask: Region {\n",
+'''    onIsVisibleChanged: slideSpring.retarget(isVisible ? 0 : (slideFromBottom ? slideContainer.height : (slideFromLeft ? -slideContainer.width : slideContainer.width)))
+
+    mask: Region {
+''')
+else:
+    edit(slideout,
 '''                const target = root.isVisible ? 0 : (root.slideFromLeft ? -slideContainer.width : slideContainer.width);
 ''',
 '''                const target = root.isVisible ? 0 : (root.slideFromBottom ? slideContainer.height : (root.slideFromLeft ? -slideContainer.width : slideContainer.width));
@@ -1323,7 +1401,8 @@ PY5
         return
     fi
 }
-modern_off NOTEPAD_BOTTOM "bottom Notepad slideout"
+# Modern DMS (77e6031) kept every DankSlideout/NotepadSettings anchor but one: the slide
+# spring retarget moved to a root-level onIsVisibleChanged, selected by NOTEPAD_MODERN.
 [[ "$NOTEPAD_BOTTOM" == 1 ]] && apply_notepad_bottom
 
 # ---- Notification click raises the sender (optional) ------------------------------
@@ -1406,8 +1485,82 @@ PYNF
         return
     fi
 }
-modern_off NOTIFY_FOCUS "notification click focus"
-[[ "$NOTIFY_FOCUS" == 1 ]] && apply_notify_focus
+# Modern DMS funnels the popup's clicks through invokeDefaultAction and an
+# onActionRequested handler, and the notification centre card through its own
+# invokeAction, so the call sites differ; the service helper is the same.
+apply_notify_focus_modern() {
+    if ! python3 - "$tmp" <<'PYNFM'
+import os, sys
+tmp = sys.argv[1]
+
+svc_anchor = "    function dismissNotification(wrapper) {\n"
+svc_add = """    // dms-shell-patch: report a notification action click to Hyprland before invoking it,
+    // so ~/.config/hypr/notify-focus.lua can bring forward the window the sender activates.
+    function invokeAction(action, appName) {
+        try {
+            const app = String(appName ?? "").replace(/[^A-Za-z0-9._ -]/g, "");
+            Quickshell.execDetached(["hyprctl", "eval", `return notify_focus and notify_focus.clicked("${app}")`]);
+        } catch (e) {
+            console.warn("NotificationService: click report failed:", e);
+        }
+        action.invoke();
+    }
+
+"""
+
+# (file, old, new, expected count). Each replacement is one statement, so braceless ifs
+# at the call sites keep their meaning. The popup's action handler runs inside the card
+# delegate, whose own notificationData would shadow the window's, hence win.notificationData.
+sites = [
+    ("Services/NotificationService.qml", svc_anchor, svc_add + svc_anchor, 1),
+    ("Modules/Notifications/Popup/NotificationPopup.qml",
+     "win.notificationData.actions[0].invoke();",
+     "NotificationService.invokeAction(win.notificationData.actions[0], win.notificationData?.appName);", 1),
+    ("Modules/Notifications/Popup/NotificationPopup.qml",
+     "action.invoke();",
+     "NotificationService.invokeAction(action, win.notificationData?.appName);", 2),
+    ("Modules/Notifications/Center/NotificationCard.qml",
+     "action.invoke();",
+     "NotificationService.invokeAction(action, root.notificationGroup?.appName);", 1),
+    ("Modules/Notifications/Center/NotificationKeyboardController.qml",
+     "action.invoke();",
+     "NotificationService.invokeAction(action, group?.appName);", 1),
+    ("Modules/DankIsland/IslandNotificationSource.qml",
+     "actions[0].invoke();",
+     "NotificationService.invokeAction(actions[0], currentWrapper?.appName);", 1),
+]
+
+texts = {}
+for rel, old, new, count in sites:
+    p = os.path.join(tmp, rel)
+    s = texts.get(rel)
+    if s is None:
+        s = open(p).read()
+    got = s.count(old)
+    assert got == count, f"{rel}: {old!r} found {got}x, expected {count}"
+    texts[rel] = s.replace(old, new)
+
+svc = texts["Services/NotificationService.qml"]
+assert "\nimport Quickshell\n" in svc, "NotificationService.qml imports Quickshell"
+for rel, s in texts.items():
+    if rel != "Services/NotificationService.qml":
+        assert "\nimport qs.Services\n" in s, f"{rel} imports qs.Services"
+    assert ".invoke();" not in s.replace("        action.invoke();\n    }", ""), f"{rel}: unrouted invoke left"
+
+for rel, s in texts.items():
+    open(os.path.join(tmp, rel), "w").write(s)
+PYNFM
+    then
+        echo "dms-shell-patch: notification click raise skipped: upstream QML anchors changed" >&2
+        NOTIFY_FOCUS=0
+        return
+    fi
+}
+if [[ $MODERN == 1 ]]; then
+    [[ "$NOTIFY_FOCUS" == 1 ]] && apply_notify_focus_modern
+else
+    [[ "$NOTIFY_FOCUS" == 1 ]] && apply_notify_focus
+fi
 
 # ---- Polished keybind cheatsheet (optional) --------------------------------------
 # Replace the stock cheatsheet content with the local DMS-themed card layout. Guard
@@ -1432,7 +1585,9 @@ apply_keybind_menu() {
     fi
     cp -a "$KEYBIND_TEMPLATE" "$target"
 }
-modern_off KEYBIND_MENU "polished keybind menu"
+# Modern DMS (77e6031) only restyled the stock KeybindsContent.qml (font weights, a
+# DankSearchField): its contract, the cheatsheet bind fields and every widget and Theme
+# property the template uses are unchanged, so the same guarded copy applies to both trees.
 [[ "$KEYBIND_MENU" == 1 ]] && apply_keybind_menu
 
 echo "$BIN_SHA" > "$tmp/.dms-binary-sha256"
@@ -1461,5 +1616,6 @@ notepadmsg="bottom Notepad ${NOTEPAD_BOTTOM_WIDTH}px wide"; [[ "$NOTEPAD_BOTTOM"
 keybindmsg="polished keybind menu"; [[ "$KEYBIND_MENU" == 1 ]] || keybindmsg="stock keybind menu"
 nfmsg="notification click raises sender"; [[ "$NOTIFY_FOCUS" == 1 ]] || nfmsg="stock notification click"
 launchmsg="launcher ${FULL_WIDTH}x${FULL_HEIGHT}, spotlight bar ${SPOT_WIDTH}px wide"
-[[ $MODERN == 1 ]] && launchmsg="modern DMS: compact control centre, stock launcher"
+[[ $MODERN == 1 ]] && launchmsg="modern DMS: compact control centre, $launchmsg"
+[[ $MODERN == 1 && "$LAUNCHER_SIZE" != 1 ]] && launchmsg="modern DMS: compact control centre, stock launcher"
 echo "dms-shell-patch: built $OUT from $(cat "$OUT/VERSION") ($launchmsg, $lockmsg, $notifmsg, $syncmsg, $pctmsg, $clkmsg, $keybindmsg, $notepadmsg, $nfmsg)"
