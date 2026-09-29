@@ -44,6 +44,8 @@
 .config/hypr/colors.conf
 .config/hypr/colors.lua
 .config/hypr/*.backup*
+.config/hypr/*.bak-*
+.config/hypr/synopsis.lua
 .config/hypr/.dms-backups/
 !.config/systemd/
 .config/systemd/*

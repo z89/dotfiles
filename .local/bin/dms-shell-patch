@@ -41,10 +41,19 @@ trap 'rm -rf "$tmp"' EXIT
 cp -a "$src"/. "$tmp"/
 chmod -R u+w "$tmp"
 
-# Newer DMS ships a grid-based control centre and no longer has the old
-# DankLauncherV2 paths patched below. Build from its stock tree with only the
-# compact control-centre layout until those older patches are ported.
+# Newer DMS (1.6.0.r131+, "modern") ships a grid-based control centre and no longer
+# has the old DankLauncherV2 paths patched below. On a modern tree the compact
+# control-centre layout and the brightness id fix apply here, then the theme sync
+# block (ported: its anchors are unchanged in 77e6031). Every other block has not
+# been ported yet; modern_off turns it off with a message so the stock files stay.
+MODERN=0
+modern_off() { # VAR "block name": disable an unported block on a modern tree, loudly
+    [[ $MODERN == 1 ]] || return 0
+    echo "dms-shell-patch: $2 not ported to modern DMS yet: stock kept" >&2
+    printf -v "$1" 0
+}
 if [[ -f "$tmp/Modules/ControlCenter/CcMetrics.qml" ]]; then
+    MODERN=1
     python3 - "$tmp" <<'PY'
 from pathlib import Path
 import sys
@@ -107,16 +116,6 @@ PYBR
     then
         echo "dms-shell-patch: brightness device-id fix skipped: upstream QML changed" >&2
     fi
-
-    echo "$BIN_SHA" > "$tmp/.dms-binary-sha256"
-    stamp=$(date +%Y%m%d%H%M.%S)
-    find "$tmp" -type f -exec touch -m -t "$stamp" {} +
-    [[ -e "$OUT.prev" ]] && rm -rf "$OUT.prev"
-    [[ -e "$OUT" ]] && mv "$OUT" "$OUT.prev"
-    mv "$tmp" "$OUT"
-    trap - EXIT
-    echo "dms-shell-patch: built $OUT from $(cat "$OUT/VERSION") (compact control centre, modern DMS)"
-    exit 0
 fi
 
 patch_one() { # file, sed-expr, must-match-regex
@@ -126,21 +125,26 @@ patch_one() { # file, sed-expr, must-match-regex
     if grep -qE "$must" "$f"; then echo "dms-shell-patch: patch did not apply in ${f#$tmp/}" >&2; exit 2; fi
 }
 
-SPOT=$tmp/Modals/DankLauncherV2
-patch_one "$SPOT/DankLauncherV2ModalSpotlight.qml" \
-    "s/modalWidth: Math\.min\(680, screenWidth - 80\)/modalWidth: Math.min($SPOT_WIDTH, screenWidth - 80)/" \
-    'modalWidth: Math\.min\(680, screenWidth - 80\)'
-patch_one "$SPOT/SpotlightLauncherContent.qml" \
-    "s/Math\.min\(430, \(parentModal\?\.screenHeight \?\? 900\) \* 0\.55\)/Math.min($SPOT_RESULTS_H, (parentModal?.screenHeight ?? 900) * 0.7)/" \
-    'Math\.min\(430, \(parentModal\?\.screenHeight \?\? 900\) \* 0\.55\)'
-patch_one "$SPOT/DankLauncherV2ModalStandalone.qml" \
-    "s/return 620;/return $FULL_WIDTH;/" 'return 620;'
-patch_one "$SPOT/DankLauncherV2ModalStandalone.qml" \
-    "s/return 600;/return $FULL_HEIGHT;/" 'return 600;'
+# Launcher and Spotlight sizes. The DankLauncherV2 modal files are gone in modern DMS.
+if [[ $MODERN == 1 ]]; then
+    echo "dms-shell-patch: launcher/Spotlight size not ported to modern DMS yet: stock kept" >&2
+else
+    SPOT=$tmp/Modals/DankLauncherV2
+    patch_one "$SPOT/DankLauncherV2ModalSpotlight.qml" \
+        "s/modalWidth: Math\.min\(680, screenWidth - 80\)/modalWidth: Math.min($SPOT_WIDTH, screenWidth - 80)/" \
+        'modalWidth: Math\.min\(680, screenWidth - 80\)'
+    patch_one "$SPOT/SpotlightLauncherContent.qml" \
+        "s/Math\.min\(430, \(parentModal\?\.screenHeight \?\? 900\) \* 0\.55\)/Math.min($SPOT_RESULTS_H, (parentModal?.screenHeight ?? 900) * 0.7)/" \
+        'Math\.min\(430, \(parentModal\?\.screenHeight \?\? 900\) \* 0\.55\)'
+    patch_one "$SPOT/DankLauncherV2ModalStandalone.qml" \
+        "s/return 620;/return $FULL_WIDTH;/" 'return 620;'
+    patch_one "$SPOT/DankLauncherV2ModalStandalone.qml" \
+        "s/return 600;/return $FULL_HEIGHT;/" 'return 600;'
 
-patch_one "$SPOT/DankLauncherV2ModalStandalone.qml" \
-    "s|readonly property real modalY: \(screenHeight - modalHeight\) / 2|readonly property real modalY: { const bw = BarWidgetService.getBarWindowForScreen(effectiveScreen?.name ?? \"\"); const ez = Math.max(0, bw?.exclusiveZone ?? 0); const pos = bw?.barConfig?.position ?? SettingsData.Position.Top; const top = pos === SettingsData.Position.Top ? ez : 0; const bottom = pos === SettingsData.Position.Bottom ? ez : 0; return top + Math.max(0, (screenHeight - top - bottom - modalHeight) / 2); }|" \
-    'readonly property real modalY: \(screenHeight - modalHeight\) / 2'
+    patch_one "$SPOT/DankLauncherV2ModalStandalone.qml" \
+        "s|readonly property real modalY: \(screenHeight - modalHeight\) / 2|readonly property real modalY: { const bw = BarWidgetService.getBarWindowForScreen(effectiveScreen?.name ?? \"\"); const ez = Math.max(0, bw?.exclusiveZone ?? 0); const pos = bw?.barConfig?.position ?? SettingsData.Position.Top; const top = pos === SettingsData.Position.Top ? ez : 0; const bottom = pos === SettingsData.Position.Bottom ? ez : 0; return top + Math.max(0, (screenHeight - top - bottom - modalHeight) / 2); }|" \
+        'readonly property real modalY: \(screenHeight - modalHeight\) / 2'
+fi
 
 # ---- Lock screen crossfade (optional) -------------------------------------------
 # Super+Alt+L (dms ipc call lock lock) crossfades a copy of the lock screen over the
@@ -403,6 +407,7 @@ PanelWindow {
 }
 QML
 }
+modern_off LOCK_FADE "lock fade"
 [[ "$LOCK_FADE" == 1 ]] && apply_lock_fade
 
 # ---- Notification popup: compact banner card (optional) ---------------------------
@@ -549,6 +554,7 @@ PY2
         return
     fi
 }
+modern_off NOTIF_CARD_PATCH "compact notification card"
 [[ "$NOTIF_CARD_PATCH" == 1 ]] && apply_notif_card
 
 # ---- Theme sync: one clock for the bar, the wallpaper, kitty and GTK (optional) ----
@@ -993,6 +999,7 @@ PY3
         return
     fi
 }
+modern_off AUDIO_PCT_LEAD "leading volume percent"
 [[ "$AUDIO_PCT_LEAD" == 1 ]] && apply_audio_pct_lead
 
 # ---- Bar clock date: "Thu 10th Sept" (optional) ------------------------------------
@@ -1040,7 +1047,65 @@ PY4
         return
     fi
 }
-[[ "$CLOCK_ORDINAL" == 1 ]] && apply_clock_ordinal
+# Modern DMS formats the date in four places (bar, dash card, desktop clock, settings
+# preview), all routed through one helper. There the ordinal is a token:
+# a "~" after the day number in clockDateFormat becomes st/nd/rd/th, so
+# "ddd, d'~ of' MMM, dd/MM" shows "Tue, 29th of Sept, 29/09" (en_AU already says "Sept").
+apply_clock_ordinal_modern() {
+    if ! python3 - "$tmp" <<'PY4M'
+import sys
+root = sys.argv[1]
+helper = """    // dms-shell-patch: "<day>~" in a formatted date becomes "<day>st|nd|rd|th"
+    function ordinalDate(text) {
+        return (text || "").replace(/(\\d+)~/g, (m, n) => {
+            const day = parseInt(n);
+            const suffix = (day % 100 >= 11 && day % 100 <= 13) ? "th" : day % 10 === 1 ? "st" : day % 10 === 2 ? "nd" : day % 10 === 3 ? "rd" : "th";
+            return n + suffix;
+        });
+    }
+
+"""
+fn = "    function getEffectiveDateFormat(fallback) {\n"
+edits = {
+    "Common/SettingsData.qml": [(fn, helper + fn)],
+    "Widgets/ClockContent.qml": [
+        ("date.toLocaleDateString(locale, SettingsData.getEffectiveDateFormat())",
+         "SettingsData.ordinalDate(date.toLocaleDateString(locale, SettingsData.getEffectiveDateFormat()))"),
+    ],
+    "Modules/DankDash/Overview/ClockCard.qml": [
+        ('systemClock.date.toLocaleDateString(I18n.locale(), SettingsData.getEffectiveDateFormat("ddd, MMM d"))',
+         'SettingsData.ordinalDate(systemClock.date.toLocaleDateString(I18n.locale(), SettingsData.getEffectiveDateFormat("ddd, MMM d")))'),
+    ],
+    "Modules/BuiltinDesktopPlugins/DesktopClockWidget.qml": [
+        ('systemClock.date?.toLocaleDateString(I18n.locale(), SettingsData.clockDateFormat) ?? ""',
+         'SettingsData.ordinalDate(systemClock.date?.toLocaleDateString(I18n.locale(), SettingsData.clockDateFormat))'),
+    ],
+    "Modules/Settings/TimeWeatherTab.qml": [
+        ("new Date().toLocaleDateString(I18n.locale(), SettingsData.clockDateFormat)",
+         "SettingsData.ordinalDate(new Date().toLocaleDateString(I18n.locale(), SettingsData.clockDateFormat))"),
+    ],
+}
+out = {}
+for rel, subs in edits.items():
+    text = open(root + "/" + rel).read()
+    for old, new in subs:
+        assert text.count(old) == 1, rel
+        text = text.replace(old, new)
+    out[rel] = text
+for rel, text in out.items():
+    open(root + "/" + rel, "w").write(text)
+PY4M
+    then
+        echo "dms-shell-patch: clock ordinal date skipped: date call sites changed upstream" >&2
+        CLOCK_ORDINAL=0
+        return
+    fi
+}
+if [[ $MODERN == 1 ]]; then
+    [[ "$CLOCK_ORDINAL" == 1 ]] && apply_clock_ordinal_modern
+else
+    [[ "$CLOCK_ORDINAL" == 1 ]] && apply_clock_ordinal
+fi
 
 # ---- Bottom-centred Notepad slideout (optional) ----------------------------------
 # Stock DMS only supports left/right slideouts. Add a generic "bottom" orientation
@@ -1258,6 +1323,7 @@ PY5
         return
     fi
 }
+modern_off NOTEPAD_BOTTOM "bottom Notepad slideout"
 [[ "$NOTEPAD_BOTTOM" == 1 ]] && apply_notepad_bottom
 
 # ---- Notification click raises the sender (optional) ------------------------------
@@ -1340,6 +1406,7 @@ PYNF
         return
     fi
 }
+modern_off NOTIFY_FOCUS "notification click focus"
 [[ "$NOTIFY_FOCUS" == 1 ]] && apply_notify_focus
 
 # ---- Polished keybind cheatsheet (optional) --------------------------------------
@@ -1365,6 +1432,7 @@ apply_keybind_menu() {
     fi
     cp -a "$KEYBIND_TEMPLATE" "$target"
 }
+modern_off KEYBIND_MENU "polished keybind menu"
 [[ "$KEYBIND_MENU" == 1 ]] && apply_keybind_menu
 
 echo "$BIN_SHA" > "$tmp/.dms-binary-sha256"
@@ -1392,4 +1460,6 @@ clkmsg="ordinal bar date"; [[ "$CLOCK_ORDINAL" == 1 ]] || clkmsg="stock bar date
 notepadmsg="bottom Notepad ${NOTEPAD_BOTTOM_WIDTH}px wide"; [[ "$NOTEPAD_BOTTOM" == 1 ]] || notepadmsg="stock Notepad slideout"
 keybindmsg="polished keybind menu"; [[ "$KEYBIND_MENU" == 1 ]] || keybindmsg="stock keybind menu"
 nfmsg="notification click raises sender"; [[ "$NOTIFY_FOCUS" == 1 ]] || nfmsg="stock notification click"
-echo "dms-shell-patch: built $OUT from $(cat "$OUT/VERSION") (launcher ${FULL_WIDTH}x${FULL_HEIGHT}, spotlight bar ${SPOT_WIDTH}px wide, $lockmsg, $notifmsg, $syncmsg, $pctmsg, $clkmsg, $keybindmsg, $notepadmsg, $nfmsg)"
+launchmsg="launcher ${FULL_WIDTH}x${FULL_HEIGHT}, spotlight bar ${SPOT_WIDTH}px wide"
+[[ $MODERN == 1 ]] && launchmsg="modern DMS: compact control centre, stock launcher"
+echo "dms-shell-patch: built $OUT from $(cat "$OUT/VERSION") ($launchmsg, $lockmsg, $notifmsg, $syncmsg, $pctmsg, $clkmsg, $keybindmsg, $notepadmsg, $nfmsg)"

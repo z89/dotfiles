@@ -133,6 +133,7 @@
     }
   ],
   "appIdSubstitutions": [],
+  "clockDateFormat": "ddd, d'~ of' MMM, dd/MM",
   "greeterAutoLogin": true,
   "appLauncherGridColumns": 8,
   "appDrawerSectionViewModes": {

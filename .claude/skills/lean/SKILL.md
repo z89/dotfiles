@@ -41,8 +41,9 @@ ask for verification of a specific point, which costs far less than pre-emptive 
 **Delegation** (only for class C/D)
 - `model: sonnet` for lookup, grep, log reading, mechanical edits.
 - `model: opus` only when the sub-task needs judgment (design, security, tricky debugging).
-- Never Fable. Never more than 2 agents. Prompt <=150 words. Require the worker to return
-  a conclusion of <=15 lines, no file dumps.
+- Never Fable. Agent count is sized to the task, not capped; spawn only agents that do
+  independent work. Prompt <=150 words. Require the worker to return a conclusion of
+  <=15 lines, no file dumps.
 - Do not both delegate and repeat the work yourself.
 
 **Editing**

@@ -460,7 +460,7 @@
       "/home/archie"
     ]
   },
-  "model": "opus",
+  "model": "claude-fable-5-1",
   "disableClaudeAiConnectors": true,
   "skillOverrides": {
     "design": "user-invocable-only",
