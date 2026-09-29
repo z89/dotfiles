@@ -137,10 +137,13 @@ def _fade_anchor():
 
 def _flip_gtk():
     """Run the gtk-theme flip step_gtk3 prepared, once, not awaited."""
-    global GTK_FLIP
+    global GTK_FLIP, ICON_FLIP
     if GTK_FLIP:
         subprocess.Popen(GTK_FLIP, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         GTK_FLIP = None
+    if ICON_FLIP:   # same tick: open file managers reload their icons with the colours
+        subprocess.Popen(ICON_FLIP, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        ICON_FLIP = None
 HYPR_BORDERS = os.path.join(HOME, ".config/hypr/borders.lua")
 THEMES_DIR = os.path.join(HOME, ".themes")
 THEME_NAMES = ("Matugen-A", "Matugen-B")
@@ -283,10 +286,72 @@ def _flip_icon_theme():
     return nxt
 
 
+ICON_SIZES = ("22x22", "24x24", "32x32", "48x48", "64x64")   # what papirus-folders touches
+ICON_FLIP = None   # gsettings argv prepared by step_iconprep, run on the fade anchor
+
+
+def _relink_folders(color):
+    """papirus-folders' change_color without its fork per icon (385 `ln` calls,
+    0.7s): point every generic folder/user icon at its coloured variant."""
+    root = os.path.expanduser("~/.local/share/icons/%s" % ICON_THEMES[0])
+    tag, n = "-" + color, 0
+    for size in ICON_SIZES:
+        places = os.path.join(root, size, "places")
+        try:
+            names = os.listdir(places)
+        except OSError:
+            continue
+        for name in names:
+            stem = name[:-4]
+            if not name.endswith(".svg") or not (
+                    stem in ("folder" + tag, "user" + tag)
+                    or stem.startswith(("folder" + tag + "-", "user" + tag + "-"))):
+                continue
+            if os.path.islink(os.path.join(places, name)):
+                continue
+            link = os.path.join(places, name.replace(tag, "", 1))
+            os.symlink(name, link + ".tmp")
+            os.replace(link + ".tmp", link)
+            n += 1
+    return n
+
+
+def step_iconprep():
+    """Recolour the folder icons ahead of the fade, while the shell still holds
+    the palette, and prepare the icon-theme flip for the fade anchor so open
+    file managers reload their icons with the GTK colours, not ~1.5s later."""
+    global ICON_FLIP
+    ICON_FLIP = None
+    try:
+        want = open(FOLDER_COLOR).read().strip()
+    except OSError:
+        return
+    try:
+        have = open(FOLDER_APPLIED).read().strip()
+    except OSError:
+        have = ""
+    cur = _gset("icon-theme")
+    if (want == have or DRY_RUN or cur not in ICON_THEMES
+            or not os.path.isdir(os.path.expanduser("~/.local/share/icons/%s" % ICON_THEMES[1]))):
+        return   # step_icons reports and repairs
+    n = _relink_folders(want)
+    if not n:
+        log("icons", "no %s folder icons in %s; left to papirus-folders" % (want, ICON_THEMES[0]))
+        return
+    subprocess.run(["gtk-update-icon-cache", "-qf",
+                    os.path.expanduser("~/.local/share/icons/%s" % ICON_THEMES[0])],
+                   stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=5)
+    with open(FOLDER_APPLIED, "w") as f:
+        f.write(want + "\n")
+    nxt = ICON_THEMES[1] if cur == ICON_THEMES[0] else ICON_THEMES[0]
+    ICON_FLIP = ["gsettings", "set", "org.gnome.desktop.interface", "icon-theme", nxt]
+    log("icons", "folders %s -> %s (%d links), %s flips in on the fade anchor" % (have or "?", want, n, nxt))
+
+
 def step_icons():
-    """Recolour the Papirus-Dank folder icons to the palette's choice
-    (papirus-folders, ~0.3s), then flip the icon theme name so open apps
-    reload.  Skipped entirely when the colour is already applied."""
+    """Fallback for step_iconprep: recolour the Papirus-Dank folder icons with
+    papirus-folders, then flip the icon theme name so open apps reload.
+    Skipped entirely when the colour is already applied."""
     try:
         want = open(FOLDER_COLOR).read().strip()
     except OSError:
@@ -1146,7 +1211,7 @@ def run_once(start):
     # until DMS stamps its first animated frame and the GTK flip and the kitty
     # frames start on it.  Everything slower comes after.
     for name, fn in (("palette", step_palette), ("gtk3", step_gtk3),
-                     ("fade", step_fade), ("kitty", step_kitty),
+                     ("iconprep", step_iconprep), ("fade", step_fade), ("kitty", step_kitty),
                      ("icons", step_icons), ("gnome", step_gnome),
                      ("hypr", step_hypr), ("portal", step_portal)):
         guard(name, fn)
