@@ -138,7 +138,7 @@ another desktop approval as a way to override it.
 
 Every turn re-sends the whole conversation, so keep tool output small and the transcript lean:
 - Read with `sed -n`, `grep -n`, `head`, `tail`; never `cat` a large file or dump a directory tree.
-- Pipe build and test output through `grep -E 'error|FAIL|warning'` and `tail -40`; report the summary, not the log.
+- Send build and test output to a log file and keep the exit status: `CMD > LOG 2>&1; echo "exit=$?"; grep -E 'error|FAIL|warning' LOG | tail -40`. Report the status and the summary, not the log.
 - Delegate long research, log reading, and test runs to a subagent and bring back only the conclusion.
 - Every spawned agent gets an explicit `model` (`sonnet` for mechanical work, `opus` for judgment) and a prompt of at most ~2,000 words. Never let a worker inherit Fable.
 - Do not re-read a file already in context unless it changed.

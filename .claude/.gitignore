@@ -17,11 +17,13 @@ skills/*
 !skills/commit/
 !skills/dotfiles/
 !skills/lean/
-!skills/lean-always/
 !skills/terminal/
 
 !hooks/
 !hooks/**
+# Links into the lean checkout: tracking one publishes its target
+hooks/lean-mode.sh
+hooks/lean-compact.sh
 
 # Never publish: bytecode, and the guard tests/notes that name real
 # infrastructure (bucket names, private repo names, account counts).
