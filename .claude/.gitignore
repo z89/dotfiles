@@ -22,9 +22,10 @@ skills/*
 
 !hooks/
 !hooks/**
-# Links into the lean checkout: tracking one publishes its target
+# Links into the lean and gloss checkouts: tracking one publishes its target
 hooks/lean-mode.sh
 hooks/lean-compact.sh
+hooks/gloss.py
 
 # Never publish: bytecode, and the guard tests/notes that name real
 # infrastructure (bucket names, private repo names, account counts).

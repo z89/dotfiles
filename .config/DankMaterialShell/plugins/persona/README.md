@@ -1,50 +1,56 @@
-# Persona
+<h1 align="center">persona</h1>
 
-Your profile picture on the [DankMaterialShell](https://github.com/AvengeMedia/DankMaterialShell) bar.
+persona is a profile picture widget for the [DankMaterialShell](https://github.com/AvengeMedia/DankMaterialShell) (DMS) bar. it shows the same picture DMS uses on the lock screen, the control center header and the greeter, inside a ring and a disc drawn in live theme colours, with initials when there is no picture.
 
-- Shows the same picture DMS uses on the lock screen, the control centre header and the greeter (AccountsService via `PortalService.profileImage`). Nothing is stored twice.
-- A ring in a live theme colour (primary, secondary, tertiary, outline, or none).
-- A theme-coloured disc behind the picture. A picture with a transparent background is recoloured on every theme switch without touching the file.
-- Initials in the disc when there is no picture.
-- Left click opens a small user panel (name, host, uptime, Lock / Sleep / Power / Dash). Right click opens the power menu. Both are configurable.
+left click opens a small user panel with the name, host, uptime and lock, sleep, power and dash buttons. right click opens the power menu. both are configurable.
 
-## Install
+## ✨ highlights
+
+- 🖼 **one picture** is read from AccountsService through DMS, so nothing is stored twice.
+- 🎨 **a themed ring and disc**, the ring in a theme colour and the disc behind the picture, are both recoloured on every theme switch.
+- 🔤 **the user's initials** sit in the disc when no picture is set.
+- 🖱 **click actions** open the user panel, control center, dash, power menu or lock, picked per button.
+
+## 📦 install
+
+persona lives in the dotfiles at `~/.config/DankMaterialShell/plugins/persona`.
 
 ```sh
-git clone https://github.com/z89/persona ~/.config/DankMaterialShell/plugins/persona
-dms ipc call plugin-scan scan
+dms ipc call plugins enable persona
 ```
 
-Then add `persona` to a bar section in Settings > Bar > Widgets.
+then add `persona` to a bar under settings, bar, widgets.
 
-## Setting the picture
+## 🖼 setting the picture
 
-Any of these work, they all end up in the same place:
+all three end up in the same place.
 
-- `avatar-make photo.jpg` (script in this repo's companion dotfiles, see below)
-- Settings > Profile in DMS
+- `avatar-make photo.jpg`
+- settings, profile in DMS
 - `dms ipc call profile setImage /path/to/picture.png`
 
-`avatar-make` turns a photo into a 512px square PNG framed for a circle, removes the background when [rembg](https://github.com/danielgatis/rembg) is installed, writes it to `~/.face` and registers it with DMS.
+`avatar-make` turns a photo into a 512px square png framed for a circle, removes the background when [rembg](https://github.com/danielgatis/rembg) is installed, writes it to `~/.face` and registers it with DMS.
 
-## Settings
+## ⚙️ settings
 
-| Key | Default | Meaning |
-|---|---|---|
-| `ringColor` | `primary` | theme colour of the ring |
+| key | default | effect |
+| --- | --- | --- |
+| `ringColor` | `primary` | ring colour, one of `primary`, `secondary`, `tertiary`, `outline` or `none` |
 | `ringWidth` | `2` | ring thickness in px |
-| `inset` | `3` | gap between avatar and bar edge |
-| `themedBackdrop` | `true` | primary container fill behind the picture |
-| `clickAction` | `popout` | `popout`, `controlcenter`, `dash`, `powermenu`, `lock` |
-| `rightClickAction` | `powermenu` | `powermenu`, `controlcenter`, `lock`, `none` |
+| `inset` | `3` | gap between the picture and the bar edge |
+| `themedBackdrop` | `true` | theme-coloured disc behind the picture |
+| `clickAction` | `popout` | `popout`, `controlcenter`, `dash`, `powermenu` or `lock` |
+| `rightClickAction` | `powermenu` | `powermenu`, `controlcenter`, `lock` or `none` |
 
-MIT.
+## 🔣 ascii avatars
 
-## tools/ascii-avatar.py
-
-Turns a pixel-art sprite into sharp, coloured ASCII art sized for an avatar. Every sprite pixel becomes a 2-wide, 1-tall run of glyphs (matching the 1:2 monospace cell), so the sprite's geometry is kept exactly. Glyphs are picked by region (`@@` outline, `##`/`%%` hair, `::`/`..` skin, `()` eyes, `vv` mouth) and coloured with the pixel's own colour; hair can be re-hued with `--hair-hue`. `--underlay 0.4` puts a faint nearest-neighbour copy of the sprite under the glyphs so the face still reads at 24px, and `--pixel out.png` also writes the plain recoloured sprite.
+`tools/ascii-avatar.py` turns a pixel-art sprite into coloured ascii art sized for an avatar. each sprite pixel becomes two glyphs side by side to match a monospace cell, and glyphs are picked by region, such as `@@` for the outline, `##` for hair and `()` for eyes. `--hair-hue` recolours the hair, `--underlay 0.4` puts a faint copy of the sprite under the glyphs so the face still reads at 24px, and `--pixel out.png` also writes the plain sprite.
 
 ```sh
 tools/ascii-avatar.py sprite.png out --crop 9,0,26,23 --hair-hue 330 --underlay 0.4
 avatar-make out.png --keep-bg
 ```
+
+## 📄 license
+
+MIT
