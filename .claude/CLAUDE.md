@@ -60,6 +60,10 @@ Whenever the task involves kitty, zsh, starship, terminal colors, prompt layout,
 Whenever the task involves adding, removing, or modifying files in the dotfiles repo (~/.gitignore whitelist, tracking new configs, managing .claude/ contents), first read:
 ~/.claude/skills/dotfiles/SKILL.md
 
+Before changing any file in the dotfiles repo, also read ~/AGENTS.md. It records the shared
+documentation style, the settled 2026-10-01 restyle, and uncommitted work that must not be
+reverted or folded into unrelated commits. Repos with their own AGENTS.md load it through CLAUDE.md.
+
 ## Working on this machine
 
 The machine is in active use while you work. Get on with the task — do not ask for a
