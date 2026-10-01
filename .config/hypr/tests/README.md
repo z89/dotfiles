@@ -1,31 +1,35 @@
-# Carry animation tests
+<h1 align="center">hyprland tests</h1>
 
-Run all 70 cases with Lua 5.5, from the dotfiles repository root:
+offline tests for `carry.lua`, the window carry animation, and `notify-focus.lua`, which focuses the kitty window behind a clicked notification. they run against a virtual compositor and never connect to hyprland or move a live window.
+
+## 🧪 run
+
+it needs lua 5.5. run it from the dotfiles root.
 
 ```sh
 bash .config/hypr/tests/run.sh
 ```
 
-The six suites use a shared virtual compositor. They cover basic carry behavior,
-input cadence and reversals, manual drag/resize handoff, workspace ownership and
-stack order, rendered pin release, and adaptive timing and landing corrections.
-They do not connect to Hyprland or move live windows.
+## 📋 suites
 
-`test_carry_render.lua` also models the workspace render offset independently of
-the carry physics, including frame sampling and clock quantization. Its native
-slide matches the `gentle` spring configured in `hyprland.lua` and Hyprland 0.56.2's
-pinned/unpinned rendering behavior. Local window coordinates alone cannot detect
-the snap caused by releasing a pin before the workspace slide settles.
+| suite | covers |
+| --- | --- |
+| 🪟 `test_carry.lua` | basic carry behaviour |
+| ⏱ `test_carry_inertia.lua` | input cadence, chained presses and reversals |
+| 🖱 `test_carry_manual.lua` | handing control back on a Super drag or resize |
+| 🗂 `test_carry_navigation.lua` | workspace ownership and stack order |
+| 🎞 `test_carry_render.lua` | the rendered workspace slide and when the pin is released |
+| 🎯 `test_clock_landing.lua` | adaptive timing and landing corrections |
+| 🔔 `test_notify_focus.lua` | pairing a DankMaterialShell notification click with kitty's urgent window |
 
-Set `CARRY=/absolute/path/to/carry.lua` to exercise an alternative module. Run a
-single suite with `lua5.5 .config/hypr/tests/test_carry_render.lua`, for example.
-The core suite optionally writes trajectory CSVs to the current directory when
-`DUMP=1`; leave it unset for an artifact-free run. Live visual testing is separate
-and requires desktop-control approval.
+`test_carry_render.lua` models the workspace slide separately from the carry physics, matching the `gentle` spring in `hyprland.lua` and how hyprland 0.56.2 renders pinned windows. window coordinates alone cannot show the snap that comes from releasing the pin before the slide settles.
 
-## Notification focus
+## ⚙️ options
 
-`test_notify_focus.lua` covers `notify-focus.lua`, which pairs a DMS notification
-click (reported through `hyprctl eval`) with kitty's `window.urgent` event and
-brings that window forward. It runs with its own small mock and the same
-`run.sh`; set `NOTIFY_FOCUS=/absolute/path/to/notify-focus.lua` to test another copy.
+| variable | effect |
+| --- | --- |
+| `CARRY=/abs/path/carry.lua` | test another copy of the carry module |
+| `NOTIFY_FOCUS=/abs/path/notify-focus.lua` | test another copy of the notification module |
+| `DUMP=1` | the core suite writes trajectory CSVs to the current directory |
+
+a single suite runs on its own, for example `lua5.5 .config/hypr/tests/test_carry_render.lua`. live visual testing is separate and needs desktop control approval.
