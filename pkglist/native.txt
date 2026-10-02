@@ -113,6 +113,7 @@ qbittorrent
 qt5ct
 qt5-wayland
 qt6ct
+qt6-multimedia-ffmpeg
 qt6-wayland
 quickshell
 rclone

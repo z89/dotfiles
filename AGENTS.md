@@ -35,3 +35,4 @@ before committing a doc, `grep -nP '—|–| -- |;' <file>` should print nothing
 - that restyle covers `README.md`, `LICENSE`, `.config/DankMaterialShell/plugins/persona/README.md` and `.config/hypr/tests/README.md`. keep their wording, the badge order (arch linux, hyprland, DMS, then the license, all in `7ee0d6`) and the 400ms theme fade figure.
 - `.config/DankMaterialShell/README.md` got the same restyle on 2026-10-02. its spare adapter steps use `<uuid>` in place of the real profile, the connection name and the interface, since the repo is public.
 - auris and ember are separate repos linked into `.config/DankMaterialShell/plugins/`, each with its own `AGENTS.md`.
+- eco (video wallpapers, formerly livewall) is a separate private repo at `~/Documents/Github-Projects/eco`. its `bin/eco-install` writes `.config/systemd/user/dms.service.d/zz-eco.conf`, which is ignored here because it points at a checkout a fresh install may not have. never track it.
