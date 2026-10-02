@@ -76,7 +76,6 @@ linux-firmware
 linux-headers
 linux-lts
 lvm2
-lxqt-openssh-askpass
 matugen
 memtest86+-efi
 mpv
@@ -174,6 +173,7 @@ ydotool
 yt-dlp
 zathura
 zathura-pdf-mupdf
+zenity
 zip
 zsh-autosuggestions
 zsh-completions
