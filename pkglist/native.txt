@@ -76,6 +76,7 @@ linux-firmware
 linux-headers
 linux-lts
 lvm2
+lxqt-openssh-askpass
 matugen
 memtest86+-efi
 mpv

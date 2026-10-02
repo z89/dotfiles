@@ -1,0 +1,11 @@
+#!/usr/bin/env bash
+# ssh-confirm-askpass: the yes/no window ssh-agent shows before a key added with
+# `ssh-add -c` signs anything. ssh-agent.service starts before the desktop exports
+# WAYLAND_DISPLAY, so find the socket here instead of fixing its name in the unit.
+if [ -z "${WAYLAND_DISPLAY:-}" ]; then
+    for s in "${XDG_RUNTIME_DIR:-/run/user/$(id -u)}"/wayland-[0-9]*; do
+        case "$s" in *.lock) continue ;; esac
+        [ -S "$s" ] && { export WAYLAND_DISPLAY="${s##*/}"; break; }
+    done
+fi
+exec /usr/bin/lxqt-openssh-askpass "$@"
