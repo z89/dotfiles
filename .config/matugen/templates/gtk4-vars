@@ -44,4 +44,32 @@
   --thumbnail-fg-color: {{colors.on_surface.default.hex}};
   --shade-color: rgba(0, 0, 0, 0.36);
   --scrollbar-outline-color: rgba(0, 0, 0, 0.5);
+  /* Material roles for palette-gen, which copies them into kitty's 256-colour slots (fastfetch). */
+  --md-primary: {{colors.primary.default.hex}};
+  --md-primary_container: {{colors.primary_container.default.hex}};
+  --md-primary_fixed: {{colors.primary_fixed.default.hex}};
+  --md-primary_fixed_dim: {{colors.primary_fixed_dim.default.hex}};
+  --md-inverse_primary: {{colors.inverse_primary.default.hex}};
+  --md-secondary: {{colors.secondary.default.hex}};
+  --md-secondary_container: {{colors.secondary_container.default.hex}};
+  --md-secondary_fixed: {{colors.secondary_fixed.default.hex}};
+  --md-secondary_fixed_dim: {{colors.secondary_fixed_dim.default.hex}};
+  --md-tertiary: {{colors.tertiary.default.hex}};
+  --md-tertiary_container: {{colors.tertiary_container.default.hex}};
+  --md-tertiary_fixed: {{colors.tertiary_fixed.default.hex}};
+  --md-tertiary_fixed_dim: {{colors.tertiary_fixed_dim.default.hex}};
+  --md-error: {{colors.error.default.hex}};
+  --md-error_container: {{colors.error_container.default.hex}};
+  --md-source_color: {{colors.source_color.default.hex}};
+  --md-surface: {{colors.surface.default.hex}};
+  --md-surface_container_lowest: {{colors.surface_container_lowest.default.hex}};
+  --md-surface_container_low: {{colors.surface_container_low.default.hex}};
+  --md-surface_container: {{colors.surface_container.default.hex}};
+  --md-surface_container_high: {{colors.surface_container_high.default.hex}};
+  --md-surface_container_highest: {{colors.surface_container_highest.default.hex}};
+  --md-surface_bright: {{colors.surface_bright.default.hex}};
+  --md-on_surface: {{colors.on_surface.default.hex}};
+  --md-on_surface_variant: {{colors.on_surface_variant.default.hex}};
+  --md-outline: {{colors.outline.default.hex}};
+  --md-outline_variant: {{colors.outline_variant.default.hex}};
 }

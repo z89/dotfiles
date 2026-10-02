@@ -1,0 +1,124 @@
+// Colours are kitty palette slots 64 to 90, which palette-gen fills with the matugen
+// roles on every theme switch (MD_ROLES in ~/.local/bin/palette-gen), so printed output
+// recolours with the kitty fade. Keep the slot order in step with MD_ROLES.
+{
+  "$schema": "https://github.com/fastfetch-cli/fastfetch/raw/master/doc/json_schema.json",
+  "logo": {
+    "color": {
+      "1": "38;5;64",
+      "2": "38;5;67"
+    }
+  },
+  "display": {
+    "color": {
+      "keys": "38;5;64",
+      "title": "38;5;64",
+      "output": "38;5;87",
+      "separator": "38;5;89"
+    },
+    "percent": {
+      "color": {
+        "green": "38;5;73",
+        "yellow": "38;5;69",
+        "red": "38;5;77"
+      }
+    }
+  },
+  "modules": [
+    "title",
+    {
+      "type": "separator",
+      "outputColor": "38;5;90"
+    },
+    "os",
+    "host",
+    "kernel",
+    "uptime",
+    "packages",
+    "shell",
+    "display",
+    {
+      "type": "command",
+      "key": "Monitor",
+      "text": "hyprctl monitors -j 2>/dev/null | jq -r '.[0] | (.make | sub(\" Electric Company\"; \"\")) + \" \" + .model + \" on \" + .name + \", \" + (.width | tostring) + \"x\" + (.height | tostring) + \" @ \" + (.refreshRate | round | tostring) + \"Hz\"' | grep . || echo unknown"
+    },
+    "de",
+    "wm",
+    "wmtheme",
+    "theme",
+    "icons",
+    "font",
+    "cursor",
+    "terminal",
+    "terminalfont",
+    "cpu",
+    "gpu",
+    "memory",
+    "swap",
+    "disk",
+    "localip",
+    "battery",
+    "poweradapter",
+    "locale",
+    "break",
+    {
+      "type": "custom",
+      "format": "\u001b[38;5;64mpalette\u001b[0m"
+    },
+    {
+      "type": "custom",
+      "format": "           \u001b[38;5;89m  base   cont  fixed   dim  inverse\u001b[0m"
+    },
+    {
+      "type": "custom",
+      "format": "\u001b[38;5;88mprimary    \u001b[0m   \u001b[38;5;64m●\u001b[0m      \u001b[38;5;65m●\u001b[0m      \u001b[38;5;66m●\u001b[0m      \u001b[38;5;67m●\u001b[0m      \u001b[38;5;68m●\u001b[0m   "
+    },
+    {
+      "type": "custom",
+      "format": "\u001b[38;5;88msecondary  \u001b[0m   \u001b[38;5;69m●\u001b[0m      \u001b[38;5;70m●\u001b[0m      \u001b[38;5;71m●\u001b[0m      \u001b[38;5;72m●\u001b[0m   "
+    },
+    {
+      "type": "custom",
+      "format": "\u001b[38;5;88mtertiary   \u001b[0m   \u001b[38;5;73m●\u001b[0m      \u001b[38;5;74m●\u001b[0m      \u001b[38;5;75m●\u001b[0m      \u001b[38;5;76m●\u001b[0m   "
+    },
+    {
+      "type": "custom",
+      "format": "\u001b[38;5;88merror      \u001b[0m   \u001b[38;5;77m●\u001b[0m      \u001b[38;5;78m●\u001b[0m   "
+    },
+    {
+      "type": "custom",
+      "format": "\u001b[38;5;88msource     \u001b[0m   \u001b[38;5;79m●\u001b[0m   "
+    },
+    "break",
+    {
+      "type": "custom",
+      "format": "           \u001b[38;5;89m lowest  low    base   high highest bright\u001b[0m"
+    },
+    {
+      "type": "custom",
+      "format": "\u001b[38;5;88msurface    \u001b[0m   \u001b[38;5;81m●\u001b[0m      \u001b[38;5;82m●\u001b[0m      \u001b[38;5;83m●\u001b[0m      \u001b[38;5;84m●\u001b[0m      \u001b[38;5;85m●\u001b[0m      \u001b[38;5;86m●\u001b[0m   "
+    },
+    "break",
+    {
+      "type": "custom",
+      "format": "           \u001b[38;5;89m  text  subtle border faint\u001b[0m"
+    },
+    {
+      "type": "custom",
+      "format": "\u001b[38;5;88mink        \u001b[0m   \u001b[38;5;87m●\u001b[0m      \u001b[38;5;88m●\u001b[0m      \u001b[38;5;89m●\u001b[0m      \u001b[38;5;90m●\u001b[0m   "
+    },
+    "break",
+    {
+      "type": "custom",
+      "format": "           \u001b[38;5;89m black   red   green  yellow  blue magenta  cyan  white\u001b[0m"
+    },
+    {
+      "type": "custom",
+      "format": "\u001b[38;5;88mterminal   \u001b[0m   \u001b[30m●\u001b[0m      \u001b[31m●\u001b[0m      \u001b[32m●\u001b[0m      \u001b[33m●\u001b[0m      \u001b[34m●\u001b[0m      \u001b[35m●\u001b[0m      \u001b[36m●\u001b[0m      \u001b[37m●\u001b[0m   "
+    },
+    {
+      "type": "custom",
+      "format": "\u001b[38;5;88mbright     \u001b[0m   \u001b[90m●\u001b[0m      \u001b[91m●\u001b[0m      \u001b[92m●\u001b[0m      \u001b[93m●\u001b[0m      \u001b[94m●\u001b[0m      \u001b[95m●\u001b[0m      \u001b[96m●\u001b[0m      \u001b[97m●\u001b[0m   "
+    }
+  ]
+}

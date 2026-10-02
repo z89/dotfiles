@@ -65,6 +65,7 @@
 !.config/systemd/user/hyprland-session.target
 !.config/systemd/user/qs-reload-notify.service
 !.config/systemd/user/dms.service.d/
+!.config/fastfetch/
 !.config/kitty/
 .config/kitty/dank-tabs.conf
 .config/kitty/matugen-theme*.conf
