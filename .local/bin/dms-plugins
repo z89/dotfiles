@@ -1,0 +1,20 @@
+#!/usr/bin/env bash
+# dms-plugins: clone the DMS plugins that live in their own repos and link them into
+# ~/.config/DankMaterialShell/plugins. safe to run again, existing clones are kept.
+set -euo pipefail
+
+src="${DMS_PLUGIN_SRC:-$HOME/Documents/Github-Projects}"
+dest="$HOME/.config/DankMaterialShell/plugins"
+mkdir -p "$src" "$dest"
+
+for name in auris ember; do
+    repo="$src/$name"
+    [ -d "$repo/.git" ] || git clone "https://github.com/z89/$name.git" "$repo"
+    link="$dest/$name"
+    if [ -e "$link" ] && [ ! -L "$link" ]; then
+        echo "dms-plugins: $link is not a link, leaving it" >&2
+        continue
+    fi
+    ln -sfn "$repo" "$link"
+    echo "dms-plugins: $name -> $repo"
+done

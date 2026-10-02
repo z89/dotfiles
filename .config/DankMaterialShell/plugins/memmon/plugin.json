@@ -1,0 +1,18 @@
+{
+    "id": "memmon",
+    "name": "Memory Monitor",
+    "description": "RAM on the DankBar as a percentage and as GB used out of the total, styled like the built-in pills. hovering or clicking opens the process list sorted by memory.",
+    "version": "0.1.0",
+    "author": "z89",
+    "type": "widget",
+    "capabilities": [
+        "dankbar-widget"
+    ],
+    "component": "./MemMonWidget.qml",
+    "settings": "./MemMonSettings.qml",
+    "icon": "developer_board",
+    "permissions": [
+        "settings_read",
+        "settings_write"
+    ]
+}

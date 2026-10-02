@@ -1,0 +1,18 @@
+{
+    "id": "cpumon",
+    "name": "CPU Monitor",
+    "description": "CPU utilisation and temperature in one DankBar pill, styled like the built-in pills. hovering or clicking opens the process list sorted by CPU.",
+    "version": "0.1.0",
+    "author": "z89",
+    "type": "widget",
+    "capabilities": [
+        "dankbar-widget"
+    ],
+    "component": "./CpuMonWidget.qml",
+    "settings": "./CpuMonSettings.qml",
+    "icon": "memory",
+    "permissions": [
+        "settings_read",
+        "settings_write"
+    ]
+}

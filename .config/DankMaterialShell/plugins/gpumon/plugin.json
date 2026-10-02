@@ -1,0 +1,18 @@
+{
+    "id": "gpumon",
+    "name": "GPU Monitor",
+    "description": "GPU utilisation on the DankBar, styled like the built-in CPU and RAM pills. reads the amdgpu sysfs counters, with optional VRAM use and edge temperature.",
+    "version": "0.1.0",
+    "author": "z89",
+    "type": "widget",
+    "capabilities": [
+        "dankbar-widget"
+    ],
+    "component": "./GpuMonWidget.qml",
+    "settings": "./GpuMonSettings.qml",
+    "icon": "videogame_asset",
+    "permissions": [
+        "settings_read",
+        "settings_write"
+    ]
+}
