@@ -92,7 +92,6 @@ hl.on("hyprland.start", function()
 
     -- Electron apps are staggered: four of them launching at once contend for
     -- GPU and disk with the bar's own startup.
-    hl.exec_cmd("~/.local/bin/hyprsunset-auto")
     hl.exec_cmd("mullvad-vpn")
     hl.exec_cmd("sleep 3 && spotify --remote-debugging-port=9332")
     -- notion-app, claude-desktop and chatgpt are launched on demand, not at boot.
