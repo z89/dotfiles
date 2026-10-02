@@ -26,20 +26,21 @@ the repo also holds the package lists and system files needed to rebuild the mac
 sudo pacman -S --needed - < pkglist/native.txt
 yay -S --needed - < pkglist/aur.txt
 sudo dotfiles-sync --apply
+dms-plugins
 systemctl --user enable dms.service cliphist.service ssh-agent.service theme-apply.path theme-sync-dconf.path theme-sync.timer hyprsunset-auto.timer hyprpolkitagent.service
 dconf load /org/gnome/desktop/interface/ < ~/.config/gsettings/interface.ini
 ```
 
 `dotfiles-sync --apply` copies the mirrored system files in `system/` back onto `/`. plain `dotfiles-sync` refreshes the mirror, the package lists and the service lists, so `git status` shows drift. secrets and machine identity are never mirrored.
 
-[auris](https://github.com/z89/auris) and [ember](https://github.com/z89/ember) live in their own repos and are linked into `~/.config/DankMaterialShell/plugins/`. [`.config/DankMaterialShell/README.md`](.config/DankMaterialShell/README.md) has the full DMS install sequence.
+[auris](https://github.com/z89/auris) and [ember](https://github.com/z89/ember) live in their own repos. `dms-plugins` clones them and links them into `~/.config/DankMaterialShell/plugins/`. auris also needs its daemon, which its readme sets up. [`.config/DankMaterialShell/README.md`](.config/DankMaterialShell/README.md) has the full DMS install sequence.
 
 ## 📁 layout
 
 | path | what it holds |
 | --- | --- |
 | 🪟 `.config/hypr/` | `hyprland.lua`, `carry.lua`, notification focus and their tests |
-| 🧩 `.config/DankMaterialShell/` | DMS settings, shell patches and the `persona` plugin |
+| 🧩 `.config/DankMaterialShell/` | DMS settings, shell patches and the `persona`, `cpumon`, `memmon` and `gpumon` plugins |
 | 🎨 `.config/matugen/` | colour templates filled from the wallpaper |
 | 🐱 `.config/kitty/` | terminal config, with the prompt in `.config/starship.template.toml` |
 | 🔧 `.local/bin/` | theme, launcher, screenshot, boot and agent scripts |
