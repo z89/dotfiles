@@ -9,7 +9,8 @@ export ROCM_PATH=/opt/rocm
 
 # SSH agent (systemd-managed)
 export SSH_AUTH_SOCK="/run/user/1000/ssh-agent.socket"
-ssh-add -l &>/dev/null || ssh-add ~/.ssh/id_ed25519 &>/dev/null
+# the signing key asks before every use (ssh-add -c), see ssh-confirm-askpass
+ssh-add -l 2>/dev/null | grep -qF "$(ssh-keygen -lf ~/.ssh/id_ed25519.pub | cut -d' ' -f2)" || ssh-add -c ~/.ssh/id_ed25519 &>/dev/null
 
 # pnpm
 export PNPM_HOME="/home/archie/.local/share/pnpm"

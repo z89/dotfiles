@@ -83,6 +83,7 @@
 !.local/bin/dms-run-patched
 !.local/bin/dms-plugins
 !.local/bin/dms-network-build
+!.local/bin/ssh-confirm-askpass
 !.local/bin/agent-run
 !.local/bin/browser-open
 !.local/bin/hyprsunset-auto
