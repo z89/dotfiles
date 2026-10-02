@@ -23,7 +23,7 @@ BIN_SHA=$(sha256sum "$BIN" | cut -d' ' -f1)
 # Stock source, in order: DMS_SHELL_SRC override; the tree dms extracts on a stock start
 # (tmpfs, gone after a reboot); a cached copy of the upstream source at the installed
 # commit (~/.cache/dms-shell-stock/<short-rev>, quickshell/ plus the dank-qml-common
-# submodule as DankCommon/), which survives reboots and yay cache purges.
+# submodule as DankCommon/), which survives reboots and paru cache purges.
 src=${DMS_SHELL_SRC:-}
 [[ -n "$src" ]] || src=$(ls -td "$RUNTIME"/danklinux-shell/*/ 2>/dev/null | head -1 || true)
 if [[ -z "$src" || ! -f "$src/shell.qml" ]]; then
