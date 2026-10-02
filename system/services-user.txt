@@ -4,7 +4,6 @@ dms.service
 dsearch.service
 hermes-gateway.service
 hyprpolkitagent.service
-hyprsunset-auto.timer
 os3d.service
 os3d.socket
 p11-kit-server.socket

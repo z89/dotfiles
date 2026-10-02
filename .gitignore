@@ -63,8 +63,6 @@
 !.config/systemd/user/theme-sync.service
 !.config/systemd/user/theme-sync.timer
 !.config/systemd/user/theme-sync-dconf.path
-!.config/systemd/user/hyprsunset-auto.service
-!.config/systemd/user/hyprsunset-auto.timer
 !.config/systemd/user/hyprland-session.target
 !.config/systemd/user/qs-reload-notify.service
 !.config/systemd/user/dms.service.d/
@@ -87,8 +85,6 @@
 !.local/bin/ssh-confirm-askpass
 !.local/bin/agent-run
 !.local/bin/browser-open
-!.local/bin/hyprsunset-auto
-!.local/bin/hyprsunset-detect
 !.local/bin/theme-switch
 !.local/bin/avatar-make
 !.local/bin/theme-apply

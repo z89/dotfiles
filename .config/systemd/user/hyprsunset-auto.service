@@ -1,6 +1,0 @@
-[Unit]
-Description=Auto night-light via hyprsunset
-
-[Service]
-Type=oneshot
-ExecStart=%h/.local/bin/hyprsunset-auto
