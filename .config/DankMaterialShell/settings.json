@@ -74,6 +74,7 @@
   "matugenScheme": "scheme-vibrant",
   "matugenSourceMode": "darkness",
   "matugenContrast": 0.2,
+  "m3ElevationEnabled": false,
   "controlCenterColumns": 6,
   "controlCenterIconScale": 0.75,
   "controlCenterWidgets": [
@@ -193,33 +194,41 @@
       ],
       "centerWidgets": [],
       "rightWidgets": [
-        "clipboard",
         "auris",
         "ember",
         "music",
         "weather",
         {
-          "id": "cpuUsage",
-          "minimumWidth": false
+          "id": "spacer",
+          "size": 2
         },
-        "memUsage",
+        {
+          "id": "cpumon"
+        },
+        "memmon",
+        "gpumon",
+        "diskUsage",
+        {
+          "id": "spacer",
+          "size": 2
+        },
         "systemTray",
         {
           "id": "clock",
           "clockDateOrder": "dateFirst"
         },
-        "roam",
         {
           "id": "controlCenterButton",
           "enabled": true,
           "showAudioPercent": true,
           "showMicPercent": true
         },
+        "clipboard",
         "notificationButton",
         "persona"
       ],
-      "spacing": 6,
-      "innerPadding": 4,
+      "spacing": 8,
+      "innerPadding": 1,
       "widgetPadding": 8,
       "squareCorners": false,
       "gothCornersEnabled": false,
@@ -228,7 +237,21 @@
       "attachToScreenEdge": false,
       "borderEnabled": false,
       "barLengthPadding": 1360,
-      "followInterfaceStyle": true
+      "followInterfaceStyle": false,
+      "island": false,
+      "hoverPopouts": true,
+      "borderThickness": 8,
+      "borderColor": "primary",
+      "borderOpacity": 0.32,
+      "fontScale": 1.03,
+      "iconScale": 0.95,
+      "barInsetPadding": 7,
+      "widgetStyle": "flat",
+      "widgetTransparency": 0.72,
+      "maximizeWidgetIcons": false,
+      "maximizeWidgetText": false,
+      "transparency": 1,
+      "noBackground": false
     }
   ],
   "builtInPluginSettings": {

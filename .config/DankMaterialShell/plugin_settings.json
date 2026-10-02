@@ -14,12 +14,16 @@
     "enabled": true,
     "themedBackdrop": false
   },
-  "roam": {
-    "enabled": true,
-    "cliCommand": "/home/archie/.local/bin/roam",
-    "terminalCommand": "/usr/bin/kitty"
-  },
   "synopsis": {
+    "enabled": true
+  },
+  "gpumon": {
+    "enabled": true
+  },
+  "memmon": {
+    "enabled": true
+  },
+  "cpumon": {
     "enabled": true
   }
 }
