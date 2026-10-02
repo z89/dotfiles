@@ -33,7 +33,7 @@ dconf load /org/gnome/desktop/interface/ < ~/.config/gsettings/interface.ini
 
 `dotfiles-sync --apply` copies the mirrored system files in `system/` back onto `/`. plain `dotfiles-sync` refreshes the mirror, the package lists and the service lists, so `git status` shows drift. secrets and machine identity are never mirrored.
 
-[auris](https://github.com/z89/auris) and [ember](https://github.com/z89/ember) live in their own repos. `dms-plugins` clones them and links them into `~/.config/DankMaterialShell/plugins/`. auris also needs its daemon, which its readme sets up. [`.config/DankMaterialShell/README.md`](.config/DankMaterialShell/README.md) has the full DMS install sequence.
+[auris](https://github.com/z89/auris) and [ember](https://github.com/z89/ember) live in their own repos. `dms-plugins` clones them and links them into `~/.config/DankMaterialShell/plugins/`. auris also needs its daemon, which its readme sets up. video wallpapers come from [eco](https://github.com/z89/eco) (private for now), which is optional. clone it, run its `bin/eco-install` and restart `dms.service`. [`.config/DankMaterialShell/README.md`](.config/DankMaterialShell/README.md) has the full DMS install sequence.
 
 ## 📁 layout
 
