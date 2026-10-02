@@ -1,0 +1,307 @@
+diff --git a/core/internal/server/network/backend_networkmanager_signals.go b/core/internal/server/network/backend_networkmanager_signals.go
+index 64c74d7ba..86030dff7 100644
+--- a/core/internal/server/network/backend_networkmanager_signals.go
++++ b/core/internal/server/network/backend_networkmanager_signals.go
+@@ -679,7 +679,15 @@ func (b *NetworkManagerBackend) handleDeviceRemoved(devicePath dbus.ObjectPath)
+ 		return
+ 	}
+ 
+-	if _, remaining, found := b.removeWifiDeviceByPath(devicePath); found {
++	if removed, remaining, found := b.removeWifiDeviceByPath(devicePath); found {
++		b.stateMutex.Lock()
++		if b.state.IsConnecting && b.state.ConnectingDevice == removed.name {
++			b.state.IsConnecting = false
++			b.state.ConnectingSSID = ""
++			b.state.ConnectingDevice = ""
++			b.state.LastError = "WiFi device disconnected"
++		}
++		b.stateMutex.Unlock()
+ 		if b.wifiDevice != nil {
+ 			dev := b.wifiDevice.(gonetworkmanager.Device)
+ 			if dev.GetPath() == devicePath {
+diff --git a/core/internal/server/network/backend_networkmanager_state.go b/core/internal/server/network/backend_networkmanager_state.go
+index 9422f67f0..67c9b1cc9 100644
+--- a/core/internal/server/network/backend_networkmanager_state.go
++++ b/core/internal/server/network/backend_networkmanager_state.go
+@@ -189,8 +189,7 @@ func forgetOnConnectFailure(reasonCode string, preExisting bool) bool {
+ 	return reasonCode == errdefs.ErrUserCanceled && !preExisting
+ }
+ 
+-// With several adapters, state must follow the associated device, not whichever
+-// enumerated first (#2460).
++// Follow the pending connection, then keep the current adapter while it is connected.
+ func (b *NetworkManagerBackend) wifiDeviceForState() (gonetworkmanager.Device, gonetworkmanager.DeviceWireless) {
+ 	var fallbackDev gonetworkmanager.Device
+ 	if b.wifiDevice != nil {
+@@ -202,6 +201,16 @@ func (b *NetworkManagerBackend) wifiDeviceForState() (gonetworkmanager.Device, g
+ 	}
+ 
+ 	snapshot := b.wifiDevicesSnapshot()
++	b.stateMutex.RLock()
++	connecting := b.state.IsConnecting
++	target := b.state.ConnectingDevice
++	current := b.state.WiFiDevice
++	b.stateMutex.RUnlock()
++	if connecting {
++		if info := snapshot[target]; info != nil && info.device != nil {
++			return info.device, info.wireless
++		}
++	}
+ 	if len(snapshot) < 2 {
+ 		return fallbackDev, fallbackWireless
+ 	}
+@@ -212,6 +221,12 @@ func (b *NetworkManagerBackend) wifiDeviceForState() (gonetworkmanager.Device, g
+ 		names = append(names, name)
+ 	}
+ 	sort.Strings(names)
++	if info := snapshot[current]; info != nil && info.device != nil {
++		state, err := info.device.GetPropertyState()
++		if err == nil && state == gonetworkmanager.NmDeviceStateActivated && !apMode[string(info.device.GetPath())] {
++			return info.device, info.wireless
++		}
++	}
+ 	for _, name := range names {
+ 		info := snapshot[name]
+ 		if info.device == nil {
+@@ -313,18 +328,20 @@ func (b *NetworkManagerBackend) updateWiFiState() error {
+ 	wasConnecting = b.state.IsConnecting
+ 	connectingSSID = b.state.ConnectingSSID
+ 
+-	if wasConnecting && connectingSSID != "" {
++	if wasConnecting && connectingSSID != "" && (b.state.ConnectingDevice == "" || b.state.ConnectingDevice == iface) {
+ 		switch {
+ 		case connected && ssid == connectingSSID:
+ 			log.Infof("[updateWiFiState] Connection successful: %s", ssid)
+ 			b.state.IsConnecting = false
+ 			b.state.ConnectingSSID = ""
++			b.state.ConnectingDevice = ""
+ 			b.state.LastError = ""
+ 			doneSSID = connectingSSID
+ 		case failed || (disconnected && !connected):
+ 			log.Warnf("[updateWiFiState] Connection failed: SSID=%s, state=%d", connectingSSID, state)
+ 			b.state.IsConnecting = false
+ 			b.state.ConnectingSSID = ""
++			b.state.ConnectingDevice = ""
+ 			b.state.LastError = reasonCode
+ 
+ 			if forgetOnConnectFailure(reasonCode, b.state.ConnectingPreExisting) {
+diff --git a/core/internal/server/network/backend_networkmanager_wifi.go b/core/internal/server/network/backend_networkmanager_wifi.go
+index 696643934..f7e25e559 100644
+--- a/core/internal/server/network/backend_networkmanager_wifi.go
++++ b/core/internal/server/network/backend_networkmanager_wifi.go
+@@ -288,7 +288,7 @@ func (b *NetworkManagerBackend) ConnectWiFi(req ConnectionRequest) error {
+ 	b.stateMutex.Lock()
+ 	b.state.IsConnecting = true
+ 	b.state.ConnectingSSID = req.SSID
+-	b.state.ConnectingDevice = req.Device
++	b.state.ConnectingDevice = devInfo.name
+ 	b.state.ConnectingPreExisting = false
+ 	b.state.LastError = ""
+ 	b.stateMutex.Unlock()
+@@ -371,14 +371,22 @@ func (b *NetworkManagerBackend) abortInFlightConnection(ssid string) {
+ 		b.stateMutex.Unlock()
+ 		return
+ 	}
++	device := b.state.ConnectingDevice
+ 	b.state.IsConnecting = false
+ 	b.state.ConnectingSSID = ""
++	b.state.ConnectingDevice = ""
+ 	b.state.LastError = ""
+ 	b.stateMutex.Unlock()
+ 
+ 	b.clearCachedWiFiSecretBySSID(ssid)
+ 
+-	if err := b.DisconnectWiFi(); err != nil {
++	var err error
++	if device != "" {
++		err = b.DisconnectWiFiDevice(device)
++	} else {
++		err = b.DisconnectWiFi()
++	}
++	if err != nil {
+ 		log.Warnf("[abortInFlightConnection] failed to abort connection to %s: %v", ssid, err)
+ 	}
+ }
+diff --git a/core/internal/server/network/multiwifi_test.go b/core/internal/server/network/multiwifi_test.go
+new file mode 100644
+index 000000000..55530a1c0
+--- /dev/null
++++ b/core/internal/server/network/multiwifi_test.go
+@@ -0,0 +1,126 @@
++package network
++
++import (
++	"fmt"
++	mocknm "github.com/AvengeMedia/DankMaterialShell/core/internal/mocks/github.com/Wifx/gonetworkmanager/v2"
++	"github.com/Wifx/gonetworkmanager/v2"
++	"github.com/godbus/dbus/v5"
++	"github.com/stretchr/testify/require"
++	"testing"
++)
++
++func TestMultiWiFiKeepsCurrentAdapter(t *testing.T) {
++	nm := mocknm.NewMockNetworkManager(t)
++	b, err := NewNetworkManagerBackend(nm)
++	require.NoError(t, err)
++	nm.EXPECT().GetPropertyActiveConnections().Return([]gonetworkmanager.ActiveConnection{}, nil).Maybe()
++	usb := mocknm.NewMockDevice(t)
++	internal := mocknm.NewMockDevice(t)
++	usb.EXPECT().GetPropertyState().Return(gonetworkmanager.NmDeviceStateActivated, nil).Maybe()
++	usb.EXPECT().GetPath().Return("/usb").Maybe()
++	internal.EXPECT().GetPropertyState().Return(gonetworkmanager.NmDeviceStateActivated, nil).Maybe()
++	internal.EXPECT().GetPath().Return("/internal").Maybe()
++	b.setWifiDeviceInfo("wlp0s20f0u5", &wifiDeviceInfo{device: usb, name: "wlp0s20f0u5"})
++	b.setWifiDeviceInfo("wlp7s0", &wifiDeviceInfo{device: internal, name: "wlp7s0"})
++	b.wifiDevice = usb
++	b.state.WiFiDevice = "wlp7s0"
++	selected, _ := b.wifiDeviceForState()
++	require.Same(t, internal, selected)
++}
++
++func TestMultiWiFiCompletesOnRequestedAdapter(t *testing.T) {
++	for _, targetState := range []gonetworkmanager.NmDeviceState{gonetworkmanager.NmDeviceStatePrepare, gonetworkmanager.NmDeviceStateActivated} {
++		t.Run(fmt.Sprint(targetState), func(t *testing.T) {
++			nm := mocknm.NewMockNetworkManager(t)
++			b, err := NewNetworkManagerBackend(nm)
++			require.NoError(t, err)
++			nm.EXPECT().GetPropertyActiveConnections().Return([]gonetworkmanager.ActiveConnection{}, nil).Maybe()
++			usb := mocknm.NewMockDevice(t)
++			internal := mocknm.NewMockDevice(t)
++			wireless := mocknm.NewMockDeviceWireless(t)
++			ap := mocknm.NewMockAccessPoint(t)
++			usb.EXPECT().GetPropertyState().Return(gonetworkmanager.NmDeviceStateActivated, nil).Maybe()
++			usb.EXPECT().GetPath().Return("/usb").Maybe()
++			usb.EXPECT().GetPropertyInterface().Return("wlp0s20f0u5", nil).Maybe()
++			usb.EXPECT().GetPropertyIP4Config().Return(nil, nil).Maybe()
++			internal.EXPECT().GetPropertyState().Return(targetState, nil).Maybe()
++			internal.EXPECT().GetPropertyInterface().Return("wlp7s0", nil).Maybe()
++			internal.EXPECT().GetPath().Return("/internal").Maybe()
++			internal.EXPECT().GetPropertyIP4Config().Return(nil, nil).Maybe()
++			wireless.EXPECT().GetPropertyActiveAccessPoint().Return(ap, nil).Maybe()
++			ap.EXPECT().GetPath().Return("/ap").Maybe()
++			ap.EXPECT().GetPropertySSID().Return("five-ghz", nil).Maybe()
++			ap.EXPECT().GetPropertyStrength().Return(uint8(80), nil).Maybe()
++			ap.EXPECT().GetPropertyHWAddress().Return("aa:bb:cc:dd:ee:ff", nil).Maybe()
++			b.setWifiDeviceInfo("wlp0s20f0u5", &wifiDeviceInfo{device: usb, name: "wlp0s20f0u5"})
++			b.setWifiDeviceInfo("wlp7s0", &wifiDeviceInfo{device: internal, wireless: wireless, name: "wlp7s0"})
++			b.wifiDevice = usb
++			b.state.IsConnecting = true
++			b.state.ConnectingSSID = "five-ghz"
++			b.state.ConnectingDevice = "wlp7s0"
++			selected, _ := b.wifiDeviceForState()
++			require.Same(t, internal, selected)
++			require.NoError(t, b.updateWiFiState())
++			require.Equal(t, targetState != gonetworkmanager.NmDeviceStateActivated, b.state.IsConnecting)
++			require.Equal(t, "wlp7s0", b.state.WiFiDevice)
++			if targetState == gonetworkmanager.NmDeviceStateActivated {
++				require.Empty(t, b.state.ConnectingDevice)
++				require.Empty(t, b.state.ConnectingSSID)
++			}
++		})
++	}
++}
++
++func TestMultiWiFiPreservesExplicitMetrics(t *testing.T) {
++	for _, metric := range []int64{0, 100, 300, 600} {
++		settings := map[string]map[string]dbus.Variant{
++			"connection": {"autoconnect-priority": dbus.MakeVariant(int32(100))},
++			"ipv4":       {"route-metric": dbus.MakeVariant(metric)},
++			"ipv6":       {"route-metric": dbus.MakeVariant(metric + 1)},
++		}
++		require.Empty(t, connectionPriorityUpdates(settings, "802-11-wireless", 100, 300))
++		updates := connectionPriorityUpdates(settings, "802-3-ethernet", 100, 300)
++		require.Contains(t, updates, "ipv6.route-metric")
++	}
++	settings := map[string]map[string]dbus.Variant{"ipv4": {"route-metric": dbus.MakeVariant(int64(-1))}}
++	require.Contains(t, connectionPriorityUpdates(settings, "802-11-wireless", 100, 300), "ipv4.route-metric")
++}
++
++func TestMultiWiFiUnplugClearsPendingConnection(t *testing.T) {
++	nm := mocknm.NewMockNetworkManager(t)
++	b, err := NewNetworkManagerBackend(nm)
++	require.NoError(t, err)
++	settings := mocknm.NewMockSettings(t)
++	settings.EXPECT().ListConnections().Return([]gonetworkmanager.Connection{}, nil).Maybe()
++	b.settings = settings
++	target := mocknm.NewMockDevice(t)
++	target.EXPECT().GetPath().Return("/target")
++	b.wifiDevice = target
++	b.setWifiDeviceInfo("wlp7s0", &wifiDeviceInfo{device: target, name: "wlp7s0"})
++	b.state.IsConnecting = true
++	b.state.ConnectingSSID = "five-ghz"
++	b.state.ConnectingDevice = "wlp7s0"
++	b.handleDeviceRemoved("/target")
++	require.False(t, b.state.IsConnecting)
++	require.Empty(t, b.state.ConnectingDevice)
++	require.NotEmpty(t, b.state.LastError)
++}
++
++func TestMultiWiFiFailedTargetRemainsSelectedForFailureHandling(t *testing.T) {
++	nm := mocknm.NewMockNetworkManager(t)
++	b, err := NewNetworkManagerBackend(nm)
++	require.NoError(t, err)
++	nm.EXPECT().GetPropertyActiveConnections().Return([]gonetworkmanager.ActiveConnection{}, nil).Maybe()
++	usb := mocknm.NewMockDevice(t)
++	target := mocknm.NewMockDevice(t)
++	usb.EXPECT().GetPropertyState().Return(gonetworkmanager.NmDeviceStateActivated, nil).Maybe()
++	usb.EXPECT().GetPath().Return("/usb").Maybe()
++	target.EXPECT().GetPropertyState().Return(gonetworkmanager.NmDeviceStateFailed, nil).Maybe()
++	b.wifiDevice = usb
++	b.setWifiDeviceInfo("wlp0s20f0u5", &wifiDeviceInfo{device: usb, name: "wlp0s20f0u5"})
++	b.setWifiDeviceInfo("wlp7s0", &wifiDeviceInfo{device: target, name: "wlp7s0"})
++	b.state.IsConnecting = true
++	b.state.ConnectingDevice = "wlp7s0"
++	selected, _ := b.wifiDeviceForState()
++	require.Same(t, target, selected)
++}
+diff --git a/core/internal/server/network/priority.go b/core/internal/server/network/priority.go
+index 612131f61..6f7a0a159 100644
+--- a/core/internal/server/network/priority.go
++++ b/core/internal/server/network/priority.go
+@@ -213,9 +213,8 @@ func (m *Manager) setConnectionPriority(connType string, autoconnectPriority int
+ 			connUUID, _ = uuidVariant.Value().(string)
+ 		}
+ 
+-		if priorityMatches(connSection["autoconnect-priority"], int64(autoconnectPriority)) &&
+-			routeMetricMatches(settings["ipv4"], routeMetric) &&
+-			routeMetricMatches(settings["ipv6"], routeMetric) {
++		updates := connectionPriorityUpdates(settings, connType, autoconnectPriority, routeMetric)
++		if len(updates) == 0 {
+ 			continue
+ 		}
+ 
+@@ -225,10 +224,7 @@ func (m *Manager) setConnectionPriority(connType string, autoconnectPriority int
+ 		} else {
+ 			args = append(args, connName)
+ 		}
+-		args = append(args,
+-			"connection.autoconnect-priority", fmt.Sprintf("%d", autoconnectPriority),
+-			"ipv4.route-metric", fmt.Sprintf("%d", routeMetric),
+-			"ipv6.route-metric", fmt.Sprintf("%d", routeMetric))
++		args = append(args, updates...)
+ 
+ 		if err := exec.Command("nmcli", args...).Run(); err != nil {
+ 			log.Warnf("Failed to set priority for %s: %v", connName, err)
+@@ -298,3 +294,22 @@ func (m *Manager) WasRecentlyFailed(ssid string) bool {
+ 	elapsed := time.Now().Unix() - nm.lastFailedTime
+ 	return elapsed < 10
+ }
++
++func connectionPriorityUpdates(settings map[string]map[string]dbus.Variant, connType string, priority int32, metric int64) []string {
++	var updates []string
++	if !priorityMatches(settings["connection"]["autoconnect-priority"], int64(priority)) {
++		updates = append(updates, "connection.autoconnect-priority", fmt.Sprint(priority))
++	}
++	for _, family := range []string{"ipv4", "ipv6"} {
++		section := settings[family]
++		current, explicit := variantInt64(section["route-metric"])
++		// A network-type preference must not erase administrator-set Wi-Fi metrics.
++		if connType == "802-11-wireless" && explicit && current >= 0 {
++			continue
++		}
++		if !routeMetricMatches(section, metric) {
++			updates = append(updates, family+".route-metric", fmt.Sprint(metric))
++		}
++	}
++	return updates
++}

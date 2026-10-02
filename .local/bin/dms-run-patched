@@ -1,28 +1,16 @@
 #!/usr/bin/env bash
-# systemd ExecStart for dms.service: run DMS with the patched shell UI when it
-# matches the installed dms binary, otherwise run stock and rebuild the patch
-# in the background, then restart once so the patched UI takes over.
-PATCHED=${DMS_SHELL_PATCHED:-$HOME/.local/share/dms-shell-patched}
-BIN_SHA=$(sha256sum "$(command -v dms)" | cut -d' ' -f1)
-rm -rf "$PATCHED.prev"   # tree the previous instance ran from; safe to drop now that it is gone
-
-if [[ -f "$PATCHED/shell.qml" && "$(cat "$PATCHED/.dms-binary-sha256" 2>/dev/null)" == "$BIN_SHA" ]]; then
-    export DMS_SHELL_DIR=$PATCHED
-else
-    echo "dms-run-patched: patched shell missing or stale for this dms binary; starting stock and rebuilding" >&2
-    (
-        for _ in $(seq 1 30); do
-            sleep 2
-            if "$HOME/.local/bin/dms-shell-patch" >/dev/null 2>&1; then
-                echo "dms-run-patched: patch rebuilt, restarting dms.service" >&2
-                exec systemctl --user restart dms.service
-            fi
-        done
-        echo "dms-run-patched: could not rebuild patched shell; running stock" >&2
-    ) &
+# Start only a tested, matching core + shell bundle; building never starts the desktop.
+set -euo pipefail
+if [[ ${DMS_NETWORK_STOCK:-0} == 1 ]]; then
+    echo "dms-run-patched: explicit recovery mode, starting stock DMS" >&2
+    unset DMS_SHELL_DIR DMS_PATCHED_BINARY
+    exec /usr/bin/dms run --session
 fi
-
-# DMS's matugen worker rewrites gtk-theme, icon-theme and accent-color after every palette;
-# theme-apply owns those (see ~/.local/bin/dms-shim/gsettings), so DMS gets a shim first in PATH.
+bundle=$("$HOME/.local/bin/dms-network-build") || {
+    echo "dms-run-patched: build failed; inspect the journal and dms-network-build output" >&2
+    exit 1
+}
+export DMS_PATCHED_BINARY="$bundle/dms"
+export DMS_SHELL_DIR="$bundle/shell"
 export PATH="$HOME/.local/bin/dms-shim:$PATH"
-exec /usr/bin/dms run --session
+exec "$DMS_PATCHED_BINARY" run --session

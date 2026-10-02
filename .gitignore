@@ -82,6 +82,7 @@
 !.local/bin/dms-shell-patch
 !.local/bin/dms-run-patched
 !.local/bin/dms-plugins
+!.local/bin/dms-network-build
 !.local/bin/agent-run
 !.local/bin/browser-open
 !.local/bin/hyprsunset-auto
