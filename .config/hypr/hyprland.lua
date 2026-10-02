@@ -95,7 +95,6 @@ hl.on("hyprland.start", function()
     hl.exec_cmd("~/.local/bin/hyprsunset-auto")
     hl.exec_cmd("mullvad-vpn")
     hl.exec_cmd("sleep 3 && spotify --remote-debugging-port=9332")
-    hl.exec_cmd("sleep 6 && discord")
     -- notion-app, claude-desktop and chatgpt are launched on demand, not at boot.
 
     -- Anything ~/.config/hypr/local.lua wants started with the session.
