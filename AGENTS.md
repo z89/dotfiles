@@ -5,7 +5,6 @@ read this before changing anything in this repo, whichever agent you are. it hol
 ## 🧭 before you edit
 
 - run `git status` and `git log -3` first. uncommitted changes you did not make belong to the owner or to another session. leave them in place, and never stash, reset, check out, reformat or commit them as part of an unrelated task.
-- the published branch was rewritten and force-pushed on 2026-10-01. a clone or branch from before then carries the old history. rebase its own commits onto the remote branch, never merge the old history back in and never force-push from it.
 - stage the paths you changed by name, never `git add -A` or `git add .`.
 - keep documentation changes and code changes in separate commits.
 - commit messages are `changelog:`, a blank line, then one to four short bullets with no full stop.
@@ -32,19 +31,7 @@ before committing a doc, `grep -nP '—|–| -- |;' <file>` should print nothing
 
 - this repo is public. nothing secret, private or identifying is committed (tokens, keys, private hostnames, email addresses, account names other than z89). run `claude-prune-settings` before committing `.claude/settings.json`.
 - the root `.gitignore` is a whitelist, so a newly tracked file needs its own `!path` line.
-- the 2026-10-01 restyle is commit f77599b, which replaced 8acdc80. never reset to 8acdc80 or to anything reachable only from it.
+- the 2026-10-01 restyle is commit f77599b.
 - that restyle covers `README.md`, `LICENSE`, `.config/DankMaterialShell/plugins/persona/README.md` and `.config/hypr/tests/README.md`. keep their wording, the badge order (arch linux, hyprland, DMS, then the license, all in `7ee0d6`) and the 400ms theme fade figure.
+- `.config/DankMaterialShell/README.md` got the same restyle on 2026-10-02. its spare adapter steps use `<uuid>` in place of the real profile, the connection name and the interface, since the repo is public.
 - auris and ember are separate repos linked into `.config/DankMaterialShell/plugins/`, each with its own `AGENTS.md`.
-
-## 🚧 uncommitted work as of 2026-10-01
-
-three separate pieces of work, each its own commit. none of them is part of the docs restyle.
-
-1. **multiple Wi-Fi adapters for DMS** came from another session on 2026-10-01 and may still be open. it covers `.config/DankMaterialShell/README.md`, `.config/DankMaterialShell/patches/network-core.patch`, `.config/DankMaterialShell/patches/network-shell.patch`, `.local/bin/dms-network-build`, `.local/bin/dms-run-patched`, `.local/bin/dms-shell-patch`, `.local/bin/dms-shim/dms` and the `!.local/bin/dms-network-build` line in `.gitignore`.
-   - finish and test it first. `dms-run-patched` no longer falls back to stock DMS on its own, so a failed build now stops `dms.service`, and `DMS_NETWORK_STOCK=1` is the recovery path.
-   - restyle `.config/DankMaterialShell/README.md` to the rules above in the same commit. it was left out of the 2026-10-01 restyle because of this work, and it still has title case headings without emoji, DankMaterialShell written in full more than once and about 34 prose lines with colons, semicolons or dashes. keep every command, path, version and recovery step exactly.
-   - `dms-network-build` is a new executable, and the bot publisher drops file modes. the owner publishes that commit from their own terminal.
-2. **`.local/bin/agent-run`** is a stale copy from 2026-09-03 sitting over the committed 2026-09-07 version. committing it would revert the runtime profile discovery and write private account names into this public repo. never commit it. the owner decides whether to restore the committed version with `git checkout -- .local/bin/agent-run`.
-3. **`.claude/settings.json`** sets the session model and effort and adds the gloss hooks. run `claude-prune-settings`, read the diff, then commit it on its own.
-
-delete each item here once it is committed.
