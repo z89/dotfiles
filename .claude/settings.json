@@ -460,7 +460,7 @@
       "/home/archie"
     ]
   },
-  "model": "opus",
+  "model": "fable",
   "disableClaudeAiConnectors": true,
   "skillOverrides": {
     "design": "user-invocable-only",
@@ -553,6 +553,14 @@
             "timeout": 5
           }
         ]
+      },
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 /home/archie/.claude/hooks/gloss.py claude"
+          }
+        ]
       }
     ],
     "PreCompact": [
@@ -561,6 +569,14 @@
           {
             "type": "command",
             "command": "bash /home/archie/.claude/hooks/lean-compact.sh"
+          }
+        ]
+      },
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 /home/archie/.claude/hooks/gloss.py claude compact"
           }
         ]
       }
