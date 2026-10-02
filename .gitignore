@@ -23,6 +23,9 @@
 !.config/DankMaterialShell/plugins/
 .config/DankMaterialShell/plugins/*
 !.config/DankMaterialShell/plugins/persona/
+!.config/DankMaterialShell/plugins/cpumon/
+!.config/DankMaterialShell/plugins/memmon/
+!.config/DankMaterialShell/plugins/gpumon/
 !.config/DankMaterialShell/settings.json
 !.config/DankMaterialShell/patches/
 !.config/Code/User/settings.json
@@ -78,6 +81,7 @@
 !.local/bin/mint-agent-token
 !.local/bin/dms-shell-patch
 !.local/bin/dms-run-patched
+!.local/bin/dms-plugins
 !.local/bin/agent-run
 !.local/bin/browser-open
 !.local/bin/hyprsunset-auto
