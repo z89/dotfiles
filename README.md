@@ -24,7 +24,7 @@ the repo also holds the package lists and system files needed to rebuild the mac
 
 ```sh
 sudo pacman -S --needed - < pkglist/native.txt
-yay -S --needed - < pkglist/aur.txt
+paru -S --needed - < pkglist/aur.txt
 sudo dotfiles-sync --apply
 dms-plugins
 systemctl --user enable dms.service cliphist.service ssh-agent.service theme-apply.path theme-sync-dconf.path theme-sync.timer hyprsunset-auto.timer hyprpolkitagent.service

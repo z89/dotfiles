@@ -26,11 +26,11 @@ This file defines the user's system. Load it before any task involving packages,
 ## Package Management
 
 - **Primary:** `pacman` for official repos
-- **AUR:** `yay` (never `paru`, never `makepkg` directly unless debugging)
-- Install: `yay -S <pkg>` — handles both official and AUR
-- Search: `yay -Ss <pkg>`
+- **AUR:** `paru` (never `yay`, which was removed on 2026-10-02, and never `makepkg` directly unless debugging)
+- Install: `paru -S <pkg>` — handles both official and AUR
+- Search: `paru -Ss <pkg>`
 - Remove: `sudo pacman -Rns <pkg>` (includes orphan deps)
-- Update all: `yay -Syu`
+- Update all: `paru` (same as `paru -Syu`)
 - Never suggest `apt`, `brew`, `dnf`, `snap`, or `flatpak` unless the user explicitly asks
 
 ## Desktop Environment
@@ -94,7 +94,7 @@ When diagnosing issues, check in this order:
 2. `dmesg | tail -30` — kernel messages
 3. `systemctl --user status <unit>` or `systemctl status <unit>` — specific service
 4. Relevant config file in `~/.config/<app>/`
-5. `yay -Qi <pkg>` — check installed version and deps
+5. `pacman -Qi <pkg>` — check installed version and deps
 6. Browser slow to open or laggy: follow `~/.claude/skills/arch/chromium-launch.md` (check machine load first, then extensions, then profile weight)
 
 ## Rules
