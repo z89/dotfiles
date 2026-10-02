@@ -1,0 +1,232 @@
+diff --git a/Services/DMSNetworkService.qml b/Services/DMSNetworkService.qml
+index b3c9f55b2..8dc5c30e8 100644
+--- a/Services/DMSNetworkService.qml
++++ b/Services/DMSNetworkService.qml
+@@ -5,6 +5,7 @@ import QtQuick
+ import Quickshell
+ import qs.Common
+ import qs.Services
++import "WifiDeviceState.js" as WifiDeviceState
+ 
+ Singleton {
+     id: root
+@@ -33,20 +34,22 @@ Singleton {
+     property var cellularDevices: []
+     property var cellularConnections: []
+ 
+-    property string wifiIP: ""
+-    property string wifiInterface: ""
+-    property bool wifiConnected: false
++    property var backendWifiState: ({})
++    readonly property var displayedWifiState: WifiDeviceState.selected(backendWifiState, wifiDeviceOverride)
++    property string wifiIP: displayedWifiState.wifiIP || ""
++    property string wifiInterface: displayedWifiState.wifiDevice || ""
++    property bool wifiConnected: displayedWifiState.wifiConnected || false
+     property bool wifiEnabled: true
+-    property string wifiConnectionUuid: ""
+-    property string wifiDevicePath: ""
+-    property string activeAccessPointPath: ""
++    property string wifiConnectionUuid: displayedWifiState.wifiConnectionUuid || ""
++    property string wifiDevicePath: displayedWifiState.wifiDevicePath || ""
++    property string activeAccessPointPath: displayedWifiState.activeAccessPointPath || ""
+     property var wifiDevices: []
+     property string wifiDeviceOverride: SessionData.wifiDeviceOverride || ""
+     property string connectingDevice: ""
+ 
+-    property string currentWifiSSID: ""
+-    property int wifiSignalStrength: 0
+-    property var wifiNetworks: []
++    property string currentWifiSSID: displayedWifiState.wifiSSID || ""
++    property int wifiSignalStrength: displayedWifiState.wifiSignal || 0
++    property var wifiNetworks: displayedWifiState.wifiNetworks || []
+     property var savedConnections: []
+     property var ssidToConnectionName: ({})
+     property var wifiSignalIcon: {
+@@ -203,6 +206,7 @@ Singleton {
+     property bool credentialsRequested: false
+ 
+     property string pendingConnectionSSID: ""
++    property string pendingConnectionDevice: ""
+     property var pendingConnectionStartTime: 0
+     property bool wasConnecting: false
+ 
+@@ -349,13 +353,8 @@ Singleton {
+         cellularDevices = state.cellularDevices || [];
+         cellularConnections = state.cellularConnections || [];
+ 
+-        wifiIP = state.wifiIP || "";
+-        wifiInterface = state.wifiDevice || "";
+-        wifiConnected = state.wifiConnected || false;
++        backendWifiState = state;
+         wifiEnabled = state.wifiEnabled !== undefined ? state.wifiEnabled : true;
+-        wifiConnectionUuid = state.wifiConnectionUuid || "";
+-        wifiDevicePath = state.wifiDevicePath || "";
+-        activeAccessPointPath = state.activeAccessPointPath || "";
+         wifiDevices = state.wifiDevices || [];
+         connectingDevice = state.connectingDevice || "";
+ 
+@@ -396,12 +395,6 @@ Singleton {
+             backendHotspotLastError = "";
+         }
+ 
+-        currentWifiSSID = state.wifiSSID || "";
+-        wifiSignalStrength = state.wifiSignal || 0;
+-
+-        if (state.wifiNetworks) {
+-            wifiNetworks = state.wifiNetworks;
+-        }
+ 
+         if (state.wifiNetworks || state.savedWifiNetworks) {
+             const hasSavedWifiState = DMSService.apiVersion >= savedWifiStateApiVersion && Array.isArray(state.savedWifiNetworks);
+@@ -480,7 +473,7 @@ Singleton {
+         lastConnectionError = state.lastError || "";
+ 
+         if (pendingConnectionSSID) {
+-            if (wifiConnected && currentWifiSSID === pendingConnectionSSID && wifiIP) {
++            if (WifiDeviceState.completed(state, pendingConnectionSSID, pendingConnectionDevice)) {
+                 const elapsed = Date.now() - pendingConnectionStartTime;
+                 log.info("Successfully connected to", pendingConnectionSSID, "in", elapsed, "ms");
+                 ToastService.showInfo(I18n.tr("Connected to %1", "wifi toast, %1 is the network name").arg(pendingConnectionSSID));
+@@ -491,7 +484,7 @@ Singleton {
+ 
+                 pendingConnectionSSID = "";
+                 connectionStatus = "connected";
+-            } else if (previousConnecting && !isConnecting && !wifiConnected) {
++            } else if (previousConnecting && !isConnecting && connectionError) {
+                 const isCancellationError = connectionError === "user-canceled";
+                 const isBadCredentials = connectionError === "bad-credentials";
+ 
+@@ -594,9 +587,8 @@ Singleton {
+         if (!networkAvailable || isScanning || !wifiEnabled)
+             return;
+         isScanning = true;
+-        const params = effectiveWifiDevice ? {
+-            device: effectiveWifiDevice
+-        } : null;
++        const device = effectiveWifiDevice || wifiInterface;
++        const params = device ? { device: device } : null;
+         DMSService.sendRequest("network.wifi.scan", params, response => {
+             isScanning = false;
+             if (response.error) {
+@@ -615,6 +607,7 @@ Singleton {
+         if (!networkAvailable || isConnecting)
+             return;
+         pendingConnectionSSID = ssid;
++        pendingConnectionDevice = effectiveWifiDevice || wifiInterface;
+         pendingConnectionStartTime = Date.now();
+         isConnecting = true;
+         connectingSSID = ssid;
+@@ -625,8 +618,8 @@ Singleton {
+         const params = {
+             ssid: ssid
+         };
+-        if (effectiveWifiDevice)
+-            params.device = effectiveWifiDevice;
++        if (pendingConnectionDevice)
++            params.device = pendingConnectionDevice;
+         if (hidden)
+             params.hidden = true;
+         if (eapMethod)
+@@ -676,15 +669,14 @@ Singleton {
+     function disconnectWifi() {
+         if (!networkAvailable || !wifiInterface)
+             return;
+-        const params = effectiveWifiDevice ? {
+-            device: effectiveWifiDevice
+-        } : null;
++        const device = effectiveWifiDevice || wifiInterface;
++        const params = device ? { device: device } : null;
+         DMSService.sendRequest("network.wifi.disconnect", params, response => {
+             if (response.error) {
+                 ToastService.showError(I18n.tr("Failed to disconnect WiFi"), response.error);
+             } else {
+                 ToastService.showInfo(I18n.tr("Disconnected from WiFi"));
+-                currentWifiSSID = "";
++                getState();
+                 connectionStatus = "";
+             }
+         });
+@@ -752,17 +744,7 @@ Singleton {
+                 savedConnections = savedConnections.filter(s => s.ssid !== ssid);
+                 savedWifiNetworks = savedWifiNetworks.filter(s => s.ssid !== ssid);
+ 
+-                const updated = [...wifiNetworks];
+-                for (const network of updated) {
+-                    if (network.ssid === ssid) {
+-                        network.saved = false;
+-                        if (network.connected) {
+-                            network.connected = false;
+-                            currentWifiSSID = "";
+-                        }
+-                    }
+-                }
+-                wifiNetworks = updated;
++                getState();
+                 networksUpdated();
+                 Qt.callLater(() => refreshSavedWifiNetworks());
+             }
+diff --git a/Services/WifiDeviceState.js b/Services/WifiDeviceState.js
+new file mode 100644
+index 000000000..e8455753d
+--- /dev/null
++++ b/Services/WifiDeviceState.js
+@@ -0,0 +1,23 @@
++function selected(state, deviceName) {
++    const device = (state.wifiDevices || []).find(d => d.name === deviceName);
++    if (!device)
++        return state;
++    const sameDevice = device.name === state.wifiDevice;
++    return {
++        wifiDevice: device.name,
++        wifiConnected: device.connected === true,
++        wifiSSID: device.ssid || "",
++        wifiBSSID: device.bssid || "",
++        wifiIP: device.ip || "",
++        wifiSignal: device.signal || 0,
++        wifiNetworks: device.networks || [],
++        wifiConnectionUuid: sameDevice ? state.wifiConnectionUuid || "" : "",
++        wifiDevicePath: sameDevice ? state.wifiDevicePath || "" : "",
++        activeAccessPointPath: sameDevice ? state.activeAccessPointPath || "" : ""
++    };
++}
++
++function completed(state, ssid, deviceName) {
++    return state.wifiConnected === true && state.wifiSSID === ssid && !!state.wifiIP
++        && (!deviceName || state.wifiDevice === deviceName);
++}
+diff --git a/tests/multiwifi.test.mjs b/tests/multiwifi.test.mjs
+new file mode 100644
+index 000000000..1d98cb5d0
+--- /dev/null
++++ b/tests/multiwifi.test.mjs
+@@ -0,0 +1,30 @@
++import assert from "node:assert/strict";
++import test from "node:test";
++import { loadScript } from "./qml-script.mjs";
++const wifi = loadScript(new URL("../Services/WifiDeviceState.js", import.meta.url));
++const state = {
++    wifiDevice: "usb", wifiSSID: "two-ghz", wifiConnected: true, wifiIP: "192.0.2.1",
++    wifiDevicePath: "/usb", wifiNetworks: [{ssid: "two-ghz"}],
++    wifiDevices: [
++        {name: "usb", connected: true, ssid: "two-ghz", ip: "192.0.2.1"},
++        {name: "internal", connected: true, ssid: "five-ghz", ip: "192.0.2.2", networks: [{ssid: "five-ghz"}]},
++        {name: "idle", connected: false, networks: []}
++    ]
++};
++test("selected adapter supplies status and networks rather than alphabetical first", () => {
++    const selected = wifi.selected(state, "internal");
++    assert.equal(selected.wifiSSID, "five-ghz");
++    assert.equal(selected.wifiIP, "192.0.2.2");
++    assert.equal(selected.wifiNetworks[0].ssid, "five-ghz");
++    assert.equal(selected.wifiDevicePath, "");
++    assert.equal(wifi.selected(state, "idle").wifiConnected, false);
++});
++test("Auto and an unplugged override fall back to backend selection", () => {
++    assert.equal(wifi.selected(state, ""), state);
++    assert.equal(wifi.selected(state, "unplugged"), state);
++});
++test("another adapter on the same SSID cannot complete a pending connection", () => {
++    assert.equal(wifi.completed(state, "two-ghz", "internal"), false);
++    assert.equal(wifi.completed(state, "two-ghz", "usb"), true);
++    assert.equal(wifi.completed({...state, wifiIP: ""}, "two-ghz", "usb"), false);
++});

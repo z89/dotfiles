@@ -41,6 +41,15 @@ trap 'rm -rf "$tmp"' EXIT
 cp -a "$src"/. "$tmp"/
 chmod -R u+w "$tmp"
 
+# Match the compiled network patch, including on manual rebuilds from stock QML.
+NETWORK_PATCH=${DMS_PATCH_DIR:-$HOME/.config/DankMaterialShell/patches}/network-shell.patch
+if GIT_CEILING_DIRECTORIES="$(dirname "$tmp")" git -C "$tmp" apply --check --exclude='tests/*' -p1 "$NETWORK_PATCH" 2>/dev/null; then
+    GIT_CEILING_DIRECTORIES="$(dirname "$tmp")" git -C "$tmp" apply --exclude='tests/*' -p1 "$NETWORK_PATCH"
+elif ! GIT_CEILING_DIRECTORIES="$(dirname "$tmp")" git -C "$tmp" apply --reverse --check --exclude='tests/*' -p1 "$NETWORK_PATCH" 2>/dev/null; then
+    echo "dms-shell-patch: network patch incompatible with this shell; refusing partial build" >&2
+    exit 1
+fi
+
 # Newer DMS (1.6.0.r131+, "modern") ships a grid-based control centre and no longer
 # has the old DankLauncherV2 paths patched below. On a modern tree the compact
 # control-centre layout and the brightness id fix apply here, then the theme sync
