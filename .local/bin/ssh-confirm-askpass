@@ -8,4 +8,8 @@ if [ -z "${WAYLAND_DISPLAY:-}" ]; then
         [ -S "$s" ] && { export WAYLAND_DISPLAY="${s##*/}"; break; }
     done
 fi
-exec /usr/bin/lxqt-openssh-askpass "$@"
+# ssh-agent allows the key on an empty answer or "yes". plain Allow and Deny buttons,
+# with no text box, so the window never asks for the passphrase.
+zenity --question --title="SSH key" --text="${1:-Allow use of the signing key?}" \
+    --ok-label=Allow --cancel-label=Deny --icon=dialog-password 2>/dev/null || exit 1
+echo yes
