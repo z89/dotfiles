@@ -23,7 +23,7 @@ fi
 [[ ! -e "$bundle" ]] || { echo "dms-network-build: incomplete bundle $bundle; inspect it before rebuilding" >&2; exit 1; }
 tmp=$(mktemp -d "$CACHE/.build.XXXXXX")
 trap 'rm -rf -- "$tmp"' EXIT
-source_repo=${DMS_NETWORK_SOURCE:-$HOME/.cache/yay/dms-shell-git/DankMaterialShell}
+source_repo=${DMS_NETWORK_SOURCE:-$HOME/.cache/paru/clone/dms-shell-git/DankMaterialShell}
 if git -C "$source_repo" cat-file -e "$rev^{commit}" 2>/dev/null; then
     git clone --no-hardlinks --no-checkout "$source_repo" "$tmp/source" >&2
     git -C "$tmp/source" remote set-url origin https://github.com/AvengeMedia/DankMaterialShell.git

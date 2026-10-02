@@ -5,7 +5,7 @@ Turns a photo into a square PNG framed for a round avatar, writes it to
 ~/.face and hands it to DMS (AccountsService), so the bar (persona plugin),
 the lock screen, the control centre and the greeter all pick it up.
 
-With rembg installed (yay -S python-rembg) the background is removed, so
+With rembg installed (paru -S python-rembg) the background is removed, so
 the theme colour shows behind the portrait wherever it is drawn. Without it
 the photo is cropped as-is.
 
@@ -130,7 +130,7 @@ def main():
         else:
             if not a.keep_bg:
                 print("rembg not installed, keeping the photo background "
-                      "(yay -S python-rembg to get the cutout look)")
+                      "(paru -S python-rembg to get the cutout look)")
             frame_photo(im, src, result, a.size, a.zoom, a.shift_y)
             print("framed photo")
 
