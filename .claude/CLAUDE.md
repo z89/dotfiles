@@ -60,9 +60,23 @@ Whenever the task involves kitty, zsh, starship, terminal colors, prompt layout,
 Whenever the task involves adding, removing, or modifying files in the dotfiles repo (~/.gitignore whitelist, tracking new configs, managing .claude/ contents), first read:
 ~/.claude/skills/dotfiles/SKILL.md
 
-Before changing any file in the dotfiles repo, also read ~/AGENTS.md. It records the shared
+Before changing any file in the dotfiles repo, also read ~/AGENTS.md. It records the
 documentation style, the settled 2026-10-01 restyle, and uncommitted work that must not be
 reverted or folded into unrelated commits. Repos with their own AGENTS.md load it through CLAUDE.md.
+
+## Repo Boundaries
+
+Every repository stands alone. Its files never name, link to or describe another of the
+user's repositories: not in the readme, docs, AGENTS.md, CLAUDE.md, CHANGELOG, code,
+comments, config or commit messages. When the user asks for docs "like auris" (or like any
+other repo), copy that style without naming the model repo or calling the style shared.
+Never write "shared across the repos", "the same way <repo> does it", or rules about leaving
+another repo alone. Keep absolute paths from this machine (the home directory, the
+projects folder) out as well.
+
+The one exception is the dotfiles repo (`~`), which installs the others and may reference
+them. Third-party projects (upstream dependencies, prior art the user asked to compare
+against) are fine.
 
 ## Working on this machine
 
