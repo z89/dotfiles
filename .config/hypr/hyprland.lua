@@ -340,7 +340,30 @@ end, { desc = "Cycle Windows" })
 hl.bind(mainMod .. " + P",         hl.dsp.window.pseudo(),                      { desc = "Pseudo (dwindle)" })
 hl.bind(mainMod .. " + SHIFT + P", hl.dsp.exec_cmd("hyprpicker -a -f hex"),     { desc = "Color Picker" })
 hl.bind(mainMod .. " + V",         hl.dsp.layout("togglesplit"),                { desc = "Toggle Split (dwindle)" })
-hl.bind(mainMod .. " + S",         hl.dsp.focus({ workspace = 9 }),             { desc = "Spotify Workspace" })
+-- Follow-or-launch for apps with a home workspace (Super + S Spotify, Super + M Mullvad).
+-- When the app has a mapped window, switch to the workspace that window is on right now,
+-- wherever it was moved. When it has none (not running, or Mullvad hidden to the tray),
+-- switch to its home workspace and launch it; its silent window rule lands it there and a
+-- relaunch of a running single-instance app only re-shows the window. Special workspaces
+-- (negative ids) count as not open.
+local function follow_or_launch(classes, home, cmd)
+    return function()
+        for _, w in ipairs(hl.get_windows() or {}) do
+            local ws = w.workspace
+            if classes[string.lower(w.class or "")] and w.mapped ~= false
+                and ws and (ws.id or 0) > 0 then
+                hl.dispatch(hl.dsp.focus({ workspace = ws.id }))
+                return
+            end
+        end
+        hl.dispatch(hl.dsp.focus({ workspace = home }))
+        hl.exec_cmd(cmd)
+    end
+end
+hl.bind(mainMod .. " + S", follow_or_launch({ ["spotify"] = true }, 10,
+    "spotify --remote-debugging-port=9332"), { desc = "Spotify Workspace" })
+hl.bind(mainMod .. " + M", follow_or_launch({ ["mullvad-vpn"] = true, ["mullvad vpn"] = true }, 9,
+    "mullvad-vpn"), { desc = "Mullvad Workspace" })
 -- Was: hyprctl --batch "dispatch resizeactive exact …; dispatch centerwindow".
 -- `hyprctl dispatch` only accepts Lua expressions under a Lua config, so this
 -- is now native. resize({ exact = true }) is verified to set an absolute size.
@@ -575,7 +598,7 @@ hl.window_rule({
     name  = "mullvad-workspace",
     match = { class = "^(mullvad-vpn|Mullvad VPN)$" },
 
-    workspace = "8 silent",
+    workspace = "9 silent",
 })
 
 hl.window_rule({
@@ -643,13 +666,6 @@ hl.window_rule({
 hl.window_rule({
     name  = "spotify-workspace",
     match = { class = "^([Ss]potify)$" },
-
-    workspace = "9 silent",
-})
-
-hl.window_rule({
-    name  = "discord-workspace",
-    match = { class = "^(discord)$" },
 
     workspace = "10 silent",
 })
