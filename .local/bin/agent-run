@@ -7,7 +7,8 @@
 #   agent-run gh pr list          # works for one-off commands too
 #
 # WHAT IT SWAPS
-#   GH_TOKEN            a fresh App token, one hour, scoped to the installed repository
+#   GH_TOKEN            a fresh App token, one hour, limited to the repository it is
+#                       launched in (AGENT_GH_REPOS=all, or a comma list, widens it)
 #   GIT_CONFIG_GLOBAL   an owner-specific agent git config: ssh remotes rewritten
 #                       to https, credentials taken from GH_TOKEN, commits
 #                       attributed to the matching App bot and locally signed
@@ -127,9 +128,21 @@ PROFILE_OWNER="${OWNER:-${ORG:-}}"
   exit 1
 }
 
+# Least privilege: a token reaches only the repository the agent was launched in,
+# unless AGENT_GH_REPOS says otherwise ("all", or a comma list of names). It is
+# exported to the agent, so a token the agent mints again later through
+# mint-agent-token keeps the same limit. A repository owned by another account
+# than the profile's is not in the installation, so it scopes nothing.
+ORIGIN="$(git config --get remote.origin.url 2>/dev/null || true)"
+ORIGIN_OWNER="$(printf '%s' "${ORIGIN}" |
+  sed -nE 's#^(git@github\.com:|ssh://git@github\.com/|https://github\.com/)([^/]+)/.*#\2#p')"
+REPO_NAME="$(printf '%s' "${ORIGIN}" |
+  sed -nE 's#^(git@github\.com:|ssh://git@github\.com/|https://github\.com/)[^/]+/([^/]+)$#\2#p' | sed 's#\.git$##')"
+[ -n "${ORIGIN_OWNER}" ] && [ "$(lower "${ORIGIN_OWNER}")" = "$(lower "${PROFILE_OWNER}")" ] || REPO_NAME=""
+SCOPE="${AGENT_GH_REPOS-${REPO_NAME}}"
 # Fail here rather than launching an agent that silently falls back to your
 # credentials. A missing token must stop the run, not degrade it.
-if ! TOKEN="$(AGENT_GH_CONF="${CONF}" AGENT_GH_KEY="${KEY}" "${MINT}")" || [ -z "${TOKEN}" ]; then
+if ! TOKEN="$(AGENT_GH_CONF="${CONF}" AGENT_GH_KEY="${KEY}" AGENT_GH_REPOS="${SCOPE}" "${MINT}")" || [ -z "${TOKEN}" ]; then
   echo "agent-run: could not mint an App token; refusing to start with your credentials" >&2
   exit 1
 fi
@@ -145,6 +158,7 @@ exec env -u SSH_AUTH_SOCK -u GITHUB_TOKEN -u GIT_SSH_COMMAND \
   AGENT_GH=1 \
   AGENT_SSH_KEY="${HOME}/.config/agent-ssh/agent_ed25519" \
   AGENT_GH_PROFILE="${PROFILE}" \
+  AGENT_GH_REPOS="${SCOPE}" \
   AGENT_GH_OWNER="${PROFILE_OWNER}" \
   AGENT_GH_BOT_LOGIN="${BOT_LOGIN}" \
   AGENT_GH_BOT_EMAIL="${BOT_EMAIL}" \

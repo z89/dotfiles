@@ -4,15 +4,30 @@
 # WHY THIS EXISTS
 #
 # A GitHub App bot signs with its own key, and GitHub cannot verify that key: signing keys attach
-# to user ACCOUNTS, and an App bot has no account. So on a repository whose ruleset requires
-# verified signatures, every bot commit trips the rule and needs an operator bypass. Bypassing a
-# rule on every commit trains the habit of bypassing it, which is how the rule stops meaning
-# anything.
+# to user ACCOUNTS, and an App bot has no account. So a plain `git push` of a bot commit always
+# shows "Unverified", and on a repository whose ruleset requires verified signatures it is refused.
 #
-# Commits created through `createCommitOnBranch` are signed by GITHUB, server side, with its own
-# key. They satisfy the rule honestly instead of going around it. The publisher also adds one
-# canonical z89 co-author trailer, so GitHub attributes the contribution to the operator without
-# pretending the bot-authored commit was authored by a human.
+# GitHub's documented route for Apps is to create the commit through the API with an installation
+# token and NO custom author, committer or signature. GitHub then builds the commit itself, signs
+# it with its own web-flow key, and records the verification permanently. Renovate
+# (`platformCommit`) and peter-evans/create-pull-request (`sign-commits`) work the same way.
+#
+# WHY THE GIT DATA API AND NOT createCommitOnBranch
+#
+# `createCommitOnBranch` carries a path and its contents and no file mode, so a new executable or
+# symlink landed as a plain file and needed a human push. The Git Data API builds the commit from
+# blobs and a tree, and tree entries carry their mode (100644, 100755, 120000, 160000), so every
+# change a local commit can hold can be published. It also makes the publication ATOMIC: every
+# commit is built and checked first, unreferenced, and the branch moves once at the end. A failure
+# part way leaves the remote branch exactly where it was.
+#
+# WHY NO CO-AUTHOR TRAILER
+#
+# GitHub counts a `Co-authored-by` trailer as an author. With vigilant mode on, a commit with an
+# author who is not the committer and did not sign it shows "Partially verified", which is what
+# the old z89 co-author trailer produced. The bot is the only author now, and the operator who
+# directed the work is recorded with a `Requested-by` trailer, which GitHub does not treat as an
+# author. Measured on 2026-10-04 against a throwaway branch, rather than assumed.
 #
 # WHAT IT DOES NOT DO, DELIBERATELY
 #
@@ -25,10 +40,15 @@
 # The scanner earns this on the record: it blocked a commit on 2026-08-17 over a hardcoded region
 # and absolute home paths, and the corrections only exist because it fired.
 #
+# It never touches the working tree or the index. Published commits have the same trees as the
+# local ones, so moving the branch onto them changes no file, and a checkout another session is
+# editing is safe to publish from.
+#
 # USAGE
 #   gh-signed-commit.sh [remote]        # default remote: origin
 #
-# Run it after committing locally and instead of `git push`.
+# Run it after committing locally, in place of a plain push.
+
 set -euo pipefail
 
 REMOTE="${1:-origin}"
@@ -41,22 +61,20 @@ command -v jq >/dev/null || die "jq is not installed"
 git rev-parse --git-dir >/dev/null 2>&1 || die "not a git repository"
 
 # The App's installation token. Absent means this is not an agent session, in which case the
-# operator's own `git push` is the right tool and this script is not.
-[ "${AGENT_GH:-0}" = "1" ] || die "AGENT_GH=1 is required — operator sessions must use git push"
-[ -n "${GH_TOKEN:-}" ] || die "GH_TOKEN is not set — this script is for agent sessions only, use git push"
+# operator's own push is the right tool and this script is not.
+[ "${AGENT_GH:-0}" = "1" ] || die "AGENT_GH=1 is required, operator sessions push themselves"
+[ -n "${GH_TOKEN:-}" ] || die "GH_TOKEN is not set, this script is for agent sessions only"
 [ -n "${AGENT_GH_OWNER:-}" ] || die "AGENT_GH_OWNER is not set; launch through agent-run"
 [ -n "${AGENT_GH_BOT_LOGIN:-}" ] || die "AGENT_GH_BOT_LOGIN is not set; launch through agent-run"
 [ -n "${AGENT_GH_BOT_EMAIL:-}" ] || die "AGENT_GH_BOT_EMAIL is not set; launch through agent-run"
 
-COAUTHOR_LOGIN="z89"
-COAUTHOR_NAME="z89"
-COAUTHOR_EMAIL="30657227+z89@users.noreply.github.com"
-COAUTHOR_TRAILER="Co-authored-by: ${COAUTHOR_NAME} <${COAUTHOR_EMAIL}>"
-
-[ -z "$(git status --porcelain)" ] || die "working tree is dirty; commit or stash before publishing"
+# Who directed the work. Recorded in the message, never as an author.
+REQUESTER="${AGENT_GH_REQUESTER:-z89}"
+REQUESTED_TRAILER="Requested-by: ${REQUESTER}"
 
 BRANCH="$(git rev-parse --abbrev-ref HEAD)"
 [ "$BRANCH" != "HEAD" ] || die "detached HEAD; check out a branch"
+LOCAL_TIP="$(git rev-parse "refs/heads/$BRANCH")"
 
 URL="$(git config --get "remote.$REMOTE.url")" || die "no such remote: $REMOTE"
 SLUG="$(printf '%s' "$URL" | sed -E 's#^(git@github\.com:|ssh://git@github\.com/|https://github\.com/)##; s#\.git$##')"
@@ -69,199 +87,185 @@ REPO_NAME="${SLUG#*/}"
 [ "$REPO_OWNER" = "$AGENT_GH_OWNER" ] ||
   die "repository owner '$REPO_OWNER' does not match selected App profile '$AGENT_GH_OWNER'"
 
-# A branch that has never been published has no remote ref for the API to build on. Create it at
-# the merge-base with the remote default branch, which the remote holds by construction, so every
-# local commit after that point is published below. Operator-authored commits in that range still
-# refuse at the author check, so this can never silently rebuild the operator's own work as the bot.
+# A branch that has never been published is built on the merge-base with the remote default
+# branch, which the remote holds by construction. Nothing is created remotely until every commit
+# has been built and checked, so a refusal leaves no empty branch behind.
 LSR_RC=0
 git ls-remote --exit-code --heads "$REMOTE" "refs/heads/$BRANCH" >/dev/null 2>&1 || LSR_RC=$?
 if [ "$LSR_RC" -eq 2 ]; then
+  CREATE=1
   DEFAULT_BRANCH="$(gh api "repos/$REPO_OWNER/$REPO_NAME" --jq '.default_branch')" ||
     die "could not read the default branch of $SLUG"
   git fetch --quiet "$REMOTE" "$DEFAULT_BRANCH" || die "could not fetch $REMOTE/$DEFAULT_BRANCH"
-  BASE_OID="$(git merge-base "$BRANCH" "$REMOTE/$DEFAULT_BRANCH")" ||
+  BASE="$(git merge-base "$LOCAL_TIP" "$REMOTE/$DEFAULT_BRANCH")" ||
     die "$BRANCH shares no history with $REMOTE/$DEFAULT_BRANCH"
-  say "$REMOTE/$BRANCH does not exist; creating it at $(git rev-parse --short "$BASE_OID"), the merge-base with $DEFAULT_BRANCH"
-  gh api "repos/$REPO_OWNER/$REPO_NAME/git/refs" -f ref="refs/heads/$BRANCH" -f sha="$BASE_OID" >/dev/null ||
-    die "could not create $REMOTE/$BRANCH"
-elif [ "$LSR_RC" -ne 0 ]; then
+  say "$REMOTE/$BRANCH does not exist; it will be created on $(git rev-parse --short "$BASE"), the merge-base with $DEFAULT_BRANCH"
+elif [ "$LSR_RC" -eq 0 ]; then
+  CREATE=0
+  git fetch --quiet "$REMOTE" "$BRANCH" || die "could not fetch $REMOTE/$BRANCH"
+  BASE="$(git rev-parse "$REMOTE/$BRANCH")"
+  # Anything on the remote that is not in local history means someone else pushed. Publishing
+  # over that would be a silent overwrite, so stop and let a human decide how to reconcile.
+  BEHIND="$(git rev-list --count "$LOCAL_TIP..$BASE")"
+  [ "$BEHIND" -eq 0 ] || die "$REMOTE/$BRANCH has $BEHIND commit(s) not in $BRANCH; rebase first"
+else
   die "could not query $REMOTE for $BRANCH (exit $LSR_RC)"
 fi
-git fetch --quiet "$REMOTE" "$BRANCH" || die "could not fetch $REMOTE/$BRANCH"
 
-COMMITS="$(git rev-list --reverse "$REMOTE/$BRANCH..$BRANCH")"
-[ -n "$COMMITS" ] || die "nothing to publish — $BRANCH is not ahead of $REMOTE/$BRANCH"
+COMMITS="$(git rev-list --reverse "$BASE..$LOCAL_TIP")"
+[ -n "$COMMITS" ] || die "nothing to publish, $BRANCH is not ahead of $REMOTE/$BRANCH"
+MERGES="$(git rev-list --min-parents=2 "$BASE..$LOCAL_TIP")"
+[ -z "$MERGES" ] || die "merge commits are not published by this script: $(printf '%s' "$MERGES" | head -1 | cut -c1-9)"
 
-# Anything on the remote that is not in local history means someone else pushed. Publishing over
-# that would be a silent overwrite, so stop and let a human decide how to reconcile.
-BEHIND="$(git rev-list --count "$BRANCH..$REMOTE/$BRANCH")"
-[ "$BEHIND" -eq 0 ] || die "$REMOTE/$BRANCH has $BEHIND commit(s) not in $BRANCH; rebase first"
-
-HEAD_OID="$(git rev-parse "$REMOTE/$BRANCH")"
-
-# Complete every deterministic check before the first remote mutation. The API cannot publish a
-# stack atomically, so discovering a malformed later commit after an earlier one was accepted
-# would leave a partial publication that needs manual reconciliation.
+# Complete every deterministic check before the first API call that creates anything.
 for C in $COMMITS; do
   AUTHOR_EMAIL="$(git log -1 --format=%ae "$C")"
   [ "$AUTHOR_EMAIL" = "$AGENT_GH_BOT_EMAIL" ] ||
-    die "commit $C is authored as '$AUTHOR_EMAIL', expected '$AGENT_GH_BOT_EMAIL'"
-
-  FULL="$(git log -1 --format=%B "$C")"
-  if printf '%s\n' "$FULL" | grep -Eiq '^(co-authored-by|co-signed-by):'; then
-    die "commit $C already contains an attribution trailer; the publisher adds the canonical z89 trailer"
-  fi
-
-  BADMODE="$(git diff-tree -r --raw --no-renames --no-commit-id "$C" |
-    awk '{ src = substr($1, 2); dst = $2 }
-         (dst == "100755" || dst == "120000") && ($5 == "A" || src != dst) { print $NF }')"
-  if [ -n "$BADMODE" ]; then
-    say "commit $C changes files whose mode this API cannot carry:"
-    printf '  %s\n' $BADMODE >&2
-    die "push these by hand — an executable or symlink would land as a plain file"
+    die "commit $C is authored as '$AUTHOR_EMAIL', expected '$AGENT_GH_BOT_EMAIL'; the operator publishes their own commits"
+  if git log -1 --format=%B "$C" | grep -Eiq '^(co-authored-by|co-signed-by|requested-by):'; then
+    die "commit $C already contains an attribution trailer; a co-author makes GitHub show Partially verified, and the publisher adds Requested-by itself"
   fi
 done
 
-# `printf '%s'` emits no trailing newline, so wc -l undercounts by one and a single commit
-# reported as "0 commit(s)". Count the lines that are actually there instead.
 say "publishing $(printf '%s\n' "$COMMITS" | grep -c .) commit(s) to $SLUG on $BRANCH"
 
 WORK="$(mktemp -d)"
 trap 'rm -rf "$WORK"' EXIT
 
+# api METHOD PATH REQUEST_FILE -> response on stdout. gh exits non-zero on an HTTP error and
+# prints GitHub's message, which is the useful part.
+api() {
+  gh api --method "$1" "$2" --input "$3" 2>"$WORK/err" || { cat "$WORK/err" >&2; return 1; }
+}
+
+# The message exactly as committed: everything after the header block of the raw commit object.
+raw_message() { git cat-file commit "$1" | sed '1,/^$/d'; }
+
+# Strip trailing blank lines so the comparison ignores a terminator GitHub may add or drop.
+trimmed() { printf '%s\n' "$1" | sed -e ':a' -e '/^\n*$/{$d;N;ba' -e '}'; }
+
+PARENT="$BASE"
+PARENT_TREE="$(git rev-parse "$BASE^{tree}")"
+PREV="$BASE"
+BUILT=""
+
 for C in $COMMITS; do
-  # SPLIT THE RAW MESSAGE, never %s and %b.
-  #
-  # Git's "subject" is everything up to the first BLANK line, and this project's format —
-  # `changelog:` followed immediately by bullets — has no blank line in it at all. So %s returns
-  # the entire message with its newlines collapsed to spaces, and %b returns nothing. Publishing
-  # that would flatten every commit in the repository to a single line.
-  FULL="$(git log -1 --format=%B "$C")"
-  SUBJECT="$(printf '%s\n' "$FULL" | head -1)"
-  # Leading blank lines are stripped from the body because the API puts one back: it rejoins
-  # headline and body as `headline\n\nbody`, which is the git convention. Without the strip, a
-  # message already written in that convention gains a SECOND blank line on every publication,
-  # and a message republished twice would grow one each time.
-  #
-  # Measured, not assumed — the 17 August smoke test published `changelog:` immediately followed
-  # by a bullet and got a blank line inserted between them.
-  BODY="$(printf '%s\n' "$FULL" | tail -n +2 | sed '/./,$!d')"
+  [ "$(git rev-parse "$C^")" = "$PREV" ] || die "commit $C does not follow $PREV; history is not linear"
+  LOCAL_TREE="$(git rev-parse "$C^{tree}")"
 
-  if [ -n "$BODY" ]; then
-    PUBLISH_BODY="${BODY}"$'\n\n'"${COAUTHOR_TRAILER}"
-  else
-    PUBLISH_BODY="${COAUTHOR_TRAILER}"
-  fi
-  EXPECTED_MESSAGE="${SUBJECT}"$'\n\n'"${PUBLISH_BODY}"
-
-  # `fileChanges.additions` carries a path and its contents and nothing else, so the API cannot
-  # SET a mode. Measured on 17 August against a throwaway branch, rather than assumed:
-  #
-  #   modifying a file that is already 100755  ->  stays 100755
-  #   adding a new file, shebang and all       ->  lands 100644
-  #
-  # So the two cases it cannot express are a NEW executable or symlink, and a MODE CHANGE on an
-  # existing path — `chmod +x` would publish as a content-only commit and quietly not take
-  # effect. Ordinary edits to files that are already executable are fine, which is most of them;
-  # an earlier version refused those too and made this unusable on a repository full of scripts.
-  #
-  # $1 carries the source mode with a leading colon, $2 the destination mode.
-  # --no-renames so a rename is expressed as a delete plus an add, which is what the API takes.
-  : > "$WORK/adds.json"
-  : > "$WORK/dels.json"
-  # `change`, not `status`: zsh makes $status a read-only alias for $?, so that name silently
-  # breaks the moment anyone runs this under a shell other than the one in the shebang.
+  # One tree entry per changed path. A raw diff-tree line is
+  #   :srcmode dstmode srcsha dstsha status<TAB>path
+  # --no-renames so a rename is a delete plus an add, which is what a tree edit takes.
+  # `change`, not `status`: zsh makes $status a read-only alias for $?.
+  : > "$WORK/entries.json"
   while IFS=$'\t' read -r meta path; do
-    change="$(printf '%s' "$meta" | awk '{print $5}')"
+    read -r srcmode dstmode _ dstsha change <<<"${meta#:}"
     case "$change" in
-      D) jq -n --arg p "$path" '{path:$p}' >> "$WORK/dels.json" ;;
+      D)
+        type=blob; [ "$srcmode" = "160000" ] && type=commit
+        jq -n --arg p "$path" --arg m "$srcmode" --arg t "$type" \
+          '{path:$p, mode:$m, type:$t, sha:null}' >> "$WORK/entries.json"
+        ;;
       A|M|T)
-        git show "$C:$path" | base64 -w0 > "$WORK/blob.b64"
-        jq -n --arg p "$path" --rawfile c "$WORK/blob.b64" '{path:$p, contents:$c}' >> "$WORK/adds.json"
+        if [ "$dstmode" = "160000" ]; then
+          # a submodule pointer is a commit id, there is no blob to upload
+          jq -n --arg p "$path" --arg s "$dstsha" \
+            '{path:$p, mode:"160000", type:"commit", sha:$s}' >> "$WORK/entries.json"
+        else
+          git cat-file blob "$dstsha" | base64 -w0 > "$WORK/blob.b64"
+          jq -n --rawfile c "$WORK/blob.b64" '{content:$c, encoding:"base64"}' > "$WORK/blob.json"
+          BLOB="$(api POST "repos/$SLUG/git/blobs" "$WORK/blob.json" | jq -r '.sha')" ||
+            die "the API refused the contents of $path in $C; check the App has Contents: write on $SLUG"
+          # Git object ids are content hashes, so a matching id proves GitHub holds the same bytes.
+          [ "$BLOB" = "$dstsha" ] || die "GitHub stored $path as $BLOB, expected $dstsha"
+          jq -n --arg p "$path" --arg m "$dstmode" --arg s "$BLOB" \
+            '{path:$p, mode:$m, type:"blob", sha:$s}' >> "$WORK/entries.json"
+        fi
         ;;
       *) die "unhandled change status '$change' for $path in $C" ;;
     esac
-  done < <(git diff-tree -r --raw --no-renames --no-commit-id "$C")
+  done < <(git diff-tree -r --raw --no-renames --no-commit-id --no-abbrev "$C")
 
-  jq -n \
-    --arg slug "$SLUG" --arg branch "$BRANCH" \
-    --arg headline "$SUBJECT" --arg body "$PUBLISH_BODY" --arg oid "$HEAD_OID" \
-    --slurpfile adds "$WORK/adds.json" --slurpfile dels "$WORK/dels.json" \
-    '{
-       query: "mutation($input: CreateCommitOnBranchInput!) { createCommitOnBranch(input: $input) { commit { oid url } } }",
-       variables: { input: {
-         branch: { repositoryNameWithOwner: $slug, branchName: $branch },
-         message: { headline: $headline, body: $body },
-         expectedHeadOid: $oid,
-         fileChanges: { additions: $adds, deletions: $dels }
-       }}
-     }' > "$WORK/request.json"
-
-  RESPONSE="$WORK/response.json"
-  if ! gh api graphql --input "$WORK/request.json" > "$RESPONSE" 2>"$WORK/err"; then
-    cat "$WORK/err" >&2
-    die "the API refused the commit — check the App has Contents: write on $SLUG"
+  if [ -s "$WORK/entries.json" ]; then
+    jq -n --arg base "$PARENT_TREE" --slurpfile e "$WORK/entries.json" \
+      '{base_tree:$base, tree:$e}' > "$WORK/tree.json"
+    TREE="$(api POST "repos/$SLUG/git/trees" "$WORK/tree.json" | jq -r '.sha')" ||
+      die "the API refused the tree for $C"
+  else
+    TREE="$PARENT_TREE"
   fi
-  # A GraphQL error is a 200 with an `errors` array, so the exit status above proves nothing.
-  if jq -e '.errors' "$RESPONSE" >/dev/null 2>&1; then
-    jq -r '.errors[].message' "$RESPONSE" >&2
-    die "the API returned an error for $C"
-  fi
+  # The same tree id proves the published commit holds exactly the local files and modes.
+  [ "$TREE" = "$LOCAL_TREE" ] || die "GitHub built tree $TREE for $C, expected $LOCAL_TREE"
 
-  NEW_OID="$(jq -r '.data.createCommitOnBranch.commit.oid' "$RESPONSE")"
-  [ "$NEW_OID" != "null" ] && [ -n "$NEW_OID" ] || die "no commit oid came back for $C"
-  say "  $(git log -1 --format=%h "$C") -> $(printf '%.9s' "$NEW_OID")  $SUBJECT"
+  BODY="$(trimmed "$(raw_message "$C")")"
+  MESSAGE="${BODY}"$'\n\n'"${REQUESTED_TRAILER}"$'\n'
 
-  # Verify every commit immediately: signature, message, tree, primary bot identity, and GitHub's
-  # association of the canonical co-author with z89. A final-commit-only check can hide a broken
-  # earlier commit in a multi-commit publication.
-  gh api "repos/$SLUG/commits/$NEW_OID" > "$WORK/published.json" ||
-    die "could not read published commit $NEW_OID back from GitHub"
+  # No author, no committer, no signature. Any of them makes GitHub skip signing.
+  jq -n --arg m "$MESSAGE" --arg t "$TREE" --arg p "$PARENT" \
+    '{message:$m, tree:$t, parents:[$p]}' > "$WORK/commit.json"
+  api POST "repos/$SLUG/git/commits" "$WORK/commit.json" > "$WORK/created.json" ||
+    die "the API refused the commit for $C"
 
-  VERIFIED="$(jq -r '.commit.verification.verified' "$WORK/published.json")"
-  [ "$VERIFIED" = "true" ] ||
-    die "GitHub reports $NEW_OID as unverified: $(jq -r '.commit.verification.reason' "$WORK/published.json")"
+  NEW="$(jq -r '.sha' "$WORK/created.json")"
+  [ -n "$NEW" ] && [ "$NEW" != "null" ] || die "no commit id came back for $C"
+  [ "$(jq -r '.verification.verified' "$WORK/created.json")" = "true" ] ||
+    die "GitHub did not sign the commit for $C ($(jq -r '.verification.reason' "$WORK/created.json")); is GH_TOKEN an App installation token?"
+  [ "$(jq -r '.tree.sha' "$WORK/created.json")" = "$LOCAL_TREE" ] || die "the commit for $C points at the wrong tree"
+  [ "$(jq -r '.parents | map(.sha) | join(" ")' "$WORK/created.json")" = "$PARENT" ] ||
+    die "the commit for $C has the wrong parent"
+  [ "$(jq -r '.author.email' "$WORK/created.json")" = "$AGENT_GH_BOT_EMAIL" ] ||
+    die "GitHub authored the commit for $C as '$(jq -r '.author.email' "$WORK/created.json")', expected '$AGENT_GH_BOT_EMAIL'"
+  [ "$(trimmed "$(jq -j '.message' "$WORK/created.json")")" = "$(trimmed "$MESSAGE")" ] ||
+    die "GitHub changed the message of the commit for $C"
 
-  jq -j '.commit.message' "$WORK/published.json" > "$WORK/published.msg"
-  printf '%s' "$EXPECTED_MESSAGE" > "$WORK/expected.msg"
-  if ! diff -q "$WORK/expected.msg" "$WORK/published.msg" >/dev/null; then
-    diff -u "$WORK/expected.msg" "$WORK/published.msg" >&2 || true
-    die "published message differs from the canonical message for $C"
-  fi
-
-  LOCAL_TREE="$(git rev-parse "$C^{tree}")"
-  PUBLISHED_TREE="$(jq -r '.commit.tree.sha' "$WORK/published.json")"
-  [ "$PUBLISHED_TREE" = "$LOCAL_TREE" ] ||
-    die "published tree $PUBLISHED_TREE differs from local tree $LOCAL_TREE for $C"
-
-  PUBLISHED_AUTHOR="$(jq -r '.author.login // empty' "$WORK/published.json")"
-  [ "$PUBLISHED_AUTHOR" = "$AGENT_GH_BOT_LOGIN" ] ||
-    die "GitHub attributed $NEW_OID to '$PUBLISHED_AUTHOR', expected '$AGENT_GH_BOT_LOGIN'"
-
-  jq -n --arg owner "$REPO_OWNER" --arg name "$REPO_NAME" --arg oid "$NEW_OID" \
-    '{
-       query: "query($owner: String!, $name: String!, $oid: GitObjectID!) { repository(owner: $owner, name: $name) { object(oid: $oid) { ... on Commit { authors(first: 100) { nodes { email user { login } } } } } } }",
-       variables: {owner: $owner, name: $name, oid: $oid}
-     }' > "$WORK/authors-request.json"
-  gh api graphql --input "$WORK/authors-request.json" > "$WORK/authors-response.json" ||
-    die "could not verify GitHub author association for $NEW_OID"
-  jq -e --arg login "$COAUTHOR_LOGIN" --arg email "$COAUTHOR_EMAIL" \
-    '.data.repository.object.authors.nodes[] | select(.user.login == $login and .email == $email)' \
-    "$WORK/authors-response.json" >/dev/null ||
-    die "GitHub did not associate canonical co-author $COAUTHOR_LOGIN with $NEW_OID"
-
-  say "  verified signature, tree, bot author, and z89 co-author"
-
-  HEAD_OID="$NEW_OID"
+  say "  $(git rev-parse --short "$C") -> $(printf '%.9s' "$NEW")  $(printf '%s\n' "$BODY" | head -1)"
+  BUILT="$BUILT $NEW"
+  PARENT="$NEW"
+  PARENT_TREE="$LOCAL_TREE"
+  PREV="$C"
 done
 
-# The published commits are DIFFERENT OBJECTS from the local ones: same trees and messages, new
-# SHAs, because GitHub built and signed them itself. Local history has to be moved onto them or
-# the next run reads this branch as ahead again and republishes everything.
-git fetch --quiet "$REMOTE" "$BRANCH"
-[ "$(git rev-parse "$REMOTE/$BRANCH")" = "$HEAD_OID" ] ||
-  die "$REMOTE/$BRANCH moved after publication; refusing to reset local history"
-git reset --hard --quiet "$REMOTE/$BRANCH"
-say "local $BRANCH reset onto the published commits"
+# Nothing is visible yet. One ref update publishes the whole stack. force:false makes GitHub
+# refuse anything but a fast-forward, so a push that landed meanwhile fails this instead of being
+# overwritten, the same guarantee expectedHeadOid gave.
+if [ "$CREATE" -eq 1 ]; then
+  jq -n --arg r "refs/heads/$BRANCH" --arg s "$PARENT" '{ref:$r, sha:$s}' > "$WORK/ref.json"
+  api POST "repos/$SLUG/git/refs" "$WORK/ref.json" >/dev/null || die "could not create $REMOTE/$BRANCH; nothing was published"
+else
+  jq -n --arg s "$PARENT" '{sha:$s, force:false}' > "$WORK/ref.json"
+  api PATCH "repos/$SLUG/git/refs/heads/$BRANCH" "$WORK/ref.json" >/dev/null ||
+    die "$REMOTE/$BRANCH moved while publishing; nothing was published, fetch and rebase first"
+fi
 
-say "published, VERIFIED, and attributed to z89: $HEAD_OID"
+# The published commits are DIFFERENT OBJECTS from the local ones: same trees and messages, new
+# ids, because GitHub built and signed them itself. The local branch is moved onto them or the
+# next run reads it as ahead again. update-ref with the old value refuses if a commit landed
+# locally meanwhile, and since the trees match, the index and working tree stay as they are.
+git fetch --quiet "$REMOTE" "$BRANCH" ||
+  die "published, but could not fetch $REMOTE/$BRANCH; fetch, then: git update-ref refs/heads/$BRANCH $PARENT $LOCAL_TIP"
+[ "$(git rev-parse "$REMOTE/$BRANCH")" = "$PARENT" ] ||
+  die "$REMOTE/$BRANCH moved after publication; local $BRANCH left as it was"
+git update-ref -m "gh-signed-commit: moved onto the GitHub signed commits" "refs/heads/$BRANCH" "$PARENT" "$LOCAL_TIP" ||
+  die "published, but local $BRANCH moved meanwhile; rebase it onto $REMOTE/$BRANCH"
+say "local $BRANCH moved onto the published commits, working tree untouched"
+
+# Read every commit back as the world sees it: verified, attributed to the bot, and with the bot
+# as the ONLY author. A second author is what turns the badge into "Partially verified".
+for NEW in $BUILT; do
+  gh api "repos/$SLUG/commits/$NEW" > "$WORK/published.json" || die "could not read $NEW back from GitHub"
+  [ "$(jq -r '.commit.verification.verified' "$WORK/published.json")" = "true" ] ||
+    die "GitHub reports $NEW as unverified: $(jq -r '.commit.verification.reason' "$WORK/published.json")"
+  [ "$(jq -r '.author.login // empty' "$WORK/published.json")" = "$AGENT_GH_BOT_LOGIN" ] ||
+    die "GitHub attributed $NEW to '$(jq -r '.author.login // empty' "$WORK/published.json")', expected '$AGENT_GH_BOT_LOGIN'"
+  jq -n --arg owner "$REPO_OWNER" --arg name "$REPO_NAME" --arg oid "$NEW" \
+    '{
+       query: "query($owner: String!, $name: String!, $oid: GitObjectID!) { repository(owner: $owner, name: $name) { object(oid: $oid) { ... on Commit { authors(first: 10) { nodes { email user { login } } } } } } }",
+       variables: {owner: $owner, name: $name, oid: $oid}
+     }' > "$WORK/authors.json"
+  AUTHORS="$(gh api graphql --input "$WORK/authors.json" --jq '[.data.repository.object.authors.nodes[] | .user.login // .email] | join(",")')" ||
+    die "could not read the authors of $NEW"
+  [ "$AUTHORS" = "$AGENT_GH_BOT_LOGIN" ] || die "GitHub lists the authors of $NEW as '$AUTHORS', expected only '$AGENT_GH_BOT_LOGIN'"
+done
+say "  verified signature, tree, modes, message, and the bot as the only author"
+
+say "published and VERIFIED: $PARENT"

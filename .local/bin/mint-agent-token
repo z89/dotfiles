@@ -91,10 +91,41 @@ jwt="${signing_input}.${signature}"
 # The JWT authenticates the APP. It cannot touch a repository - it is only good
 # for exchanging into an INSTALLATION token, which is what carries the
 # repository-scoped permissions and the one-hour expiry.
+#
+# NARROW THE TOKEN. GitHub's App guidance is to limit every installation token to
+# the repositories and permissions the job needs, so a leaked token reaches as
+# little as possible. AGENT_GH_REPOS is a comma separated list of repository
+# names under the installation's account ("all" or empty keeps every repository
+# the App can reach). AGENT_GH_PERMISSIONS is a JSON object such as
+# {"contents":"write","metadata":"read"}, and may only narrow what the App was
+# granted. Either can also be set as REPOS= or PERMISSIONS= in the profile config.
+body=$(REPOS="${AGENT_GH_REPOS:-${REPOS:-}}" PERMS="${AGENT_GH_PERMISSIONS:-${PERMISSIONS:-}}" python3 -c '
+import json, os, re, sys
+body = {}
+repos = os.environ["REPOS"].strip()
+if repos and repos != "all":
+    names = [r.strip() for r in repos.split(",") if r.strip()]
+    bad = [r for r in names if not re.fullmatch(r"[A-Za-z0-9._-]+", r)]
+    if bad:
+        sys.exit("mint-agent-token: not a repository name: " + ", ".join(bad))
+    body["repositories"] = names
+perms = os.environ["PERMS"].strip()
+if perms:
+    try:
+        p = json.loads(perms)
+    except ValueError:
+        sys.exit("mint-agent-token: AGENT_GH_PERMISSIONS is not JSON")
+    if not isinstance(p, dict) or not all(v in ("read", "write", "admin") for v in p.values()):
+        sys.exit("mint-agent-token: AGENT_GH_PERMISSIONS must map names to read, write or admin")
+    body["permissions"] = p
+print(json.dumps(body))
+')
+
 response=$(curl -sS -X POST \
   -H "Authorization: Bearer ${jwt}" \
   -H "Accept: application/vnd.github+json" \
   -H "X-GitHub-Api-Version: 2022-11-28" \
+  -d "${body}" \
   "https://api.github.com/app/installations/${INSTALL_ID}/access_tokens")
 
 token=$(printf '%s' "${response}" | python3 -c 'import json,sys; print(json.load(sys.stdin).get("token",""))' 2>/dev/null || true)
