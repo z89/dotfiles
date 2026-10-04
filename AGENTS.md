@@ -1,6 +1,6 @@
 # agent notes
 
-read this before changing anything in this repo, whichever agent you are. it holds the documentation style shared by the z89 repos (lean, gloss, ember, auris, somnus and dotfiles), the decisions already settled here and any work left uncommitted, so a later change keeps the earlier work instead of undoing it.
+read this before changing anything in this repo, whichever agent you are. it holds the documentation style, the decisions already settled here and any work left uncommitted, so a later change keeps the earlier work instead of undoing it.
 
 ## 🧭 before you edit
 
@@ -21,9 +21,9 @@ this covers every markdown file (readme, changelog and docs). code blocks, inlin
 - prose has no em dashes, en dashes, double hyphens, colons or semicolons. use a comma, a full stop, parentheses, or "to" for a range. a line that would end in a colon before a list or code block ends in a full stop or is reworded. colons stay only in code, URLs, clock times and literal values.
 - no filler, hedging or summary phrases ("it's worth noting", "importantly", "in summary").
 - write DankMaterialShell in full once per document, followed by (DMS), then DMS from there on. the badge label is `DMS`.
-- tool names are lowercase in prose (rust, cargo, bluez, pipewire, wireplumber, linux, systemd, qt, quickshell, hyprland, kitty, zsh, lua). acronyms stay uppercase (ANC, CLI, JSON, MPRIS, BLE, MIT). Apple names keep Apple's casing (AirPods, Mac, macOS, iPhone).
-- units take no space (`800ms`, `5s`, `2000K`).
-- `LICENSE` is the standard MIT text with `Copyright (c) 2026 z89`, byte-identical across the repos and with no trailing blank line. the readme ends with `## 📄 license` and the word MIT.
+- tool names are lowercase in prose (rust, cargo, bluez, pipewire, wireplumber, linux, systemd, qt, quickshell, hyprland, kitty, zsh, lua). acronyms stay uppercase (CLI, JSON, MIT). Apple names keep Apple's casing (AirPods, macOS).
+- units take no space (`400ms`, `640px`).
+- `LICENSE` is the standard MIT text with `Copyright (c) 2026 z89` and no trailing blank line. the readme ends with `## 📄 license` and the word MIT.
 
 before committing a doc, `grep -nP '—|–| -- |;' <file>` should print nothing outside code, and every line `grep -n ':' <file>` prints should be code, a URL, a table of literal values or a clock time.
 
