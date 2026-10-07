@@ -1,6 +1,7 @@
 {
   "currentThemeName": "dynamic",
   "clockFormat": "12h",
+  "showSeconds": true,
   "fontFamily": "Inter",
   "monoFontFamily": "JetBrainsMono Nerd Font",
   "dockConfigs": [
