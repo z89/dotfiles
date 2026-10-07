@@ -123,6 +123,8 @@ env -u GH_TOKEN -u GITHUB_TOKEN -u GIT_CONFIG_COUNT -u GIT_SSH_COMMAND \
   }
 git update-ref "refs/heads/$BRANCH" "$FINAL" "$TIP" ||
   die "remote push succeeded, but local $BRANCH moved; reconcile it with $FINAL"
+git fetch --quiet "$REMOTE" "refs/heads/$BRANCH" ||
+  die "push succeeded, but could not refresh $REMOTE/$BRANCH"
 VERIFIED="$(env -u GH_TOKEN -u GITHUB_TOKEN gh api "repos/$SLUG/commits/$FINAL" \
   --jq '[.commit.verification.verified, .author.login, .committer.login] | @tsv')" ||
   die "push succeeded, but GitHub verification could not be read for $FINAL"
