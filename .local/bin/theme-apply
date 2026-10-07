@@ -72,15 +72,26 @@ FADE_FPS = 30
 SYNC_WAIT_S = 2.5   # longest wait for the DMS palette stamp after a matugen write (covers its wallpaper-decode hold)
 STAMP_MISSED = os.path.join(STATE_DIR, "stamp-missed")   # trigger time of a run that saw no stamp
 FADE_BEZIER = "cubic-bezier(0.33, 1, 0.68, 1)"   # easeOutCubic, same as _ease()
+# color is inherited, and GTK restarts a node's transition on every frame its parent's
+# value moves, so a color transition on every node froze each nesting level until the
+# level above finished (Nautilus text landed 1.6s to 2.5s after the switch). Only the
+# nodes that draw text and icons fade it, from containers that change in one step.
 GTK_FADE_CSS = (
     "\n/* fade engine: colour changes ease over the same curve and duration as kitty */\n"
-    "* { transition: background-color %(d)dms %(b)s, color %(d)dms %(b)s, "
+    "* { transition: background-color %(d)dms %(b)s, "
+    "border-color %(d)dms %(b)s, outline-color %(d)dms %(b)s; }\n"
+    "label, image, text { transition: color %(d)dms %(b)s, background-color %(d)dms %(b)s, "
     "border-color %(d)dms %(b)s, outline-color %(d)dms %(b)s; }\n"
     "/* interactive widgets keep snappy state changes */\n"
     "button, button *, .titlebutton, check, radio, switch, slider, scale, entry, "
     "menuitem, modelbutton, tab, scrollbar *, spinbutton *, row:hover, row:selected, "
     "*:hover, *:active, *:checked { transition-duration: 120ms; }\n"
     % {"d": FADE_MS, "b": FADE_BEZIER})
+# GTK4 never transitions the toplevel window node, and libadwaita apps paint their main
+# surface there (Nautilus is window.background.view), so it snapped while the rest faded.
+# The window's direct child repaints that colour and fades it. GTK3 is left out because
+# its window > decoration node draws the shadow.
+GTK4_FADE_CSS = "window.background > :not(.titlebar) { background-color: inherit; }\n"
 KITTY_PALETTE = os.path.join(HOME, ".config/kitty/matugen-theme.conf")        # live include
 KITTY_PALETTE_NEXT = os.path.join(HOME, ".config/kitty/matugen-theme.next.conf")  # from palette-gen
 # Touched by DMS (dms-shell-patch, Theme.qml) on the first frame that animates a new
@@ -92,6 +103,7 @@ PALETTE_STAMP = os.path.join(os.environ.get("XDG_CACHE_HOME") or os.path.join(HO
 
 
 GTK_FLIP = None   # gsettings argv prepared by step_gtk3, run by step_fade on the stamp
+GTK_FLIP_T = 0.0  # when that flip ran; the icon flip waits out the fade from here
 
 
 def _mtime(path):
@@ -137,11 +149,20 @@ def _fade_anchor():
 
 def _flip_gtk():
     """Run the gtk-theme flip step_gtk3 prepared, once, not awaited."""
-    global GTK_FLIP, ICON_FLIP
+    global GTK_FLIP, GTK_FLIP_T
     if GTK_FLIP:
         subprocess.Popen(GTK_FLIP, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-        GTK_FLIP = None
-    if ICON_FLIP:   # same tick: open file managers reload their icons with the colours
+        GTK_FLIP, GTK_FLIP_T = None, time.time()
+
+
+def _flip_icons():
+    """Run the icon-theme flip step_iconprep prepared, once the GTK fade is over.
+    A GTK app reloads the whole icon theme chain on its main thread (about 300ms
+    with Papirus), so a flip on the fade anchor froze every GTK window through
+    its colour transition and the colours jumped instead of fading."""
+    global ICON_FLIP
+    if ICON_FLIP:
+        time.sleep(max(0.0, GTK_FLIP_T + FADE_MS / 1000.0 - time.time()))
         subprocess.Popen(ICON_FLIP, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         ICON_FLIP = None
 HYPR_BORDERS = os.path.join(HOME, ".config/hypr/borders.lua")
@@ -287,7 +308,7 @@ def _flip_icon_theme():
 
 
 ICON_SIZES = ("22x22", "24x24", "32x32", "48x48", "64x64")   # what papirus-folders touches
-ICON_FLIP = None   # gsettings argv prepared by step_iconprep, run on the fade anchor
+ICON_FLIP = None   # gsettings argv prepared by step_iconprep, run by step_fade after the fade
 
 
 def _relink_folders(color):
@@ -318,8 +339,8 @@ def _relink_folders(color):
 
 def step_iconprep():
     """Recolour the folder icons ahead of the fade, while the shell still holds
-    the palette, and prepare the icon-theme flip for the fade anchor so open
-    file managers reload their icons with the GTK colours, not ~1.5s later."""
+    the palette, and prepare the icon-theme flip for the end of the fade so open
+    file managers reload their icons as the colours land, not ~1.5s later."""
     global ICON_FLIP
     ICON_FLIP = None
     try:
@@ -345,7 +366,7 @@ def step_iconprep():
         f.write(want + "\n")
     nxt = ICON_THEMES[1] if cur == ICON_THEMES[0] else ICON_THEMES[0]
     ICON_FLIP = ["gsettings", "set", "org.gnome.desktop.interface", "icon-theme", nxt]
-    log("icons", "folders %s -> %s (%d links), %s flips in on the fade anchor" % (have or "?", want, n, nxt))
+    log("icons", "folders %s -> %s (%d links), %s flips in after the fade" % (have or "?", want, n, nxt))
 
 
 def step_icons():
@@ -642,6 +663,7 @@ def step_fade():
         if current != next_text:
             _atomic_write(KITTY_PALETTE, next_text)   # nothing faded; promote outright
     _flip_gtk()                      # nothing to fade: flip GTK without waiting further
+    _flip_icons()
     nkeys = max([len(keys[p]) for p in fading] or [0])
     log("fade", "kitty: %d instance(s) faded over %dms (%d key(s), joined %+dms), %d already in sync, "
         "%d unreachable; live file %s; borders %s"
@@ -968,7 +990,7 @@ def _theme_css(colors_css, base4):
         vars4 = ""
     body = colors_css + palette + GTK_FADE_CSS
     css3 = '@import url("%s");\n%s' % (GTK3_BASE_THEME, body)
-    css4 = '@import url("%s");\n%s%s' % (base4, body, vars4)
+    css4 = '@import url("%s");\n%s%s%s' % (base4, body, GTK4_FADE_CSS, vars4)
     return (css3, css4)
 
 
