@@ -92,6 +92,14 @@ GTK_FADE_CSS = (
 # The window's direct child repaints that colour and fades it. GTK3 is left out because
 # its window > decoration node draws the shadow.
 GTK4_FADE_CSS = "window.background > :not(.titlebar) { background-color: inherit; }\n"
+# sepia draws four-slot symbolic folder icons through this node. Its fallback
+# CSS supplies defaults; the GTK theme overrides them to match the current
+# accent and the rest of the window's fade. Stock nautilus ignores the rule.
+GTK4_FADE_CSS += (
+    ".nautilus-image > image { color: mix(@accent_bg_color, black, 0.65);"
+    " -gtk-icon-palette: success @accent_bg_color, warning mix(@accent_bg_color, black, 0.2), error #e4e4e4;"
+    " transition: color %(d)dms %(b)s, -gtk-icon-palette %(d)dms %(b)s; }\n"
+    % {"d": FADE_MS, "b": FADE_BEZIER})
 KITTY_PALETTE = os.path.join(HOME, ".config/kitty/matugen-theme.conf")        # live include
 KITTY_PALETTE_NEXT = os.path.join(HOME, ".config/kitty/matugen-theme.next.conf")  # from palette-gen
 # Touched by DMS (dms-shell-patch, Theme.qml) on the first frame that animates a new
