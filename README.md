@@ -15,7 +15,7 @@ the repo also holds the package lists and system files needed to rebuild the mac
 
 - 🪟 **window carry** moves the active window to another workspace with a spring animation on `Super + Shift + period` and `comma`, or `Super + Shift + 1` to `0`. it is written in plain lua inside hyprland and covered by offline tests.
 - 🎨 **wallpaper theming** fades kitty and the text already printed in it, gtk, spotify, notion, the hyprland borders and the portal onto a new wallpaper's palette together, about 400ms after the click.
-- 🧩 **a patched DMS** comes from `dms-shell-patch`, which rebuilds the shell with a wider launcher, a compact notification card, a lock screen crossfade and synced palette fades, and applies itself again after a DMS upgrade.
+- 🧩 **a patched DMS** comes from the tools in `.config/DankMaterialShell/tooling/`. an explicit `dms-network-build` run rebuilds the core and shell after a DMS upgrade, applies the tested network and visual patches, and keeps stock behaviour where an upstream QML change makes a visual patch incompatible.
 - 🎯 **focus or launch** jumps to an app's existing window, on whatever workspace it is on, instead of starting a second copy.
 - 🔗 **links from other apps** open in a browser window on the current workspace.
 - 🔐 **boot and login** use a touch-only fido2 disk unlock from `luks-boot-setup`, with a plymouth theme drawn from the current palette, and greetd with the DMS greeter.
