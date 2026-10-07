@@ -108,7 +108,11 @@ AGENT_GITCONFIG="${AGENT_GH_GITCONFIG:-$PROFILE_DIR/gitconfig}"
 
 [ -x "${MINT}" ]           || { echo "agent-run: ${MINT} not found or not executable" >&2; exit 1; }
 [ -r "${CONF}" ]            || { echo "agent-run: ${CONF} not readable" >&2; exit 1; }
-[ -r "${KEY}" ]             || { echo "agent-run: ${KEY} not readable" >&2; exit 1; }
+# With the token broker installed the key is sealed away and unreadable here by
+# design; mint-agent-token asks the broker instead.
+if [ "${AGENT_GH_DIRECT:-0}" = 1 ] || [ ! -S "${AGENT_GH_BROKER:-/run/agent-gh/broker.sock}" ]; then
+  [ -r "${KEY}" ]           || { echo "agent-run: ${KEY} not readable" >&2; exit 1; }
+fi
 [ -r "${AGENT_GITCONFIG}" ] || { echo "agent-run: ${AGENT_GITCONFIG} not readable" >&2; exit 1; }
 
 # Do not let unrelated caller variables impersonate values from the selected

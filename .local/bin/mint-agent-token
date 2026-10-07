@@ -54,6 +54,70 @@ EOF
   exit 1
 fi
 
+# NARROW THE TOKEN. GitHub's App guidance is to limit every installation token to
+# the repositories and permissions the job needs, so a leaked token reaches as
+# little as possible. AGENT_GH_REPOS is a comma separated list of repository
+# names under the installation's account ("all" or empty keeps every repository
+# the App can reach). AGENT_GH_PERMISSIONS is a JSON object such as
+# {"contents":"write","metadata":"read"}, and may only narrow what the App was
+# granted. Either can also be set as REPOS= or PERMISSIONS= in the profile config.
+body=$(REPOS="${AGENT_GH_REPOS:-${REPOS:-}}" PERMS="${AGENT_GH_PERMISSIONS:-${PERMISSIONS:-}}" python3 -c '
+import json, os, re, sys
+body = {}
+repos = os.environ["REPOS"].strip()
+if repos and repos != "all":
+    names = [r.strip() for r in repos.split(",") if r.strip()]
+    bad = [r for r in names if not re.fullmatch(r"[A-Za-z0-9._-]+", r)]
+    if bad:
+        sys.exit("mint-agent-token: not a repository name: " + ", ".join(bad))
+    body["repositories"] = names
+perms = os.environ["PERMS"].strip()
+if perms:
+    try:
+        p = json.loads(perms)
+    except ValueError:
+        sys.exit("mint-agent-token: AGENT_GH_PERMISSIONS is not JSON")
+    if not isinstance(p, dict) or not all(v in ("read", "write", "admin") for v in p.values()):
+        sys.exit("mint-agent-token: AGENT_GH_PERMISSIONS must map names to read, write or admin")
+    body["permissions"] = p
+print(json.dumps(body))
+')
+
+# THE BROKER. When the token broker is installed, the App keys are sealed to the
+# TPM and only the broker's service can read them, so nothing running as you can
+# copy a key. The broker checks the request against a root-owned policy, logs it
+# to the journal and returns the token. AGENT_GH_DIRECT=1 skips it and signs with
+# AGENT_GH_KEY, which agent-gh-key uses to test a new key before installing it.
+SOCK="${AGENT_GH_BROKER:-/run/agent-gh/broker.sock}"
+if [ "${AGENT_GH_DIRECT:-0}" != 1 ] && [ -S "${SOCK}" ]; then
+  [ -n "${APP_SLUG:-}" ] || { echo "mint-agent-token: ${CONF} needs APP_SLUG to use the broker" >&2; exit 1; }
+  exec env SOCK="${SOCK}" SLUG="${APP_SLUG}" BODY="${body}" python3 -c '
+import json, os, socket, sys
+req = json.loads(os.environ["BODY"])
+req["app"] = os.environ["SLUG"]
+s = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+s.settimeout(30)
+try:
+    s.connect(os.environ["SOCK"])
+    s.sendall((json.dumps(req) + "\n").encode())
+    buf = b""
+    while b"\n" not in buf:
+        chunk = s.recv(65536)
+        if not chunk:
+            break
+        buf += chunk
+except OSError as e:
+    sys.exit("mint-agent-token: broker unreachable: %s" % e)
+try:
+    out = json.loads(buf or b"{}")
+except ValueError:
+    sys.exit("mint-agent-token: broker sent no answer")
+if not out.get("token"):
+    sys.exit("mint-agent-token: broker refused: %s" % out.get("error", "no token"))
+print(out["token"])
+'
+fi
+
 if [ ! -r "${KEY}" ]; then
   cat >&2 <<EOF
 mint-agent-token: cannot read private key at ${KEY}
@@ -92,35 +156,6 @@ jwt="${signing_input}.${signature}"
 # for exchanging into an INSTALLATION token, which is what carries the
 # repository-scoped permissions and the one-hour expiry.
 #
-# NARROW THE TOKEN. GitHub's App guidance is to limit every installation token to
-# the repositories and permissions the job needs, so a leaked token reaches as
-# little as possible. AGENT_GH_REPOS is a comma separated list of repository
-# names under the installation's account ("all" or empty keeps every repository
-# the App can reach). AGENT_GH_PERMISSIONS is a JSON object such as
-# {"contents":"write","metadata":"read"}, and may only narrow what the App was
-# granted. Either can also be set as REPOS= or PERMISSIONS= in the profile config.
-body=$(REPOS="${AGENT_GH_REPOS:-${REPOS:-}}" PERMS="${AGENT_GH_PERMISSIONS:-${PERMISSIONS:-}}" python3 -c '
-import json, os, re, sys
-body = {}
-repos = os.environ["REPOS"].strip()
-if repos and repos != "all":
-    names = [r.strip() for r in repos.split(",") if r.strip()]
-    bad = [r for r in names if not re.fullmatch(r"[A-Za-z0-9._-]+", r)]
-    if bad:
-        sys.exit("mint-agent-token: not a repository name: " + ", ".join(bad))
-    body["repositories"] = names
-perms = os.environ["PERMS"].strip()
-if perms:
-    try:
-        p = json.loads(perms)
-    except ValueError:
-        sys.exit("mint-agent-token: AGENT_GH_PERMISSIONS is not JSON")
-    if not isinstance(p, dict) or not all(v in ("read", "write", "admin") for v in p.values()):
-        sys.exit("mint-agent-token: AGENT_GH_PERMISSIONS must map names to read, write or admin")
-    body["permissions"] = p
-print(json.dumps(body))
-')
-
 response=$(curl -sS -X POST \
   -H "Authorization: Bearer ${jwt}" \
   -H "Accept: application/vnd.github+json" \
