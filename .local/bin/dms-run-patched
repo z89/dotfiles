@@ -1,16 +1,1 @@
-#!/usr/bin/env bash
-# Start only a tested, matching core + shell bundle; building never starts the desktop.
-set -euo pipefail
-if [[ ${DMS_NETWORK_STOCK:-0} == 1 ]]; then
-    echo "dms-run-patched: explicit recovery mode, starting stock DMS" >&2
-    unset DMS_SHELL_DIR DMS_PATCHED_BINARY
-    exec /usr/bin/dms run --session
-fi
-bundle=$("$HOME/.local/bin/dms-network-build") || {
-    echo "dms-run-patched: build failed; inspect the journal and dms-network-build output" >&2
-    exit 1
-}
-export DMS_PATCHED_BINARY="$bundle/dms"
-export DMS_SHELL_DIR="$bundle/shell"
-export PATH="$HOME/.local/bin/dms-shim:$PATH"
-exec "$DMS_PATCHED_BINARY" run --session
+../../.config/DankMaterialShell/tooling/bin/dms-run-patched

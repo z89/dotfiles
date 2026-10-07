@@ -1,0 +1,8 @@
+#!/usr/bin/env bash
+# DMS-only shim. The bundled helper is the sole wallpaper thumbnail implementation.
+backend=${DMS_PATCHED_BINARY:-/usr/bin/dms}
+helper=${DMS_SHELL_DIR:-}/scripts/dms-matugen-thumb
+if [[ ${1:-} == matugen && ${2:-} == queue && -x $helper ]]; then
+    exec "$helper" "$backend" "$@"
+fi
+exec "$backend" "$@"

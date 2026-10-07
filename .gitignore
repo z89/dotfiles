@@ -29,6 +29,10 @@
 !.config/DankMaterialShell/plugins/gpumon/
 !.config/DankMaterialShell/settings.json
 !.config/DankMaterialShell/patches/
+!.config/DankMaterialShell/tooling/
+!.config/quickshell/
+.config/quickshell/*
+!.config/quickshell/boot-cover/
 !.config/Code/User/settings.json
 !.config/Code/User/keybindings.json
 !.zprofile
@@ -83,6 +87,10 @@
 !.local/bin/dms-run-patched
 !.local/bin/dms-plugins
 !.local/bin/dms-network-build
+!.local/bin/dms-bundle-state
+!.local/bin/desktop-stage
+!.local/bin/desktop-gate
+!.local/bin/boot-cover
 !.local/bin/ssh-confirm-askpass
 !.local/bin/agent-run
 !.local/bin/browser-open

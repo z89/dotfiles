@@ -1,0 +1,93 @@
+#!/usr/bin/env bash
+# boot-cover: redraw the plymouth dank-unlock frame over every monitor until
+# $XDG_RUNTIME_DIR/desktop-ready appears, fade it out over 400ms, exit 0.
+#
+#   boot-cover          normal run (desktop-stage starts it with &)
+#   boot-cover --test   hold 3s, then fade, ignoring the flag
+#
+# Exits at once, showing nothing, when desktop-ready already exists, when qs is not
+# installed or when the quickshell config is missing. Runs qs in the foreground under
+# timeout (never daemonized), so nothing outlives the 15s budget, and forwards
+# TERM/INT/HUP to it. Always exits 0 apart from a usage error.
+#
+# Overrides (tests): BOOT_COVER_PLYMOUTH (theme file), XDG_CONFIG_HOME, XDG_RUNTIME_DIR.
+
+set -u
+
+test_mode=0
+case "${1-}" in
+    "") ;;
+    --test) test_mode=1 ;;
+    *)
+        echo "usage: boot-cover [--test]" >&2
+        exit 2
+        ;;
+esac
+[ $# -le 1 ] || { echo "usage: boot-cover [--test]" >&2; exit 2; }
+
+start_us=${EPOCHREALTIME//[!0-9]/}   # the separator follows the locale
+start_ms=$(( 10#$start_us / 1000 ))
+
+runtime_dir=${XDG_RUNTIME_DIR:-/run/user/$(id -u)}
+flag=$runtime_dir/desktop-ready
+if [ "$test_mode" = 0 ] && [ -e "$flag" ]; then
+    exit 0
+fi
+
+command -v qs >/dev/null 2>&1 || exit 0
+config_dir=${XDG_CONFIG_HOME:-$HOME/.config}/quickshell/boot-cover
+[ -r "$config_dir/shell.qml" ] || exit 0
+
+# theme directory and background colour from the [two-step] section of the theme file
+plymouth_file=${BOOT_COVER_PLYMOUTH:-/usr/share/plymouth/themes/dank-unlock/dank-unlock.plymouth}
+image_dir=""
+colour=""
+if [ -r "$plymouth_file" ]; then
+    section=""
+    while IFS= read -r line || [ -n "$line" ]; do
+        line=${line%$'\r'}
+        case $line in
+            \[*\]) section=$line; continue ;;
+        esac
+        [ "$section" = "[two-step]" ] || continue
+        key=${line%%=*}
+        value=${line#*=}
+        [ "$key" != "$line" ] || continue
+        key=${key//[[:space:]]/}
+        value=${value#"${value%%[![:space:]]*}"}
+        value=${value%"${value##*[![:space:]]}"}
+        case $key in
+            ImageDir) image_dir=$value ;;
+            BackgroundStartColor) colour=$value ;;
+        esac
+    done < "$plymouth_file"
+fi
+if [[ $colour =~ ^0[xX]([0-9a-fA-F]{6})$ ]]; then
+    colour="#${BASH_REMATCH[1],,}"
+else
+    colour="#1d1013"
+fi
+[ -n "$image_dir" ] || image_dir=$(dirname -- "$plymouth_file")
+[ -d "$image_dir" ] || image_dir=""
+
+# whole process gone by start + 15s: QML quits at +14.5s, timeout kills at about +14.9s
+export QS_DISABLE_CRASH_HANDLER=1
+export BOOT_COVER_DIR=$image_dir
+export BOOT_COVER_BG=$colour
+export BOOT_COVER_FLAG=$flag
+export BOOT_COVER_DEADLINE_MS=$(( start_ms + 14500 ))
+if [ "$test_mode" = 1 ]; then
+    export BOOT_COVER_TEST=1
+else
+    unset BOOT_COVER_TEST
+fi
+
+timeout -k 0.3s 14.6s qs -n -c boot-cover &
+child=$!
+trap 'kill -TERM "$child" 2>/dev/null' TERM INT HUP
+# wait returns early when a trapped signal arrives; wait again while the child still runs
+while :; do
+    wait "$child" 2>/dev/null
+    kill -0 "$child" 2>/dev/null || break
+done
+exit 0

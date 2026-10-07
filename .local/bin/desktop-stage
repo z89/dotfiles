@@ -1,0 +1,153 @@
+#!/bin/bash
+# desktop-stage (boot-tune contract 1.3)
+#
+# Run once by Hyprland at hyprland.start, in the background, no arguments.
+#   1. remove old desktop-ready / desktop-heavy flags
+#   2. start ~/.local/bin/boot-cover in the background if it is executable
+#   3. wait until dms.service is active AND `hyprctl layers -j` lists dms:bar,
+#      then settle about 1s (wallpaper, plugins, night light); hard cap 20s
+#      from start, the settle included
+#   4. create $XDG_RUNTIME_DIR/desktop-ready
+#   5. sleep 20s, create $XDG_RUNTIME_DIR/desktop-heavy
+# Every step is logged with elapsed milliseconds via `logger -t desktop-stage`.
+# A second instance exits at once. Whatever happens after step 1, the ready
+# flag is created by the cap or on exit, so the cover never outlives it.
+#
+# Test hooks (environment, seconds, decimals allowed):
+#   DESKTOP_STAGE_CAP          readiness cap (default 20)
+#   DESKTOP_STAGE_SETTLE       settle delay (default 1)
+#   DESKTOP_STAGE_HEAVY_DELAY  ready -> heavy delay (default 20)
+#   DESKTOP_STAGE_POLL         poll interval (default 0.2)
+#   DESKTOP_STAGE_COVER        cover launcher (default ~/.local/bin/boot-cover)
+
+set -u
+
+if [ -z "${XDG_RUNTIME_DIR:-}" ]; then
+    XDG_RUNTIME_DIR=/run/user/$(id -u)
+    export XDG_RUNTIME_DIR
+fi
+rt=$XDG_RUNTIME_DIR
+ready=$rt/desktop-ready
+heavy=$rt/desktop-heavy
+lock=$rt/desktop-stage.lock
+
+is_uint() { case $1 in ''|*[!0-9]*) return 1 ;; esac; return 0; }
+
+to_ms() {
+    local v=$1 i f=
+    i=${v%%.*}
+    case $v in *.*) f=${v#*.} ;; esac
+    i=${i:-0}
+    is_uint "$i" || return 1
+    [ -z "$f" ] || is_uint "$f" || return 1
+    f=${f}000
+    printf '%s' $(( 10#$i * 1000 + 10#${f:0:3} ))
+}
+
+ms_to_s() { printf '%d.%03d' $(( $1 / 1000 )) $(( $1 % 1000 )); }
+
+uptime_ms() {
+    local up rest s c
+    read -r up rest < /proc/uptime || { printf 0; return; }
+    s=${up%%.*}
+    c=${up#*.}00
+    printf '%s' $(( 10#$s * 1000 + 10#${c:0:2} * 10 ))
+}
+
+ms_env() {   # ms_env VALUE DEFAULT_MS
+    local v
+    v=$(to_ms "$1" 2>/dev/null) && [ -n "$v" ] && { printf '%s' "$v"; return; }
+    printf '%s' "$2"
+}
+
+cap_ms=$(ms_env "${DESKTOP_STAGE_CAP:-20}" 20000)
+settle_ms=$(ms_env "${DESKTOP_STAGE_SETTLE:-1}" 1000)
+heavy_ms=$(ms_env "${DESKTOP_STAGE_HEAVY_DELAY:-20}" 20000)
+poll_ms=$(ms_env "${DESKTOP_STAGE_POLL:-0.2}" 200)
+[ "$poll_ms" -gt 0 ] || poll_ms=200
+cover=${DESKTOP_STAGE_COVER:-$HOME/.local/bin/boot-cover}
+
+t0=$(uptime_ms)
+elapsed() { printf '%s' $(( $(uptime_ms) - t0 )); }
+log() { logger -t desktop-stage -- "+$(elapsed)ms $*" 2>/dev/null || true; }
+
+# Sleep that lets the TERM/HUP traps run promptly.
+nap() { sleep "$(ms_to_s "$1")" 2>/dev/null 9>&- & wait $! 2>/dev/null; }
+
+log "start pid $$ (cap ${cap_ms}ms, settle ${settle_ms}ms, heavy after ${heavy_ms}ms)"
+
+if command -v flock >/dev/null 2>&1 && exec 9>>"$lock"; then
+    if ! flock -n 9; then
+        log "another desktop-stage holds $lock, exiting"
+        exit 0
+    fi
+else
+    log "no lock available ($lock), continuing without one"
+fi
+
+rm -f -- "$ready" "$heavy"
+log "old flags removed"
+
+ready_done=0
+make_ready() {
+    [ "$ready_done" = 1 ] && return
+    if touch -- "$ready" 2>/dev/null; then
+        ready_done=1
+        log "desktop-ready created ($1)"
+    else
+        log "could not create $ready ($1)"
+    fi
+}
+trap 'make_ready "on exit"' EXIT
+trap 'exit 0' TERM INT HUP
+
+if [ -x "$cover" ]; then
+    "$cover" </dev/null >/dev/null 2>&1 9>&- &
+    log "boot-cover started pid $!"
+else
+    log "boot-cover not executable at $cover, skipped"
+fi
+
+# Remaining time before the cap, clipped to at most $1 ms, as seconds.
+budget() {
+    local rem=$(( cap_ms - $(elapsed) ))
+    [ "$rem" -gt "$1" ] && rem=$1
+    [ "$rem" -gt 0 ] || return 1
+    ms_to_s "$rem"
+}
+
+dms_seen=0
+healthy=0
+while :; do
+    t=$(budget 2000) || break
+    if timeout "$t" systemctl --user is-active --quiet dms.service 2>/dev/null; then
+        [ "$dms_seen" = 1 ] || { dms_seen=1; log "dms.service active"; }
+        t=$(budget 2000) || break
+        if timeout "$t" hyprctl layers -j 2>/dev/null | grep -q '"namespace": *"dms:bar"'; then
+            healthy=1
+            log "dms:bar layer mapped"
+            break
+        fi
+    fi
+    t=$(budget "$poll_ms") || break
+    nap "$(to_ms "$t")"
+done
+
+if [ "$healthy" = 1 ]; then
+    if t=$(budget "$settle_ms"); then
+        nap "$(to_ms "$t")"
+    fi
+    log "settled"
+    make_ready "healthy"
+else
+    log "cap reached (dms active seen: $dms_seen, dms:bar seen: 0)"
+    make_ready "cap"
+fi
+
+nap "$heavy_ms"
+if touch -- "$heavy" 2>/dev/null; then
+    log "desktop-heavy created"
+else
+    log "could not create $heavy"
+fi
+exit 0

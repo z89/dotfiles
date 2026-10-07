@@ -76,12 +76,15 @@ local fileManager = "nautilus --new-window"
 
 hl.on("hyprland.start", function()
     hl.exec_cmd("systemctl --user start hyprland-session.target")
+    -- Boot staging: shows the plymouth-matching cover (boot-cover), waits for DMS,
+    -- then writes $XDG_RUNTIME_DIR/desktop-ready and, 20s later, desktop-heavy.
+    hl.exec_cmd("~/.local/bin/desktop-stage")
 
     -- KDE Connect (clipboard/share sync with the MacBook). Must run inside the
     -- session so it sees the Wayland clipboard; kills any ssh-spawned instance
     -- that started without WAYLAND_DISPLAY. Pairing state lives on disk and
     -- survives the restart.
-    hl.exec_cmd("sh -c 'pkill -x kdeconnectd; sleep 1; exec /usr/lib/kdeconnectd'")
+    hl.exec_cmd("~/.local/bin/desktop-gate ready 0; sh -c 'pkill -x kdeconnectd; sleep 1; exec /usr/lib/kdeconnectd'")
 
     -- Session daemons (polkit agent, wallpaper daemon, clipboard history,
     -- idle) are systemd user units bound to graphical-session.target, so they
@@ -90,15 +93,17 @@ hl.on("hyprland.start", function()
 
     -- Shell: DankMaterialShell via systemd (dms.service, WantedBy graphical-session.target)
 
-    -- Electron apps are staggered: four of them launching at once contend for
-    -- GPU and disk with the bar's own startup.
-    hl.exec_cmd("mullvad-vpn")
-    hl.exec_cmd("sleep 3 && spotify --remote-debugging-port=9332")
+    -- Electron apps are gated: desktop-gate blocks until desktop-stage writes
+    -- desktop-ready (DMS up and settled), then waits the per-app delay, so they
+    -- never contend for GPU and disk with the bar's own startup. The gate is
+    -- fail-open (75s after the user manager started). Night light is ember (DMS night mode).
+    hl.exec_cmd("~/.local/bin/desktop-gate ready 0; mullvad-vpn")
+    hl.exec_cmd("~/.local/bin/desktop-gate ready 2; spotify --remote-debugging-port=9332")
     -- notion-app, claude-desktop and chatgpt are launched on demand, not at boot.
 
-    -- Anything ~/.config/hypr/local.lua wants started with the session.
+    -- Anything ~/.config/hypr/local.lua wants started with the session, behind the same gate.
     for _, cmd in ipairs(local_conf.autostart or {}) do
-        hl.exec_cmd(cmd)
+        hl.exec_cmd("~/.local/bin/desktop-gate ready 1; " .. cmd)
     end
 end)
 
@@ -136,6 +141,24 @@ hl.config({ ecosystem = { no_update_news = true, no_donation_nag = true } })
 -----------------------
 ---- LOOK AND FEEL ----
 -----------------------
+
+-- Hyprland's first frame uses the plymouth splash colour (dank-unlock BackgroundStartColor,
+-- "0xRRGGBB") so the hand-over to boot-cover never flashes another colour. Written as
+-- "rgb(rrggbb)", the string type hl.meta.lua gives misc.background_color, and set in its own
+-- pcall'd hl.config call: a missing theme file or a rejected value cannot touch the rest.
+local boot_background = "rgb(1d1013)"
+pcall(function()
+    local f = io.open("/usr/share/plymouth/themes/dank-unlock/dank-unlock.plymouth", "r")
+    if not f then return end
+    local text = f:read("*a")
+    f:close()
+    for line in text:gmatch("[^\r\n]+") do
+        local hex = line:match("^%s*BackgroundStartColor%s*=%s*0[xX](%x%x%x%x%x%x)%s*$")
+        if hex then boot_background = "rgb(" .. hex:lower() .. ")" break end
+    end
+end)
+local bg_ok, bg_err = pcall(hl.config, { misc = { background_color = boot_background } })
+if not bg_ok then print("hyprland.lua: misc.background_color: " .. tostring(bg_err)) end
 
 hl.config({
     general = {
@@ -403,6 +426,11 @@ hl.bind(mainMod .. " + mouse_up",   hl.dsp.exec_cmd("~/.local/bin/workspace-swit
 -- Switch workspaces with mainMod + </> (no wrap)
 hl.bind(mainMod .. " + period", hl.dsp.exec_cmd("~/.local/bin/workspace-switch +1"), { desc = "Next Workspace" })
 hl.bind(mainMod .. " + comma",  hl.dsp.exec_cmd("~/.local/bin/workspace-switch -1"), { desc = "Previous Workspace" })
+
+-- Mouse thumb buttons switch workspaces (no wrap). Binds consume the press, so apps never
+-- see back/forward, and ignore_mods swallows it with any modifier held too.
+hl.bind("mouse:275", hl.dsp.exec_cmd("~/.local/bin/workspace-switch +1"), { ignore_mods = true, desc = "Next Workspace (rear thumb button)" })
+hl.bind("mouse:276", hl.dsp.exec_cmd("~/.local/bin/workspace-switch -1"), { ignore_mods = true, desc = "Previous Workspace (front thumb button)" })
 -- Carry the active window to the numerically next/previous workspace with a visible
 -- flight: ~/.config/hypr/carry.lua pins the live window, drives it with its own spring
 -- physics from a 2 ms timer paced against /proc/uptime (the timer slows to 4-5 ms under
@@ -524,6 +552,8 @@ end
 
 -- Rofi - fade only (no resize/slide animation)
 hl.layer_rule({ name = "dms-noanim", match = { namespace = "dms" }, no_anim = true })
+-- Boot cover appears in one frame and runs its own 400ms fade.
+hl.layer_rule({ name = "boot-cover-noanim", match = { namespace = "^boot-cover$" }, no_anim = true })
 
 
 -- Wallpaper picker - fade
@@ -566,7 +596,9 @@ hl.window_rule({
 -- This is toolkit-agnostic (GTK, Qt, Electron, Java, wine) — no per-app rules.
 hl.window_rule({
     name  = "default-size-primary-only",
-    match = { class = ".*", float = false },
+    -- mpv is excluded: it sizes its own window to the video, and a size given
+    -- here would force 2540x1300 and letterbox anything that is not that shape.
+    match = { class = "negative:^(mpv)$", float = false },
 
     size   = "2540 1300",
     center = true,
@@ -575,6 +607,15 @@ hl.window_rule({
 -------------------------------------------------------------
 --- PER-APP SIZES (these intentionally win over the above) --
 -------------------------------------------------------------
+
+-- mpv: window takes the video's own size and shape, and keeps that shape on resize
+hl.window_rule({
+    name  = "mpv-video-shape",
+    match = { class = "^(mpv)$" },
+
+    center            = true,
+    keep_aspect_ratio = true,
+})
 
 -- Mullvad — override the catch-all size so it keeps its own dimensions
 hl.window_rule({
@@ -700,3 +741,6 @@ hl.window_rule({
 for _, so in ipairs(local_conf.plugins or {}) do
     hl.plugin.load(so)
 end
+
+-- DMS writes this generated file after startup, so a fresh install may not have it yet.
+pcall(require, "dms.windowrules")

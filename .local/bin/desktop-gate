@@ -1,0 +1,128 @@
+#!/bin/bash
+# desktop-gate <ready|heavy> [extra_delay_seconds]
+# desktop-gate settled <seconds>
+#
+# boot-tune contract 1.2. Blocks until $XDG_RUNTIME_DIR/desktop-<ready|heavy>
+# exists, then sleeps extra_delay_seconds, then exits 0. Fails open: when the
+# flag has not appeared by the deadline (75s after the systemd user manager
+# started) it exits 0 anyway, and when that deadline is already past and the
+# flag is absent it returns at once with no extra delay. Never exits non-zero
+# in these modes and never prints to stdout.
+#
+# `settled <seconds>` answers at once (meant for ExecCondition=). When
+# desktop-heavy exists it exits 0 only if the flag is at least <seconds> old.
+# When the flag is absent it exits 0 only if the user manager has been up for
+# at least 300s (the desktop never reached the heavy stage, docker came from
+# the fallback timer); otherwise 1.
+#
+# Works as a systemd ExecStartPre (no Wayland env) and when spawned by Hyprland.
+# Needs only bash, coreutils and systemctl.
+#
+# Test hooks (environment):
+#   DESKTOP_GATE_DEADLINE  seconds after user manager start (default 75)
+#   DESKTOP_GATE_POLL      poll interval in seconds (default 0.2)
+#   DESKTOP_GATE_SETTLED_FALLBACK  manager uptime in seconds after which
+#                          `settled` passes without desktop-heavy (default 300)
+
+exec >/dev/null
+
+uid=$(id -u)
+if [ -z "${XDG_RUNTIME_DIR:-}" ]; then
+    XDG_RUNTIME_DIR=/run/user/$uid
+    export XDG_RUNTIME_DIR      # lets `systemctl --user` find the manager
+fi
+rt=$XDG_RUNTIME_DIR
+
+mode=${1:-}
+arg=${2:-}
+
+is_uint() { case $1 in ''|*[!0-9]*) return 1 ;; esac; return 0; }
+
+# "N" or "N.FFF" seconds -> milliseconds; prints nothing when invalid.
+to_ms() {
+    local v=$1 i f=
+    i=${v%%.*}
+    case $v in *.*) f=${v#*.} ;; esac
+    i=${i:-0}
+    is_uint "$i" || return 1
+    [ -z "$f" ] || is_uint "$f" || return 1
+    f=${f}000
+    printf '%s' $(( 10#$i * 1000 + 10#${f:0:3} ))
+}
+
+uptime_ms() {
+    local up rest s c
+    read -r up rest < /proc/uptime || return 1
+    s=${up%%.*}
+    c=${up#*.}00
+    printf '%s' $(( 10#$s * 1000 + 10#${c:0:2} * 10 ))
+}
+
+# User manager start on the CLOCK_MONOTONIC scale, in ms; fails when the
+# manager cannot be asked. /proc/uptime also counts suspended time, so after a
+# suspend the manager only looks older, which errs toward failing open.
+mgr_start_ms() {
+    local us
+    us=$(timeout 5 systemctl --user show -p UserspaceTimestampMonotonic --value 2>/dev/null)
+    is_uint "$us" && [ "$us" -gt 0 ] || return 1
+    printf '%s' $(( us / 1000 ))
+}
+
+case $mode in
+settled)
+    is_uint "$arg" || exit 1
+    f=$rt/desktop-heavy
+    if [ ! -e "$f" ]; then
+        # No heavy stage on this boot (headless, or the desktop never got
+        # there): pass once the user manager is old enough. If the manager
+        # cannot be asked, the system uptime stands in (it is always larger).
+        fb=$(to_ms "${DESKTOP_GATE_SETTLED_FALLBACK:-300}" 2>/dev/null)
+        [ -n "$fb" ] || fb=300000
+        now=$(uptime_ms) || exit 1
+        start=$(mgr_start_ms) || start=0
+        [ $(( now - start )) -ge "$fb" ] && exit 0
+        exit 1
+    fi
+    m=$(stat -c %Y -- "$f" 2>/dev/null) || exit 1
+    now=$(date +%s) || exit 1
+    [ $(( now - m )) -ge "$arg" ] && exit 0
+    exit 1
+    ;;
+ready|heavy) ;;
+*)
+    echo "desktop-gate: unknown mode '$mode', not waiting" >&2
+    exit 0
+    ;;
+esac
+
+flag=$rt/desktop-$mode
+delay=${arg:-0}
+to_ms "$delay" >/dev/null 2>&1 || delay=0
+poll=${DESKTOP_GATE_POLL:-0.2}
+to_ms "$poll" >/dev/null 2>&1 || poll=0.2
+deadline_ms=$(to_ms "${DESKTOP_GATE_DEADLINE:-75}" 2>/dev/null) || deadline_ms=75000
+[ -n "$deadline_ms" ] || deadline_ms=75000
+
+pass() {
+    sleep "$delay" 2>/dev/null
+    exit 0
+}
+
+[ -e "$flag" ] && pass
+
+now=$(uptime_ms) || exit 0
+
+# Fallback when the manager cannot be asked: the deadline counts from this
+# gate's own start.
+if start=$(mgr_start_ms); then
+    deadline=$(( start + deadline_ms ))
+else
+    deadline=$(( now + deadline_ms ))
+fi
+
+while [ ! -e "$flag" ]; do
+    now=$(uptime_ms) || exit 0
+    [ "$now" -ge "$deadline" ] && exit 0
+    sleep "$poll" 2>/dev/null || exit 0
+done
+pass

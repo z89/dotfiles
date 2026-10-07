@@ -1,0 +1,244 @@
+#!/usr/bin/env python3
+"""Register tested DMS bundles and select one without building at login."""
+
+import fcntl
+import hashlib
+import json
+import os
+import re
+import stat
+import sys
+import tempfile
+from pathlib import Path
+
+
+KEY = re.compile(r"[0-9a-f]{64}\Z")
+
+
+def fail(message):
+    raise ValueError(message)
+
+
+def cache_root():
+    return Path(os.environ.get("DMS_NETWORK_CACHE", str(Path(os.environ.get("XDG_CACHE_HOME", str(Path.home() / ".cache"))) / "dms-network"))).absolute()
+
+
+def stock_binary():
+    return Path(os.environ.get("DMS_STOCK_BINARY", "/usr/bin/dms"))
+
+
+def digest(path):
+    h = hashlib.sha256()
+    with path.open("rb") as stream:
+        for block in iter(lambda: stream.read(1024 * 1024), b""):
+            h.update(block)
+    return h.hexdigest()
+
+
+def owned_and_private(path):
+    info = path.lstat()
+    if info.st_uid != os.getuid() or info.st_mode & (stat.S_IWGRP | stat.S_IWOTH):
+        fail(f"bundle state is writable by another user or not owned by this user: {path}")
+    return info.st_mode
+
+
+def regular_file(path):
+    mode = owned_and_private(path)
+    if not stat.S_ISREG(mode):
+        fail(f"not a regular file: {path}")
+    return mode
+
+
+def bundle_path(cache, key):
+    if not KEY.fullmatch(key):
+        fail(f"invalid bundle key: {key}")
+    bundle = cache / key
+    if not stat.S_ISDIR(owned_and_private(bundle)):
+        fail(f"not a published bundle directory: {bundle}")
+    return bundle
+
+
+def inventory(bundle):
+    binary = bundle / "dms"
+    binary_mode = regular_file(binary)
+    if not binary_mode & stat.S_IXUSR:
+        fail(f"bundle binary is not executable: {binary}")
+    shell = bundle / "shell"
+    if not stat.S_ISDIR(owned_and_private(shell)):
+        fail(f"bundle shell is not a directory: {shell}")
+    regular_file(shell / "shell.qml")
+    files = {"dms": {"sha256": digest(binary), "mode": stat.S_IMODE(binary_mode)}}
+
+    def walk_error(error):
+        raise error
+
+    for root, dirs, names in os.walk(shell, followlinks=False, onerror=walk_error):
+        for name in dirs:
+            path = Path(root) / name
+            if not stat.S_ISDIR(owned_and_private(path)):
+                fail(f"shell contains a non-directory or symlink: {path}")
+        for name in names:
+            path = Path(root) / name
+            mode = regular_file(path)
+            files[path.relative_to(bundle).as_posix()] = {"sha256": digest(path), "mode": stat.S_IMODE(mode)}
+    return dict(sorted(files.items()))
+
+
+def metadata_for(cache, key):
+    directory = cache / ".metadata"
+    if not stat.S_ISDIR(owned_and_private(directory)):
+        fail(f"bundle metadata directory is missing or invalid: {directory}")
+    path = directory / f"{key}.json"
+    regular_file(path)
+    with path.open(encoding="utf-8") as stream:
+        data = json.load(stream)
+    if not isinstance(data, dict) or data.get("format") != 1 or data.get("key") != key:
+        fail(f"invalid bundle metadata: {path}")
+    return data
+
+
+def verify(cache, key):
+    bundle = bundle_path(cache, key)
+    regular_file(bundle / ".ready")
+    if (bundle / ".ready").read_text(encoding="utf-8") != key + "\n":
+        fail(f"invalid ready marker: {bundle}")
+    regular_file(bundle / ".package-version")
+    version = (bundle / ".package-version").read_text(encoding="utf-8").strip()
+    if not version:
+        fail(f"missing package version: {bundle}")
+    data = metadata_for(cache, key)
+    if data.get("package_version") != version or not KEY.fullmatch(str(data.get("stock_sha256", ""))):
+        fail(f"bundle package or stock metadata mismatch: {bundle}")
+    if data.get("files") != inventory(bundle):
+        fail(f"bundle binary or shell differs from registered manifest: {bundle}")
+    return bundle, data
+
+
+def pointer(cache, name):
+    path = cache / name
+    try:
+        regular_file(path)
+    except FileNotFoundError:
+        return None
+    key = path.read_text(encoding="ascii").strip()
+    if not KEY.fullmatch(key):
+        fail(f"invalid {name} bundle pointer")
+    return key
+
+
+def atomic_write(path, content):
+    fd, tmp = tempfile.mkstemp(prefix=f".{path.name}.", dir=path.parent)
+    try:
+        with os.fdopen(fd, "w", encoding="utf-8") as stream:
+            stream.write(content)
+            stream.flush()
+            os.fsync(stream.fileno())
+        os.replace(tmp, path)
+        dirfd = os.open(path.parent, os.O_RDONLY | os.O_DIRECTORY)
+        try:
+            os.fsync(dirfd)
+        finally:
+            os.close(dirfd)
+    finally:
+        if os.path.exists(tmp):
+            os.unlink(tmp)
+
+
+def select(cache):
+    if not stat.S_ISDIR(owned_and_private(cache)):
+        fail(f"invalid cache directory: {cache}")
+    try:
+        current_stock = digest(stock_binary())
+    except OSError as error:
+        fail(f"cannot hash installed stock binary: {error}")
+    candidates = []
+    seen = set()
+    for name in ("active", "previous"):
+        try:
+            key = pointer(cache, name)
+            if key is None or key in seen:
+                continue
+            seen.add(key)
+            bundle, data = verify(cache, key)
+            candidates.append((name, bundle, data))
+            if data["stock_sha256"] == current_stock:
+                if name != "active":
+                    print("dms-bundle-state: using verified previous bundle", file=sys.stderr)
+                print(bundle)
+                return
+        except (OSError, ValueError, KeyError, TypeError, json.JSONDecodeError) as error:
+            print(f"dms-bundle-state: {name} rejected: {error}", file=sys.stderr)
+    if candidates:
+        fail("no verified bundle matches the installed stock binary")
+    fail("no verified DMS bundle is selected")
+
+
+def register(cache, supplied):
+    cache.mkdir(parents=True, exist_ok=True)
+    if not stat.S_ISDIR(owned_and_private(cache)):
+        fail(f"invalid cache directory: {cache}")
+    bundle = Path(supplied).absolute()
+    if bundle.parent != cache or not KEY.fullmatch(bundle.name):
+        fail("register requires a direct published bundle directory in the cache")
+    lockfd = os.open(cache / ".state.lock", os.O_CREAT | os.O_RDWR | os.O_NOFOLLOW, 0o600)
+    try:
+        info = os.fstat(lockfd)
+        if not stat.S_ISREG(info.st_mode) or info.st_uid != os.getuid() or info.st_mode & (stat.S_IWGRP | stat.S_IWOTH):
+            fail("invalid bundle state lock")
+        fcntl.flock(lockfd, fcntl.LOCK_EX)
+        key = bundle.name
+        bundle_path(cache, key)
+        regular_file(bundle / ".ready")
+        if (bundle / ".ready").read_text(encoding="utf-8") != key + "\n":
+            fail(f"invalid ready marker: {bundle}")
+        regular_file(bundle / ".package-version")
+        version = (bundle / ".package-version").read_text(encoding="utf-8").strip()
+        if not version:
+            fail(f"missing package version: {bundle}")
+        stock_hash = digest(stock_binary())
+        files = inventory(bundle)
+        metadata_dir = cache / ".metadata"
+        metadata_dir.mkdir(mode=0o700, exist_ok=True)
+        if not stat.S_ISDIR(owned_and_private(metadata_dir)):
+            fail(f"invalid metadata directory: {metadata_dir}")
+        manifest = metadata_dir / f"{key}.json"
+        if manifest.exists() or manifest.is_symlink():
+            existing = metadata_for(cache, key)
+            expected = {"format": 1, "key": key, "package_version": version, "stock_sha256": stock_hash, "files": files}
+            if existing != expected:
+                fail(f"existing registered bundle has changed: {bundle}")
+        else:
+            data = {"format": 1, "key": key, "package_version": version, "stock_sha256": stock_hash, "files": files}
+            atomic_write(manifest, json.dumps(data, sort_keys=True, separators=(",", ":")) + "\n")
+        try:
+            old = pointer(cache, "active")
+        except (OSError, ValueError):
+            old = None
+        if old != key:
+            if old:
+                try:
+                    verify(cache, old)
+                    atomic_write(cache / "previous", old + "\n")
+                except (OSError, ValueError, KeyError, TypeError, json.JSONDecodeError):
+                    pass
+            atomic_write(cache / "active", key + "\n")
+        print(bundle)
+    finally:
+        os.close(lockfd)
+
+
+def main():
+    if len(sys.argv) == 2 and sys.argv[1] == "select":
+        select(cache_root())
+    elif len(sys.argv) == 3 and sys.argv[1] == "register":
+        register(cache_root(), sys.argv[2])
+    else:
+        fail("usage: dms-bundle-state select | register BUNDLE")
+
+
+if __name__ == "__main__":
+    try:
+        main()
+    except (OSError, ValueError, KeyError, TypeError, json.JSONDecodeError) as error:
+        print(f"dms-bundle-state: {error}", file=sys.stderr)
+        sys.exit(1)

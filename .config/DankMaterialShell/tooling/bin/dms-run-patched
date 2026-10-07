@@ -1,0 +1,20 @@
+#!/usr/bin/env bash
+# Start only a verified local core + shell bundle; never build at login.
+set -euo pipefail
+tooling_dir=$(dirname -- "$(readlink -f -- "${BASH_SOURCE[0]}")")/..
+STOCK=${DMS_STOCK_BINARY:-/usr/bin/dms}
+if [[ ${DMS_NETWORK_STOCK:-0} == 1 ]]; then
+    echo "dms-run-patched: explicit recovery mode, starting stock DMS" >&2
+    unset DMS_SHELL_DIR DMS_PATCHED_BINARY
+    exec "$STOCK" run --session
+fi
+STATE=${DMS_BUNDLE_STATE:-$tooling_dir/bin/dms-bundle-state}
+bundle=$("$STATE" select) || {
+    echo "dms-run-patched: no valid local patched bundle; starting stock DMS" >&2
+    unset DMS_SHELL_DIR DMS_PATCHED_BINARY
+    exec "$STOCK" run --session
+}
+export DMS_PATCHED_BINARY="$bundle/dms"
+export DMS_SHELL_DIR="$bundle/shell"
+export PATH="$tooling_dir/shim:$PATH"
+exec "$DMS_PATCHED_BINARY" run --session

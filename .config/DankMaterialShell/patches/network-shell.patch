@@ -1,5 +1,5 @@
 diff --git a/Services/DMSNetworkService.qml b/Services/DMSNetworkService.qml
-index b3c9f55b2..8dc5c30e8 100644
+index 02b92c5..a250748 100644
 --- a/Services/DMSNetworkService.qml
 +++ b/Services/DMSNetworkService.qml
 @@ -5,6 +5,7 @@ import QtQuick
@@ -10,9 +10,9 @@ index b3c9f55b2..8dc5c30e8 100644
  
  Singleton {
      id: root
-@@ -33,20 +34,22 @@ Singleton {
-     property var cellularDevices: []
-     property var cellularConnections: []
+@@ -68,20 +69,22 @@ Singleton {
+         return "signal_cellular_0_bar";
+     }
  
 -    property string wifiIP: ""
 -    property string wifiInterface: ""
@@ -42,7 +42,7 @@ index b3c9f55b2..8dc5c30e8 100644
      property var savedConnections: []
      property var ssidToConnectionName: ({})
      property var wifiSignalIcon: {
-@@ -203,6 +206,7 @@ Singleton {
+@@ -238,6 +241,7 @@ Singleton {
      property bool credentialsRequested: false
  
      property string pendingConnectionSSID: ""
@@ -50,22 +50,24 @@ index b3c9f55b2..8dc5c30e8 100644
      property var pendingConnectionStartTime: 0
      property bool wasConnecting: false
  
-@@ -349,13 +353,8 @@ Singleton {
-         cellularDevices = state.cellularDevices || [];
-         cellularConnections = state.cellularConnections || [];
+@@ -400,13 +404,10 @@ Singleton {
+         cellularDevices = keepUnchanged(cellularDevices, state.cellularDevices || []);
+         cellularConnections = keepUnchanged(cellularConnections, state.cellularConnections || []);
  
 -        wifiIP = state.wifiIP || "";
 -        wifiInterface = state.wifiDevice || "";
 -        wifiConnected = state.wifiConnected || false;
-+        backendWifiState = state;
++        backendWifiState = Object.assign({}, state, {
++                wifiNetworks: state.wifiNetworks ? keepUnchanged(backendWifiState.wifiNetworks || [], state.wifiNetworks) : backendWifiState.wifiNetworks || []
++            });
          wifiEnabled = state.wifiEnabled !== undefined ? state.wifiEnabled : true;
 -        wifiConnectionUuid = state.wifiConnectionUuid || "";
 -        wifiDevicePath = state.wifiDevicePath || "";
 -        activeAccessPointPath = state.activeAccessPointPath || "";
-         wifiDevices = state.wifiDevices || [];
+         wifiDevices = keepUnchanged(wifiDevices, state.wifiDevices || []);
          connectingDevice = state.connectingDevice || "";
  
-@@ -396,12 +395,6 @@ Singleton {
+@@ -447,13 +448,6 @@ Singleton {
              backendHotspotLastError = "";
          }
  
@@ -73,12 +75,13 @@ index b3c9f55b2..8dc5c30e8 100644
 -        wifiSignalStrength = state.wifiSignal || 0;
 -
 -        if (state.wifiNetworks) {
--            wifiNetworks = state.wifiNetworks;
+-            wifiNetworks = keepUnchanged(wifiNetworks, state.wifiNetworks);
 -        }
- 
+-
          if (state.wifiNetworks || state.savedWifiNetworks) {
              const hasSavedWifiState = DMSService.apiVersion >= savedWifiStateApiVersion && Array.isArray(state.savedWifiNetworks);
-@@ -480,7 +473,7 @@ Singleton {
+             const sourceSavedNetworks = hasSavedWifiState ? state.savedWifiNetworks : (state.wifiNetworks || []).filter(network => network.saved);
+@@ -532,7 +526,7 @@ Singleton {
          lastConnectionError = state.lastError || "";
  
          if (pendingConnectionSSID) {
@@ -87,7 +90,7 @@ index b3c9f55b2..8dc5c30e8 100644
                  const elapsed = Date.now() - pendingConnectionStartTime;
                  log.info("Successfully connected to", pendingConnectionSSID, "in", elapsed, "ms");
                  ToastService.showInfo(I18n.tr("Connected to %1", "wifi toast, %1 is the network name").arg(pendingConnectionSSID));
-@@ -491,7 +484,7 @@ Singleton {
+@@ -543,7 +537,7 @@ Singleton {
  
                  pendingConnectionSSID = "";
                  connectionStatus = "connected";
@@ -96,7 +99,7 @@ index b3c9f55b2..8dc5c30e8 100644
                  const isCancellationError = connectionError === "user-canceled";
                  const isBadCredentials = connectionError === "bad-credentials";
  
-@@ -594,9 +587,8 @@ Singleton {
+@@ -646,9 +640,8 @@ Singleton {
          if (!networkAvailable || isScanning || !wifiEnabled)
              return;
          isScanning = true;
@@ -108,7 +111,7 @@ index b3c9f55b2..8dc5c30e8 100644
          DMSService.sendRequest("network.wifi.scan", params, response => {
              isScanning = false;
              if (response.error) {
-@@ -615,6 +607,7 @@ Singleton {
+@@ -667,6 +660,7 @@ Singleton {
          if (!networkAvailable || isConnecting)
              return;
          pendingConnectionSSID = ssid;
@@ -116,7 +119,7 @@ index b3c9f55b2..8dc5c30e8 100644
          pendingConnectionStartTime = Date.now();
          isConnecting = true;
          connectingSSID = ssid;
-@@ -625,8 +618,8 @@ Singleton {
+@@ -677,8 +671,8 @@ Singleton {
          const params = {
              ssid: ssid
          };
@@ -127,7 +130,7 @@ index b3c9f55b2..8dc5c30e8 100644
          if (hidden)
              params.hidden = true;
          if (eapMethod)
-@@ -676,15 +669,14 @@ Singleton {
+@@ -728,15 +722,14 @@ Singleton {
      function disconnectWifi() {
          if (!networkAvailable || !wifiInterface)
              return;
@@ -146,28 +149,23 @@ index b3c9f55b2..8dc5c30e8 100644
                  connectionStatus = "";
              }
          });
-@@ -752,17 +744,7 @@ Singleton {
+@@ -804,12 +797,7 @@ Singleton {
                  savedConnections = savedConnections.filter(s => s.ssid !== ssid);
                  savedWifiNetworks = savedWifiNetworks.filter(s => s.ssid !== ssid);
  
--                const updated = [...wifiNetworks];
--                for (const network of updated) {
--                    if (network.ssid === ssid) {
--                        network.saved = false;
--                        if (network.connected) {
--                            network.connected = false;
--                            currentWifiSSID = "";
--                        }
--                    }
--                }
--                wifiNetworks = updated;
+-                if (wifiNetworks.some(network => network.ssid === ssid && network.connected))
+-                    currentWifiSSID = "";
+-                wifiNetworks = wifiNetworks.map(network => network.ssid !== ssid ? network : Object.assign({}, network, {
+-                        saved: false,
+-                        connected: false
+-                    }));
 +                getState();
                  networksUpdated();
                  Qt.callLater(() => refreshSavedWifiNetworks());
              }
 diff --git a/Services/WifiDeviceState.js b/Services/WifiDeviceState.js
 new file mode 100644
-index 000000000..e8455753d
+index 0000000..e845575
 --- /dev/null
 +++ b/Services/WifiDeviceState.js
 @@ -0,0 +1,23 @@
@@ -196,7 +194,7 @@ index 000000000..e8455753d
 +}
 diff --git a/tests/multiwifi.test.mjs b/tests/multiwifi.test.mjs
 new file mode 100644
-index 000000000..1d98cb5d0
+index 0000000..1d98cb5
 --- /dev/null
 +++ b/tests/multiwifi.test.mjs
 @@ -0,0 +1,30 @@

@@ -36,3 +36,8 @@ before committing a doc, `grep -nP '—|–| -- |;' <file>` should print nothing
 - `.config/DankMaterialShell/README.md` got the same restyle on 2026-10-02. its spare adapter steps use `<uuid>` in place of the real profile, the connection name and the interface, since the repo is public.
 - auris and ember are separate repos linked into `.config/DankMaterialShell/plugins/`, each with its own `AGENTS.md`.
 - eco (video wallpapers, formerly livewall) is a separate private repo at `~/Documents/Github-Projects/eco`. its `bin/eco-install` writes `.config/systemd/user/dms.service.d/zz-eco.conf`, which is ignored here because it points at a checkout a fresh install may not have. never track it.
+- DMS startup only selects verified local core and shell bundles through `dms-bundle-state`. downloads and compilation belong to explicit `dms-network-build` runs, never login.
+- keep published shell trees unchanged. a failed build keeps the previous release, and a package upgrade without a verified matching bundle uses stock DMS.
+- preparing bundles and headless tests does not switch the desktop. stopping the recovery shell and starting `dms.service` needs its own desktop guard approval.
+- DMS patch and bundle sources live in `.config/DankMaterialShell/tooling/`. `dms-network-build`, `dms-shell-patch`, `dms-run-patched`, `dms-bundle-state` and the two `dms-shim` commands link there from `.local/bin/`. keep their targets and headless tests together when changing them.
+- the hyprland boot staging calls `desktop-stage`, `desktop-gate` and `boot-cover`. keep those scripts and `.config/quickshell/boot-cover/` tracked with the caller. generated `hypr/dms/windowrules.lua` stays ignored.

@@ -1,0 +1,12 @@
+#!/usr/bin/env bash
+# gsettings shim seen only by DMS (dms-run-patched prepends this dir to PATH).
+# theme-apply owns gtk-theme (Matugen-A/B flip on the palette stamp), icon-theme
+# (Papirus-Dank-A/B) and accent-color. The dms matugen worker writes all three right
+# after the templates: gtk-theme "" then adw-gtk3-dark, icon-theme, accent-color.
+# Every GTK app restyled two or three times per wallpaper change, ahead of the fade.
+# Those writes are dropped here; everything else passes through.
+if [[ ${1:-} == @(set|reset) && ${2:-} == org.gnome.desktop.interface \
+      && ${3:-} == @(gtk-theme|icon-theme|accent-color) ]]; then
+    exit 0
+fi
+exec /usr/bin/gsettings "$@"
