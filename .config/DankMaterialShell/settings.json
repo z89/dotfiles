@@ -52,6 +52,9 @@
       "showTrash": false,
       "trashFileManager": "default",
       "trashCustomCommand": "",
+      "magnification": false,
+      "magnificationScale": 130,
+      "magnificationProfile": "parabolic",
       "order": [],
       "widgets": [
         {
@@ -75,10 +78,40 @@
   "matugenScheme": "scheme-vibrant",
   "matugenSourceMode": "darkness",
   "matugenContrast": 0.2,
+  "dmsWindowsFloatingSeeded": [
+    "hyprland"
+  ],
   "m3ElevationEnabled": false,
   "controlCenterColumns": 6,
   "controlCenterIconScale": 0.75,
   "controlCenterWidgets": [
+    {
+      "id": "user",
+      "enabled": true,
+      "w": 3,
+      "h": 1
+    },
+    {
+      "id": "settings",
+      "enabled": true,
+      "w": 1,
+      "h": 1,
+      "small": true
+    },
+    {
+      "id": "lock",
+      "enabled": true,
+      "w": 1,
+      "h": 1,
+      "small": true
+    },
+    {
+      "id": "power",
+      "enabled": true,
+      "w": 1,
+      "h": 1,
+      "small": true
+    },
     {
       "id": "brightnessSlider",
       "enabled": true,
@@ -132,6 +165,13 @@
       "enabled": true,
       "w": 6,
       "h": 1
+    },
+    {
+      "id": "runningApps",
+      "enabled": true,
+      "w": 4,
+      "h": 1,
+      "footer": true
     }
   ],
   "appIdSubstitutions": [],
@@ -197,22 +237,11 @@
       "rightWidgets": [
         "auris",
         "ember",
-        "music",
-        "weather",
-        {
-          "id": "spacer",
-          "size": 2
-        },
         {
           "id": "cpumon"
         },
         "memmon",
         "gpumon",
-        "diskUsage",
-        {
-          "id": "spacer",
-          "size": 2
-        },
         "systemTray",
         {
           "id": "clock",
@@ -252,7 +281,8 @@
       "maximizeWidgetIcons": false,
       "maximizeWidgetText": false,
       "transparency": 1,
-      "noBackground": false
+      "noBackground": false,
+      "widgetFollowInterfaceStyle": false
     }
   ],
   "builtInPluginSettings": {
@@ -269,5 +299,5 @@
       "trigger": "qrg"
     }
   },
-  "configVersion": 28
+  "configVersion": 36
 }

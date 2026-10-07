@@ -18,7 +18,8 @@
     "enabled": true
   },
   "gpumon": {
-    "enabled": true
+    "enabled": true,
+    "minimumWidth": false
   },
   "memmon": {
     "enabled": true

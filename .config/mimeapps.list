@@ -1,8 +1,8 @@
 [Default Applications]
 x-scheme-handler/betterdiscord=discord.desktop
 inode/directory=org.gnome.Nautilus.desktop
-video/mp4=vlc.desktop
-video/webm=vlc.desktop
+video/mp4=mpv.desktop
+video/webm=mpv.desktop
 x-scheme-handler/claude-cli=claude-code-url-handler.desktop
 x-scheme-handler/claude=com.anthropic.Claude.desktop
 x-scheme-handler/notion=notion.desktop
@@ -13,7 +13,7 @@ text/csv=wps-office-et.desktop
 text/markdown=chromium.desktop
 x-scheme-handler/codex=chatgpt.desktop
 x-scheme-handler/tonsite=userapp-Telegram Desktop-HZJFV3.desktop
-video/x-matroska=vlc.desktop
+video/x-matroska=mpv.desktop
 video/quicktime=vlc.desktop
 video/mpeg=vlc.desktop
 video/ogg=vlc.desktop
@@ -66,8 +66,11 @@ video/x-theora=vlc.desktop
 video/x-totem-stream=vlc.desktop
 x-scheme-handler/opencode=ai.opencode.desktop.desktop
 x-scheme-handler/tg=userapp-Telegram Desktop-TYWFV3.desktop
-x-scheme-handler/http=browser-open.desktop
-x-scheme-handler/https=browser-open.desktop
+x-scheme-handler/http=chromium.desktop
+x-scheme-handler/https=chromium.desktop
+text/html=chromium.desktop
+x-scheme-handler/about=chromium.desktop
+x-scheme-handler/unknown=chromium.desktop
 
 [Added Associations]
 video/mp4=vlc.desktop;
