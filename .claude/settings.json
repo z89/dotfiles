@@ -487,44 +487,6 @@
             "statusMessage": "Checking for desktop takeover..."
           }
         ]
-      },
-      {
-        "matcher": "Bash",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "~/.claude/hooks/subagent-commit-guard.sh",
-            "timeout": 10,
-            "statusMessage": "Checking subagent commit guard..."
-          },
-          {
-            "type": "command",
-            "command": "python3 /home/archie/.claude/hooks/terraform-guard.py"
-          },
-          {
-            "type": "command",
-            "command": "python3 /home/archie/.claude/hooks/aws-guard.py"
-          },
-          {
-            "type": "command",
-            "command": "python3 /home/archie/.claude/hooks/require-commit-skill.py"
-          },
-          {
-            "type": "command",
-            "command": "python3 /home/archie/.claude/hooks/git-secret-scan.py"
-          }
-        ]
-      }
-    ],
-    "PostToolUse": [
-      {
-        "matcher": "Skill",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "python3 /home/archie/.claude/hooks/mark-commit-skill.py"
-          }
-        ]
       }
     ],
     "UserPromptSubmit": [
@@ -534,14 +496,6 @@
             "type": "command",
             "command": "python3 /home/archie/.claude/hooks/desktop-control-gate.py",
             "timeout": 10
-          }
-        ]
-      },
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "python3 /home/archie/.claude/hooks/mark-commit-skill.py"
           }
         ]
       },
