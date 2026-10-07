@@ -89,6 +89,10 @@ export JAVA_HOME="/usr/lib/jvm/java-17-openjdk"
 # which skips every JS patch and breaks the theme switcher.
 export PATH="$PATH:$HOME/.local/bin"
 
+# ── local binaries ─────────────────────────────────────────────────────────────
+# Keep hand-built user commands after the system paths.
+export PATH="$PATH:$HOME/bin"
+
 # agent-run takes the command directly. It cannot take `command`, which is a shell
 # builtin with no binary on this system — agent-run ends in `exec env … "$@"`, and
 # env only resolves real executables.
