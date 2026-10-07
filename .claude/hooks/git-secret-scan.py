@@ -282,7 +282,9 @@ def main():
             )
         names = [n for n in name_output.splitlines() if n]
 
-    if not diff and not names:
+    # Nothing staged is not nothing to scan: `git commit --allow-empty -m ...`
+    # publishes its message all the same.
+    if not diff and not names and not metadata.strip():
         allow()
 
     # Only inspect added lines (ignore context and removals).
