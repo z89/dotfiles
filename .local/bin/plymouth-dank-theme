@@ -5,9 +5,10 @@ Reads the DankMaterialShell matugen palette (~/.cache/DankMaterialShell/dms-colo
 the current wallpaper (~/.local/state/DankMaterialShell/session.json) and ~/.face, and
 writes a complete two-step theme directory:
 
-    background.png   blurred, dimmed wallpaper cropped to the focused monitor's aspect
+    background.png   blurred, dimmed wallpaper at the monitor's native mode size, so Plymouth
+                     draws it 1:1 (ScaleBackgroundImage=false) instead of upscaling it at boot
     watermark.png    avatar ring + user name + host name (always visible, centred at 40 %)
-    throbber-NNNN.png  30-frame Material arc spinner shown while booting / unlocking
+    throbber-NNNN.png  60-frame Material arc spinner shown while booting / unlocking
     lock.png + entry.png  one seamless pill: lock glyph in the left cap, bullets on the right
     bullet.png       dot for typed passphrase characters
     dank-unlock.plymouth
@@ -45,7 +46,10 @@ RADIUS = ENTRY_H / 2
 BULLET = 22          # bullet cell size; spacing == cell size in two-step
 AVATAR = 112
 THROB = 44
-THROB_FRAMES = 30
+# Plymouth's throbber plays the whole sequence once every 2.0 s on a 30 Hz timer (constants
+# in libply-splash-graphics), so N frames show at N/2 fps: 60 is the most that 30 Hz can use.
+THROB_FRAMES = 60
+BG_WORK_W = 2560     # blur/dim at this width (the look is tuned here), then scale to native
 
 
 def rgb(hexstr):
@@ -88,11 +92,12 @@ def load_palette(mode):
     return d["colors"][mode], mode
 
 
-def monitor_aspect():
-    """Aspect of the largest connected display. Reads the DRM preferred mode from sysfs so it
-    works under sudo (no compositor env) and matches what Plymouth's DRM renderer will use."""
+def monitor_size(drm_root="/sys/class/drm"):
+    """(width, height) of the largest connected display, or None. Reads the DRM preferred mode
+    from sysfs so it works under sudo (no compositor env) and matches what Plymouth's DRM
+    renderer will use; falls back to hyprctl inside a Hyprland session."""
     best = None
-    for status in Path("/sys/class/drm").glob("card*-*/status"):
+    for status in Path(drm_root).glob("card*-*/status"):
         try:
             if status.read_text().strip() != "connected":
                 continue
@@ -103,13 +108,23 @@ def monitor_aspect():
         if not best or w * h > best[0] * best[1]:
             best = (w, h)
     if best:
-        return best[0] / best[1]
+        return best
     try:
-        mons = json.loads(subprocess.check_output(["hyprctl", "monitors", "-j"], timeout=3))
+        mons = json.loads(subprocess.check_output(["hyprctl", "monitors", "-j"], timeout=3,
+                                                  stderr=subprocess.DEVNULL))
         m = next((m for m in mons if m.get("focused")), mons[0])
-        return m["width"] / m["height"]
+        return int(m["width"]), int(m["height"])
     except Exception:
-        return 16 / 9
+        return None
+
+
+def background_size():
+    """(width, height, native). Native size when the monitor is known, so Plymouth needs no
+    scaling; otherwise the old 2560-wide 16:9 image that Plymouth scales to fit."""
+    size = monitor_size()
+    if size:
+        return size[0], size[1], True
+    return BG_WORK_W, int(round(BG_WORK_W * 9 / 16)), False
 
 
 def wallpaper_path():
@@ -121,22 +136,25 @@ def wallpaper_path():
         return None
 
 
-def render_background(out, pal):
+def render_background(out, pal, size):
     wp = wallpaper_path()
     if not wp:
         print("no wallpaper set; flat background colour only")
         return
-    aspect = monitor_aspect()
-    width = 2560
+    out_w, out_h, _ = size
+    aspect = out_w / out_h
+    width = BG_WORK_W
     height = int(round(width / aspect))
     # crop to monitor aspect, downscale (blur hides the detail), blur, then dim with the
-    # surface colour so the pill and label stay legible.
+    # surface colour so the pill and label stay legible. The blurred result is scaled to the
+    # output size here, once, rather than by Plymouth on every boot.
     subprocess.check_call([
         "magick", str(wp), "-auto-orient", "-gravity", "center",
         "-crop", f"{aspect:.6f}:1", "+repage",
         "-resize", f"{width}x{height}^", "-extent", f"{width}x{height}",
         "-blur", "0x18",
         "-fill", pal["surface"], "-colorize", "58%",
+        "-resize", f"{out_w}x{out_h}!",
         "-strip", "-define", "png:compression-level=9",
         str(out / "background.png"),
     ])
@@ -151,11 +169,14 @@ def render_hint(out, pal, text):
         return
     img = cairo.ImageSurface.create_from_png(str(bg))
     cr = cairo.Context(img)
+    # sizes are tuned for a BG_WORK_W-wide image that Plymouth used to scale to the screen;
+    # scale them the same way so a native-size background shows the hint unchanged.
+    k = img.get_width() / BG_WORK_W
     cr.select_font_face(FONT, cairo.FONT_SLANT_NORMAL, cairo.FONT_WEIGHT_NORMAL)
-    cr.set_font_size(26)
+    cr.set_font_size(26 * k)
     xb, yb, w, h, _, _ = cr.text_extents(text)
     cr.set_source_rgba(*rgb(pal["on_surface_variant"]), 0.85)
-    cr.move_to(img.get_width() / 2 - w / 2 - xb, img.get_height() - 72)
+    cr.move_to(img.get_width() / 2 - w / 2 - xb, img.get_height() - 72 * k)
     cr.show_text(text)
     img.write_to_png(str(bg))
 
@@ -308,8 +329,9 @@ def render_watermark(out, pal, tmp):
     s.write_to_png(str(out / "watermark.png"))
 
 
-def write_plymouth(out, pal):
+def write_plymouth(out, pal, size):
     bg = pal["surface"].lstrip("#")
+    scale = "false" if size[2] else "true"
     (out / f"{THEME}.plymouth").write_text(f"""[Plymouth Theme]
 Name=Dank Unlock
 Description=DankMaterialShell-styled boot splash and LUKS unlock (generated by plymouth-dank-theme)
@@ -320,7 +342,7 @@ Font={FONT} 13
 TitleFont={FONT} 30
 MonospaceFont=JetBrainsMono Nerd Font 12
 ImageDir=/usr/share/plymouth/themes/{THEME}
-ScaleBackgroundImage=true
+ScaleBackgroundImage={scale}
 BackgroundStartColor=0x{bg}
 BackgroundEndColor=0x{bg}
 # avatar block (watermark) sits above the spinner / passphrase pill
@@ -386,15 +408,17 @@ def main():
     if out.exists():
         shutil.rmtree(out)
     out.mkdir(parents=True)
+    size = background_size()
     with tempfile.TemporaryDirectory() as tmp:
         tmp = Path(tmp)
-        render_background(out, pal)
+        render_background(out, pal, size)
         render_hint(out, pal, a.hint)
         render_pill(out, pal)
         render_throbber(out, pal)
         render_watermark(out, pal, tmp)
-        write_plymouth(out, pal)
-    print(f"{THEME} ({mode}, primary {pal['primary']}) rendered to {out}")
+        write_plymouth(out, pal, size)
+    how = "native, unscaled" if size[2] else "monitor unknown, Plymouth scales it"
+    print(f"{THEME} ({mode}, primary {pal['primary']}) rendered to {out}, background {size[0]}x{size[1]} ({how})")
 
 
 if __name__ == "__main__":
