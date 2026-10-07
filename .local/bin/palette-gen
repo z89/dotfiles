@@ -212,9 +212,10 @@ def _atomic(path, text):
 
 def render_gtk(c, H):
     """libadwaita / adw-gtk3 named colours from the same OKLCH palette as
-    kitty: the window and view background *are* the terminal background,
-    chrome (headerbar, sidebar) sits a step lighter, floating surfaces
-    (cards, popovers, dialogs) another step.  theme-apply appends this file
+    kitty: the window, view and sidebar background *are* the terminal
+    background, the headerbar sits a step lighter, floating surfaces (cards,
+    popovers, dialogs) another step.  Backdrop colours equal the focused ones
+    so an unfocused window keeps its colours.  theme-apply appends this file
     to the generated GTK themes so it overrides the matugen colours."""
     bg, fg = c["background"], c["foreground"]
     lvl = lambda L: oklch_to_hex(L, C_BG, H)
@@ -222,13 +223,15 @@ def render_gtk(c, H):
         "window_bg_color": bg, "window_fg_color": fg,
         "view_bg_color": bg, "view_fg_color": fg,
         "headerbar_bg_color": lvl(0.205), "headerbar_fg_color": fg,
-        "headerbar_backdrop_color": lvl(0.185),
+        "headerbar_backdrop_color": lvl(0.205),
         "headerbar_border_color": fg, "headerbar_shade_color": "rgba(0, 0, 0, 0.36)",
         "headerbar_darker_shade_color": "rgba(0, 0, 0, 0.9)",
-        "sidebar_bg_color": lvl(0.215), "sidebar_fg_color": fg,
-        "sidebar_backdrop_color": lvl(0.195), "sidebar_border_color": lvl(0.30),
+        "sidebar_bg_color": bg, "sidebar_fg_color": fg,
+        "sidebar_backdrop_color": bg, "sidebar_border_color": lvl(0.30),
         "sidebar_shade_color": "rgba(0, 0, 0, 0.25)",
         "secondary_sidebar_bg_color": lvl(0.190), "secondary_sidebar_fg_color": fg,
+        "secondary_sidebar_backdrop_color": lvl(0.190), "secondary_sidebar_border_color": lvl(0.30),
+        "secondary_sidebar_shade_color": "rgba(0, 0, 0, 0.25)",
         "card_bg_color": lvl(0.235), "card_fg_color": fg,
         "card_shade_color": "rgba(0, 0, 0, 0.36)",
         "dialog_bg_color": lvl(0.225), "dialog_fg_color": fg,
