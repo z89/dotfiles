@@ -1,0 +1,131 @@
+#!/usr/bin/env bash
+# Turn unpublished local bot commits into one operator-signed commit and publish it.
+set -euo pipefail
+
+die() { printf 'agent-publish-z89: %s\n' "$*" >&2; exit 1; }
+say() { printf 'agent-publish-z89: %s\n' "$*"; }
+
+[ "${AGENT_GH:-0}" = 1 ] || die 'run this from an agent-run session'
+[ -n "${AGENT_GH_BOT_EMAIL:-}" ] || die 'the selected bot email is missing'
+[ "$#" -eq 1 ] || die 'usage: agent-publish-z89 "changelog: ..."'
+MESSAGE="$1"
+[[ "$MESSAGE" == $'changelog:\n\n- '* ]] || die 'the final message must use the changelog format'
+if printf '%s\n' "$MESSAGE" | grep -Eiq '^(co-authored-by|co-signed-by|requested-by):'; then
+  die 'the final commit must have z89 as its only author'
+fi
+command -v gh >/dev/null || die 'gh is required'
+command -v zenity >/dev/null || die 'zenity is required for push approval'
+
+ROOT="$(git rev-parse --show-toplevel)" || die 'not in a git repository'
+BRANCH="$(git symbolic-ref --quiet --short HEAD)" || die 'detached HEAD'
+TIP="$(git rev-parse HEAD)"
+REMOTE=origin
+URL="$(git config --get remote.$REMOTE.url)" || die 'origin is missing'
+SLUG="$(printf '%s' "$URL" | sed -nE 's#^(git@github\.com:|ssh://git@github\.com/|https://github\.com/)([^/]+/[^/]+)(\.git)?$#\2#p' | sed 's/\.git$//')"
+[[ "$SLUG" == */* ]] || die 'origin must be a GitHub repository'
+[ "${SLUG%%/*}" = "${AGENT_GH_OWNER:-}" ] || die 'origin owner differs from the selected bot profile'
+PUSH_URL="https://github.com/${SLUG}.git"
+
+# The agent token may read/fetch, but must never authenticate the final push.
+OPERATOR_CONFIG="$HOME/.gitconfig"
+[ -r "$OPERATOR_CONFIG" ] || die 'operator git configuration is missing'
+OPERATOR_NAME="$(GIT_CONFIG_GLOBAL="$OPERATOR_CONFIG" git config --global --get user.name)" || die 'operator name is missing'
+OPERATOR_EMAIL="$(GIT_CONFIG_GLOBAL="$OPERATOR_CONFIG" git config --global --get user.email)" || die 'operator email is missing'
+OPERATOR_KEY="$(GIT_CONFIG_GLOBAL="$OPERATOR_CONFIG" git config --global --get user.signingkey)" || die 'operator signing key is missing'
+[ "$OPERATOR_NAME" = z89 ] || die 'operator git identity is not z89'
+[ -n "$OPERATOR_KEY" ] || die 'operator signing key is empty'
+KEY_DATA="$(printf '%s\n' "$OPERATOR_KEY" | awk '{print $1 " " $2}')"
+env -u GH_TOKEN -u GITHUB_TOKEN gh api users/z89/ssh_signing_keys --jq '.[].key' |
+  awk '{print $1 " " $2}' | grep -Fxq "$KEY_DATA" ||
+  die 'the operator signing key is not registered with GitHub'
+SIGNING_SOCKET="${XDG_RUNTIME_DIR:-/run/user/$(id -u)}/ssh-agent.socket"
+[ -S "$SIGNING_SOCKET" ] || die 'operator ssh-agent socket is unavailable'
+env -u GH_TOKEN -u GITHUB_TOKEN gh api user --jq .login | grep -Fxq z89 ||
+  die 'operator GitHub CLI is not authenticated as z89'
+
+REMOTE_TIP="$(git ls-remote --heads "$REMOTE" "refs/heads/$BRANCH" | awk '{print $1}')" ||
+  die 'could not read the remote branch'
+if [ -n "$REMOTE_TIP" ]; then
+  git fetch --quiet "$REMOTE" "refs/heads/$BRANCH" || die 'could not fetch the remote branch'
+  BASE="$(git rev-parse FETCH_HEAD)"
+else
+  DEFAULT="$(gh api "repos/$SLUG" --jq .default_branch)" || die 'could not read the default branch'
+  git fetch --quiet "$REMOTE" "refs/heads/$DEFAULT" || die 'could not fetch the default branch'
+  BASE="$(git merge-base "$TIP" FETCH_HEAD)" || die 'branch shares no history with the default branch'
+fi
+git merge-base --is-ancestor "$BASE" "$TIP" || die 'local history is behind or diverged from the remote'
+[ "$BASE" != "$TIP" ] || die 'there are no unpublished commits'
+[ -z "$(git rev-list --min-parents=2 "$BASE..$TIP")" ] || die 'outgoing history contains a merge commit'
+
+while IFS= read -r commit; do
+  [ "$(git log -1 --format=%ae "$commit")" = "$AGENT_GH_BOT_EMAIL" ] ||
+    die "outgoing commit $commit is not authored by the selected bot"
+  git verify-commit "$commit" >/dev/null 2>&1 ||
+    die "outgoing bot commit $commit does not verify locally"
+done < <(git rev-list "$BASE..$TIP")
+
+WORK="$(mktemp -d)"
+cleanup() {
+  git -C "$ROOT" worktree remove --force "$WORK/tree" >/dev/null 2>&1 || true
+  rm -rf -- "$WORK"
+}
+trap cleanup EXIT
+git -C "$ROOT" worktree add --quiet --detach "$WORK/tree" "$BASE" || die 'could not prepare a temporary worktree'
+git -C "$WORK/tree" merge --squash --no-commit "$TIP" >/dev/null || die 'could not squash bot commits'
+git -C "$WORK/tree" diff --cached --check || die 'squashed changes failed whitespace validation'
+[ "$(git -C "$WORK/tree" write-tree)" = "$(git rev-parse "$TIP^{tree}")" ] ||
+  die 'squash tree differs from the bot-tested tree'
+git -C "$ROOT" diff "$BASE" "$TIP" > "$WORK/review.diff"
+say "prepared one z89 commit for $SLUG:$BRANCH"
+git -C "$ROOT" diff --stat "$BASE" "$TIP"
+zenity --text-info --filename="$WORK/review.diff" \
+  --title="Review and sign $SLUG:$BRANCH" \
+  --ok-label=Sign --cancel-label=Cancel --width=1000 --height=700 ||
+  die 'signing canceled before using the operator key'
+
+# The operator key is added to ssh-agent with -c, so signing asks the operator on screen.
+# Clear agent credentials and identity overrides before creating the final commit.
+env -u GH_TOKEN -u GITHUB_TOKEN -u GIT_AUTHOR_NAME -u GIT_AUTHOR_EMAIL \
+  -u GIT_AUTHOR_DATE -u GIT_COMMITTER_NAME -u GIT_COMMITTER_EMAIL \
+  -u GIT_COMMITTER_DATE -u GIT_SSH_COMMAND -u GIT_CONFIG_COUNT \
+  GIT_CONFIG_GLOBAL="$OPERATOR_CONFIG" GIT_CONFIG_SYSTEM=/dev/null \
+  SSH_AUTH_SOCK="$SIGNING_SOCKET" \
+  git -C "$WORK/tree" -c user.name="$OPERATOR_NAME" -c user.email="$OPERATOR_EMAIL" \
+  -c user.signingkey="$OPERATOR_KEY" -c gpg.format=ssh commit -S -m "$MESSAGE" ||
+  die 'signing was canceled or the commit failed'
+
+FINAL="$(git -C "$WORK/tree" rev-parse HEAD)"
+[ "$(git rev-parse "$FINAL^{tree}")" = "$(git rev-parse "$TIP^{tree}")" ] ||
+  die 'the signed commit tree differs from the bot-tested tree'
+[ "$(git log -1 --format=%an:%ae:%cn:%ce "$FINAL")" = \
+  "$OPERATOR_NAME:$OPERATOR_EMAIL:$OPERATOR_NAME:$OPERATOR_EMAIL" ] ||
+  die 'the signed commit does not have z89 as author and committer'
+GIT_CONFIG_GLOBAL="$OPERATOR_CONFIG" git verify-commit "$FINAL" >/dev/null ||
+  die 'the final signature did not verify locally'
+[ "$(git rev-parse HEAD)" = "$TIP" ] || die 'the local branch moved while preparing publication'
+
+say "signed commit: $FINAL"
+if ! zenity --question --title='Publish z89 commit' \
+    --text="Push signed commit ${FINAL:0:12} to $SLUG ($BRANCH)?" \
+    --ok-label=Push --cancel-label=Cancel; then
+  git update-ref "refs/agent-publish/pending/${FINAL}" "$FINAL"
+  die "push canceled; signed commit retained at refs/agent-publish/pending/$FINAL"
+fi
+
+# The z89 GitHub CLI credential authenticates the push after the explicit dialog.
+# No force push: a concurrent remote update makes this fail safely.
+env -u GH_TOKEN -u GITHUB_TOKEN -u GIT_CONFIG_COUNT -u GIT_SSH_COMMAND \
+  GIT_CONFIG_GLOBAL="$OPERATOR_CONFIG" GIT_CONFIG_SYSTEM=/dev/null \
+  SSH_AUTH_SOCK="$SIGNING_SOCKET" \
+  git push "$PUSH_URL" "$FINAL:refs/heads/$BRANCH" || {
+    git update-ref "refs/agent-publish/pending/${FINAL}" "$FINAL"
+    die "push failed; signed commit retained at refs/agent-publish/pending/$FINAL"
+  }
+git update-ref "refs/heads/$BRANCH" "$FINAL" "$TIP" ||
+  die "remote push succeeded, but local $BRANCH moved; reconcile it with $FINAL"
+VERIFIED="$(env -u GH_TOKEN -u GITHUB_TOKEN gh api "repos/$SLUG/commits/$FINAL" \
+  --jq '[.commit.verification.verified, .author.login, .committer.login] | @tsv')" ||
+  die "push succeeded, but GitHub verification could not be read for $FINAL"
+[ "$VERIFIED" = $'true\tz89\tz89' ] ||
+  die "push succeeded, but GitHub did not report a Verified z89 commit for $FINAL ($VERIFIED)"
+say "published $FINAL to $SLUG:$BRANCH"

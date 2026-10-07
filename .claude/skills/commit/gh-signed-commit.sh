@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
-# Republishes local commits through GitHub's API so they land VERIFIED.
+# Explicit bot-authored publication through GitHub's API.
+# The default operator-authored flow is agent-publish-z89.
 #
 # WHY THIS EXISTS
 #
@@ -47,7 +48,7 @@
 # USAGE
 #   gh-signed-commit.sh [remote]        # default remote: origin
 #
-# Run it after committing locally, in place of a plain push.
+# Use only when bot authorship was explicitly requested.
 
 set -euo pipefail
 

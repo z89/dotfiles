@@ -43,6 +43,13 @@
 !LICENSE
 !assets/
 !.claude/
+!.codex/
+.codex/*
+!.codex/skills/
+.codex/skills/*
+!.codex/skills/commit/
+.codex/skills/commit/*
+!.codex/skills/commit/SKILL.md
 !.git-commit-template
 !.gitconfig
 !.ssh/
@@ -93,6 +100,7 @@
 !.local/bin/boot-cover
 !.local/bin/ssh-confirm-askpass
 !.local/bin/agent-run
+!.local/bin/agent-publish-z89
 !.local/bin/browser-open
 !.local/bin/theme-switch
 !.local/bin/avatar-make
