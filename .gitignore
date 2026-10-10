@@ -107,6 +107,7 @@
 !.local/bin/theme-apply
 !.local/bin/focus-or-launch
 !.local/bin/qs-reload-notify
+!.local/bin/bt-keysync
 !.icons/
 .icons/*
 !.icons/default/

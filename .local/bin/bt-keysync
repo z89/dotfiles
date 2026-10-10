@@ -1,0 +1,275 @@
+#!/usr/bin/python3 -I
+"""Copy Bluetooth pairing keys from the Windows registry into bluez.
+
+Run as root after pairing a device in Windows last. Mounts the Windows
+system partition read-only, exports BTHPORT\\Parameters\\Keys with reged
+(chntpw), and rewrites the matching /var/lib/bluetooth/<adapter>/<device>/info
+files. Handles the classic LinkKey and the LE LongTermKey, EDiv, Rand and
+IdentityResolvingKey, which bt-dualboot 1.0.x does not.
+
+usage: bt-keysync [--dry-run] [--win-dev /dev/nvmeXnYpZ | --scan] [MAC ...]
+"""
+
+import argparse
+import os
+import re
+import shutil
+import subprocess
+import sys
+import tempfile
+import time
+
+BT_ROOT = "/var/lib/bluetooth"
+WIN_DEV = "/dev/nvme1n1p2"  # the dual-boot Windows; nvme0n1p3 is an unrelated Acer install
+REG_KEY_FMT = r"ControlSet{:03d}\Services\BTHPORT\Parameters\Keys"
+
+
+def die(msg):
+    print(f"error: {msg}", file=sys.stderr)
+    sys.exit(1)
+
+
+def run(cmd, **kw):
+    return subprocess.run(cmd, check=True, capture_output=True, text=True, **kw)
+
+
+def parse_reg(text):
+    """Return {section_path_lower: {name: (kind, bytes_or_int)}}."""
+    data = {}
+    section = None
+    pending = None  # (name, kind, hexstr)
+    for raw in text.splitlines():
+        line = raw.rstrip("\r")
+        if pending:
+            name, kind, hexstr = pending
+            cont = line.strip()
+            more = cont.rstrip("\\")
+            hexstr += more
+            if cont.endswith("\\"):
+                pending = (name, kind, hexstr)
+            else:
+                data[section][name] = (kind, bytes.fromhex(hexstr.replace(",", "")))
+                pending = None
+            continue
+        if line.startswith("["):
+            section = line.strip("[]").lower()
+            data.setdefault(section, {})
+            continue
+        m = re.match(r'^"([^"]+)"=(.*)$', line)
+        if not m or section is None:
+            continue
+        name, val = m.group(1), m.group(2)
+        if val.startswith("dword:"):
+            data[section][name] = ("dword", int(val[6:], 16))
+        elif val.startswith("hex"):
+            kind, _, rest = val.partition(":")
+            rest = rest.strip()
+            if rest.endswith("\\"):
+                pending = (name, kind, rest.rstrip("\\"))
+            else:
+                data[section][name] = (kind, bytes.fromhex(rest.replace(",", "")))
+    return data
+
+
+def set_ini_value(lines, section, key, value):
+    """Set key=value inside [section]; create the section if absent. Returns new lines."""
+    out = []
+    in_sec = False
+    done = False
+    found_sec = False
+    for line in lines:
+        if line.startswith("["):
+            if in_sec and not done:
+                out.append(f"{key}={value}")
+                done = True
+            in_sec = line.strip() == f"[{section}]"
+            found_sec = found_sec or in_sec
+            out.append(line)
+            continue
+        if in_sec and not done and line.split("=", 1)[0] == key:
+            out.append(f"{key}={value}")
+            done = True
+            continue
+        out.append(line)
+    if in_sec and not done:
+        out.append(f"{key}={value}")
+        done = True
+    if not found_sec:
+        if out and out[-1] != "":
+            out.append("")
+        out.append(f"[{section}]")
+        out.append(f"{key}={value}")
+    return out
+
+
+def mac_from_hex(h):
+    h = h.upper()
+    return ":".join(h[i : i + 2] for i in range(0, 12, 2))
+
+
+def main():
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--dry-run", action="store_true")
+    ap.add_argument("--win-dev", default=WIN_DEV, help=f"Windows system partition (default {WIN_DEV})")
+    ap.add_argument("--scan", action="store_true", help="read every NTFS partition instead of --win-dev")
+    ap.add_argument("macs", nargs="*", help="device MACs to sync (default all)")
+    args = ap.parse_args()
+    if os.geteuid() != 0:
+        die("run as root")
+    if shutil.which("reged") is None:
+        die("reged not found, install chntpw")
+
+    if not args.scan:
+        devs = [args.win_dev]
+    else:
+        out = run(["lsblk", "-nro", "PATH,FSTYPE"]).stdout
+        devs = [l.split()[0] for l in out.splitlines() if len(l.split()) == 2 and l.split()[1] == "ntfs"]
+    if not devs:
+        die("no NTFS partitions found")
+
+    reg = {}
+    tmp = tempfile.mkdtemp(prefix="bt-keysync.")
+    mnt = os.path.join(tmp, "win")
+    os.mkdir(mnt)
+    try:
+        for dev in devs:
+            try:
+                run(["mount", "-t", "ntfs-3g", "-o", "ro", dev, mnt])
+            except subprocess.CalledProcessError as e:
+                print(f"windows: {dev} mount failed: {e.stderr.strip().splitlines()[-1] if e.stderr.strip() else ''}")
+                continue
+            hive_src = os.path.join(mnt, "Windows", "System32", "config", "SYSTEM")
+            if not os.path.exists(hive_src):
+                subprocess.run(["umount", mnt], check=False)
+                if not args.scan:
+                    die(f"{dev} has no Windows/System32/config/SYSTEM")
+                continue
+            hive = os.path.join(tmp, "SYSTEM")
+            shutil.copyfile(hive_src, hive)
+            subprocess.run(["umount", mnt], check=False)
+
+            # Which ControlSet is live: Select\Current
+            current = 1
+            selfile = os.path.join(tmp, "select.reg")
+            try:
+                run(["reged", "-x", hive, r"HKEY_LOCAL_MACHINE\SYSTEM", "Select", selfile])
+                with open(selfile, encoding="utf-8", errors="replace") as f:
+                    sel = parse_reg(f.read())
+                for sec, vals in sel.items():
+                    if sec.endswith("\\select") and "Current" in vals:
+                        current = vals["Current"][1]
+            except subprocess.CalledProcessError:
+                pass
+            REG_KEY = REG_KEY_FMT.format(current)
+            regfile = os.path.join(tmp, "keys.reg")
+            try:
+                run(["reged", "-x", hive, r"HKEY_LOCAL_MACHINE\SYSTEM", REG_KEY, regfile])
+            except subprocess.CalledProcessError as e:
+                print(f"windows: {dev} reged failed: {e.stdout.strip()} {e.stderr.strip()}")
+                continue
+            with open(regfile, encoding="utf-8", errors="replace") as f:
+                part = parse_reg(f.read())
+            print(f"windows: {dev} hive, {REG_KEY}")
+            # merge, keyed by section path below the ControlSet so hives can differ in set number
+            for sec, vals in part.items():
+                i = sec.find("\\services\\bthport")
+                if i >= 0:
+                    reg[sec[i:]] = vals
+    finally:
+        shutil.rmtree(tmp, ignore_errors=True)
+
+    prefix = r"\services\bthport\parameters\keys"
+    adapters = {}
+    for sec in reg:
+        if not sec.startswith(prefix + "\\"):
+            continue
+        parts = sec[len(prefix) + 1 :].split("\\")
+        if len(parts) == 1:
+            adapters.setdefault(parts[0], {"classic": {}, "le": {}})
+            for name, (kind, val) in reg[sec].items():
+                if re.fullmatch(r"[0-9a-f]{12}", name) and kind == "hex":
+                    adapters[parts[0]]["classic"][name] = val
+        elif len(parts) == 2:
+            adapters.setdefault(parts[0], {"classic": {}, "le": {}})
+            adapters[parts[0]]["le"][parts[1]] = reg[sec]
+
+    if not adapters:
+        die("no Bluetooth keys found in the Windows registry (nothing paired there?)")
+    for adp_hex, keys in adapters.items():
+        devs = sorted(set(keys["classic"]) | set(keys["le"]))
+        print(f"windows: adapter {mac_from_hex(adp_hex)} has {', '.join(mac_from_hex(d) for d in devs) or 'no devices'}")
+    print(f"linux:   adapters {', '.join(sorted(d for d in os.listdir(BT_ROOT) if ':' in d))}")
+
+    want = {m.upper() for m in args.macs}
+    changed = 0
+    for adp_hex, keys in adapters.items():
+        adp = mac_from_hex(adp_hex)
+        adp_dir = os.path.join(BT_ROOT, adp)
+        if not os.path.isdir(adp_dir):
+            print(f"skip adapter {adp}: not present in {BT_ROOT}")
+            continue
+        devs = set(keys["classic"]) | set(keys["le"])
+        for dev_hex in sorted(devs):
+            dev = mac_from_hex(dev_hex)
+            if want and dev not in want:
+                continue
+            info = os.path.join(adp_dir, dev, "info")
+            if not os.path.exists(info):
+                print(f"skip {dev}: not paired in Linux (pair it here once, then rerun)")
+                continue
+            with open(info) as f:
+                lines = f.read().splitlines()
+            orig = list(lines)
+            notes = []
+            lk = keys["classic"].get(dev_hex)
+            if lk:
+                lines = set_ini_value(lines, "LinkKey", "Key", lk.hex().upper())
+                notes.append("LinkKey")
+            le = keys["le"].get(dev_hex, {})
+            if "LTK" in le:
+                ltk = le["LTK"][1].hex().upper()
+                lines = set_ini_value(lines, "LongTermKey", "Key", ltk)
+                if "ERand" in le:
+                    rand = int.from_bytes(le["ERand"][1], "little")
+                    lines = set_ini_value(lines, "LongTermKey", "Rand", str(rand))
+                if "EDIV" in le:
+                    lines = set_ini_value(lines, "LongTermKey", "EDiv", str(le["EDIV"][1]))
+                if "KeyLength" in le:
+                    lines = set_ini_value(lines, "LongTermKey", "EncSize", str(le["KeyLength"][1]))
+                # Secure Connections uses one LTK for both roles.
+                for sec in ("PeripheralLongTermKey", "SlaveLongTermKey"):
+                    if f"[{sec}]" in lines:
+                        lines = set_ini_value(lines, sec, "Key", ltk)
+                        if "ERand" in le:
+                            lines = set_ini_value(lines, sec, "Rand", str(rand))
+                        if "EDIV" in le:
+                            lines = set_ini_value(lines, sec, "EDiv", str(le["EDIV"][1]))
+                notes.append("LongTermKey")
+            if "IRK" in le:
+                lines = set_ini_value(lines, "IdentityResolvingKey", "Key", le["IRK"][1].hex().upper())
+                notes.append("IdentityResolvingKey")
+            if lines == orig:
+                print(f"ok   {dev}: already in sync")
+                continue
+            print(f"sync {dev}: {', '.join(notes)}")
+            if args.dry_run:
+                for a, b in zip(orig, lines):
+                    if a != b:
+                        print(f"     - {a}\n     + {b}")
+                for b in lines[len(orig):]:
+                    print(f"     + {b}")
+                continue
+            shutil.copyfile(info, f"{info}.bak-{time.strftime('%Y%m%d-%H%M%S')}")
+            with open(info, "w") as f:
+                f.write("\n".join(lines) + "\n")
+            changed += 1
+
+    if changed and not args.dry_run:
+        subprocess.run(["systemctl", "restart", "bluetooth"], check=False)
+        print(f"updated {changed} device(s), bluetooth restarted")
+    elif args.dry_run:
+        print("dry run, nothing written")
+
+
+if __name__ == "__main__":
+    main()
