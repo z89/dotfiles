@@ -133,6 +133,10 @@
 !.local/share/nautilus-python/extensions/
 .local/share/nautilus-python/extensions/*
 !.local/share/nautilus-python/extensions/open-in-terminal.py
+!.local/share/nautilus-python/extensions/nautilus-media-columns.py
+!.local/share/nautilus/
+.local/share/nautilus/*
+!.local/share/nautilus/scripts/
 !.config/notion-flags.conf
 !/.local/bin/screenshot
 !/.config/satty/

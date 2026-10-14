@@ -46,6 +46,7 @@ go
 greetd
 grim
 grub
+gst-libav
 gtksourceview3
 gvfs
 handbrake

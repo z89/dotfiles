@@ -1,0 +1,22 @@
+#!/bin/sh
+# nautilus script. right click inside a folder, Scripts, Play by duration.
+# builds by-duration.m3u (longest first) and opens it in vlc, detached.
+
+if [ -n "$NAUTILUS_SCRIPT_CURRENT_URI" ]; then
+    dir=$(printf '%s' "$NAUTILUS_SCRIPT_CURRENT_URI" | python3 -c 'import sys,urllib.parse;print(urllib.parse.unquote(sys.stdin.read().strip()).removeprefix("file://"))')
+else
+    dir=$PWD
+fi
+cd "$dir" || exit 1
+
+notify-send -a "Play by duration" "Building playlist" "$dir" 2>/dev/null
+
+find . -maxdepth 1 -type f ! -name '*.m3u' -print0 \
+  | xargs -0 -P"$(nproc)" -I{} sh -c \
+      'd=$(ffprobe -v error -show_entries format=duration -of csv=p=0 "$1" 2>/dev/null) && [ -n "$d" ] && printf "%s\t%s\n" "$d" "${1#./}"' _ {} \
+  | sort -rn | cut -f2- > by-duration.m3u
+
+n=$(wc -l < by-duration.m3u)
+notify-send -a "Play by duration" "Playing $n files" "longest first" 2>/dev/null
+
+QT_QPA_PLATFORM=xcb setsid -f vlc --loop --no-auto-preparse --no-video-title-show by-duration.m3u >/dev/null 2>&1
