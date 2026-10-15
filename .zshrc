@@ -94,16 +94,14 @@ export PATH="$PATH:$HOME/.local/bin"
 # Keep hand-built user commands after the system paths.
 export PATH="$PATH:$HOME/bin"
 
-# agent-run takes the command directly. It cannot take `command`, which is a shell
-# builtin with no binary on this system — agent-run ends in `exec env … "$@"`, and
-# env only resolves real executables.
+# claude, codex and opencode start inside the warden box through `agent`. `agent`
+# refuses outside a registered checkout and prints the registration command. The hint
+# below is printed only when agent exits 64, its "refused" status.
 #
-# No recursion: agent-run is a separate process, zsh functions are not exported to
-# it, so `claude` inside it resolves to /usr/bin/claude.
-#
-# To run one as YOURSELF, bypass the function:  command claude
-claude() { agent-run claude "$@"; }
-codex()  { agent-run codex  "$@"; }
+# To run one unconfined as YOURSELF, bypass the function:  command claude
+claude() { agent claude -- "$@"; local rc=$?; [ $rc -eq 64 ] && print -u2 "unconfined: run command claude"; return $rc; }
+codex() { agent codex -- "$@"; local rc=$?; [ $rc -eq 64 ] && print -u2 "unconfined: run command codex"; return $rc; }
+opencode() { agent opencode -- "$@"; local rc=$?; [ $rc -eq 64 ] && print -u2 "unconfined: run command opencode"; return $rc; }
 
 
 # >>> Codex installer >>>
