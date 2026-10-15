@@ -89,7 +89,6 @@
 !.local/bin/
 .local/bin/*
 !.local/bin/claude-prune-settings
-!.local/bin/mint-agent-token
 !.local/bin/dms-shell-patch
 !.local/bin/dms-run-patched
 !.local/bin/dms-plugins
@@ -99,8 +98,7 @@
 !.local/bin/desktop-gate
 !.local/bin/boot-cover
 !.local/bin/ssh-confirm-askpass
-!.local/bin/agent-run
-!.local/bin/agent-publish-z89
+!.local/bin/ssh-passphrase-askpass
 !.local/bin/browser-open
 !.local/bin/theme-switch
 !.local/bin/avatar-make

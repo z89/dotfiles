@@ -1,0 +1,13 @@
+#!/usr/bin/env bash
+# ssh-passphrase-askpass: the window ssh opens when it needs a key passphrase and has no
+# terminal to ask on (a git push from an editor or an agent session). The key then stays in
+# the agent for the AddKeysToAgent window from ~/.ssh/config, so the question comes once per
+# hour, not once per push. Terminals keep their usual prompt because SSH_ASKPASS_REQUIRE is
+# not set. A yes/no confirmation from ssh-agent itself goes through ssh-confirm-askpass.
+if [ -z "${WAYLAND_DISPLAY:-}" ]; then
+    for s in "${XDG_RUNTIME_DIR:-/run/user/$(id -u)}"/wayland-[0-9]*; do
+        case "$s" in *.lock) continue ;; esac
+        [ -S "$s" ] && { export WAYLAND_DISPLAY="${s##*/}"; break; }
+    done
+fi
+exec zenity --password --title="SSH key" --text="${1:-Enter the key passphrase}" 2>/dev/null
