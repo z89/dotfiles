@@ -1,38 +1,42 @@
 ---
 name: commit
-description: Commit bot work locally and publish a z89 signed squash after operator confirmation
+description: Commit work inside the warden box and publish it as z89 through the publisher daemon
 argument-hint: [optional description or scope hint]
 allowed-tools: Bash, Read, Glob, Grep
 ---
 
 # commit
 
-Read `AGENT_GH` before staging. Sessions launched with `agent-run` have `AGENT_GH=1` and use the selected GitHub App identity for local commits. Other sessions use the operator identity.
+Check `WARDEN_PROFILE` before staging. A session started with `agent` has `WARDEN_PROFILE` and `WARDEN_PUBLISH_SOCK` set, runs as its own Unix user, and holds no write credential. A session without them is an operator session.
 
-## local bot commits
+## local commits inside the box
 
-- Keep the bot name, email, signing key and Git configuration selected by `agent-run`. Do not restore `SSH_AUTH_SOCK`, use `ssh-add`, or sign a bot commit with the operator key.
+- Keep the draft identity and git configuration that the box rendered. Do not look for an ssh agent, a signing key or a token, and do not sign a draft commit by hand.
 - Inspect status and both staged and unstaged diffs. Stage only the requested paths by name. Keep unrelated work out of the commit.
 - Run repository checks and inspect the entire staged diff for secrets before committing. Never bypass hooks.
-- Commit with plain `git commit`. The bot profile signs the local commit automatically.
-- Do not use plain `git push` for bot commits. Do not add a `Co-authored-by` or `Requested-by` trailer.
-- Keep App tokens limited to the repository in `agent-run`. Do not widen token scope without the operator's approval or seek a plaintext App key when the token broker refuses a request.
+- Commit with plain `git commit`. Drafts are unsigned and are rewritten by the publisher.
+- Do not use plain `git push`. Do not add a `Co-authored-by`, `Requested-by`, `Generated-with` or `Signed-off-by` trailer.
+- Name the branch `<type>/<slug>` with type one of feat, fix, chore, docs, refactor, test, perf. Do not use an `agent/` prefix.
 
-## publishing bot work as z89
+## publishing as z89
 
-When the user asks to publish bot work, prepare a final message from all unpublished bot commits and run `~/.local/bin/agent-publish-z89` from the repository. This one helper is the default for both bot profiles, Claude and Codex. Pass the complete final message as its single argument.
+When the user asks to publish, prepare the final message from all unpublished draft commits and run this from inside the box, in the workspace clone.
 
-The helper opens live desktop dialogs. Follow the action-scoped desktop guard in `AGENTS.md` immediately before launching it. A general request to publish does not waive that guard.
+```bash
+python3 -m warden.client.publish
+```
 
-The helper fetches the remote branch, verifies the outgoing bot commits, and builds one squash commit in a temporary worktree. It checks that the final tree matches the tested bot tree. The operator sees the diff and chooses Sign or Cancel. Git then asks through the existing SSH agent confirmation dialog before signing with z89's key. A separate dialog asks before the exact signed commit is pushed with z89's GitHub CLI login. Canceling or failing the push retains the signed commit under `refs/agent-publish/pending/`.
+Pass the repository, branch and final message as that command's help describes. The client sends the drafts and only the changed paths to the publisher over `WARDEN_PUBLISH_SOCK`, then polls the job state.
 
-The final remote commit has z89 as its only author and committer. This produces one z89 commit contribution when GitHub's normal contribution criteria are met. Bot commits remain local and do not appear in remote history. The publisher refuses merges, divergent history, an unexpected author, a different tree, and a missing or unverified signature. It never force pushes.
+- No pull request is opened. The publisher validates the delta, scans for secrets, signs as z89 with the auto key and pushes the branch over SSH. The job ends at `pushed`.
+- The default branch is pushed the same way when the policy marks it automatic, and the push is refused when the remote head moved since the drafts were based. Rebase the drafts and submit again. A branch the policy marks gated stays in `awaiting_operator` until the operator reviews it from an operator session. Report the job id and stop. Do not retry or resubmit while it waits. A protected branch is refused.
+- Report the final state and remote sha from the job status. A job in `rejected`, `expired` or `failed` is reported with its reason and is not retried blindly.
 
-The old `gh-signed-commit.sh` publishes bot-authored GitHub signed commits. Use it only when the user explicitly asks for bot authorship instead of z89 authorship. Do not use it for this workflow.
+The final remote commit has z89 as its only author, committer and signer. Draft commits stay in the clone and never reach the remote.
 
 ## operator commits
 
-When `AGENT_GH` is unset or `0`, verify the operator key in `/run/user/1000/ssh-agent.socket` before committing. Use the configured SSH signing key and `git commit -S`. Push only after the user approves that specific push.
+In an operator session, verify the operator key in `/run/user/1000/ssh-agent.socket` before committing. Use the configured SSH signing key and `git commit -S`. Push only after the user approves that specific push.
 
 ## commit message
 
