@@ -1,9 +1,9 @@
 {
+  "cleanupPeriodDays": 36500,
   "attribution": {
     "commit": "",
     "pr": ""
   },
-  "cleanupPeriodDays": 36500,
   "permissions": {
     "allow": [
       "Bash(export SSH_AUTH_SOCK=\"/run/user/1000/ssh-agent.socket\")",
@@ -464,7 +464,7 @@
       "/home/archie"
     ]
   },
-  "model": "fable",
+  "model": "opus",
   "disableClaudeAiConnectors": true,
   "skillOverrides": {
     "design": "user-invocable-only",
