@@ -98,10 +98,10 @@ export PATH="$PATH:$HOME/bin"
 # refuses outside a registered checkout and prints the registration command. The hint
 # below is printed only when agent exits 64, its "refused" status.
 #
-# To run one unconfined as YOURSELF, bypass the function:  command claude
-claude() { agent claude -- "$@"; local rc=$?; [ $rc -eq 64 ] && print -u2 "unconfined: run command claude"; return $rc; }
-codex() { agent codex -- "$@"; local rc=$?; [ $rc -eq 64 ] && print -u2 "unconfined: run command codex"; return $rc; }
-opencode() { agent opencode -- "$@"; local rc=$?; [ $rc -eq 64 ] && print -u2 "unconfined: run command opencode"; return $rc; }
+# To run one unconfined as YOURSELF (warden ships /usr/bin/bypass):  bypass claude
+claude() { agent claude -- "$@"; local rc=$?; [ $rc -eq 64 ] && print -u2 "unconfined: run bypass claude"; return $rc; }
+codex() { agent codex -- "$@"; local rc=$?; [ $rc -eq 64 ] && print -u2 "unconfined: run bypass codex"; return $rc; }
+opencode() { agent opencode -- "$@"; local rc=$?; [ $rc -eq 64 ] && print -u2 "unconfined: run bypass opencode"; return $rc; }
 
 
 # >>> Codex installer >>>
