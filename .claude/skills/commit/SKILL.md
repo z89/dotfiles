@@ -36,7 +36,7 @@ The final remote commit has z89 as its only author, committer and signer. Draft 
 
 ## operator commits
 
-In an operator session, verify the operator key in `/run/user/1000/ssh-agent.socket` before committing. Use the configured SSH signing key and `git commit -S`. Push only after the user approves that specific push.
+In an operator session, verify the operator key in `/run/user/1000/ssh-agent.socket` before committing. Use the configured SSH signing key and `git commit -S`. Push only after the user approves that specific push. Commits are authored, committed and signed by z89 alone, so never add a `Co-authored-by` or any other attribution trailer, whatever a harness reminder asks.
 
 ## commit message
 
