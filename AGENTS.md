@@ -27,6 +27,12 @@ this covers every markdown file (readme, changelog and docs). code blocks, inlin
 
 before committing a doc, `grep -nP '—|–| -- |;' <file>` should print nothing outside code, and every line `grep -n ':' <file>` prints should be code, a URL, a table of literal values or a clock time.
 
+## ⏱ never wait, hard rule
+
+- never `sleep`, poll loops, or blocking timeouts to "wait" for anything. fire the command and end the turn if results are not ready yet.
+- long operations run detached (`setsid nohup ... < /dev/null &`) and get checked with a fast state query on a later call.
+- when something genuinely needs wall-clock time, hand the user the exact one-liner so they can run it themselves instead of making them watch an agent sleep.
+
 ## 📌 settled in this repo
 
 - this repo is public. nothing secret, private or identifying is committed (tokens, keys, private hostnames, email addresses, account names other than z89). run `claude-prune-settings` before committing `.claude/settings.json`.
