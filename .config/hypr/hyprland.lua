@@ -97,13 +97,15 @@ hl.on("hyprland.start", function()
     -- desktop-ready (DMS up and settled), then waits the per-app delay, so they
     -- never contend for GPU and disk with the bar's own startup. The gate is
     -- fail-open (75s after the user manager started). Night light is ember (DMS night mode).
-    hl.exec_cmd("~/.local/bin/desktop-gate ready 0; mullvad-vpn")
-    hl.exec_cmd("~/.local/bin/desktop-gate ready 2; spotify --remote-debugging-port=9332")
+    -- DMS ignores urgency from these tagged windows until their first focus.
+    -- Keep the tag on the launch so manually launched windows still alert normally.
+    hl.exec_cmd("~/.local/bin/desktop-gate ready 0; mullvad-vpn", { tag = "+startup-quiet" })
+    hl.exec_cmd("~/.local/bin/desktop-gate ready 2; spotify --remote-debugging-port=9332", { tag = "+startup-quiet" })
     -- notion-app, claude-desktop and chatgpt are launched on demand, not at boot.
 
     -- Anything ~/.config/hypr/local.lua wants started with the session, behind the same gate.
     for _, cmd in ipairs(local_conf.autostart or {}) do
-        hl.exec_cmd("~/.local/bin/desktop-gate ready 1; " .. cmd)
+        hl.exec_cmd("~/.local/bin/desktop-gate ready 1; " .. cmd, { tag = "+startup-quiet" })
     end
 end)
 

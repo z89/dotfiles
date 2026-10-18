@@ -30,6 +30,7 @@
 !.config/DankMaterialShell/settings.json
 !.config/DankMaterialShell/patches/
 !.config/DankMaterialShell/tooling/
+!.config/DankMaterialShell/tooling/tests/test_startup_urgency.py
 !.config/quickshell/
 .config/quickshell/*
 !.config/quickshell/boot-cover/

@@ -1624,6 +1624,42 @@ apply_keybind_menu() {
 # property the template uses are unchanged, so the same guarded copy applies to both trees.
 [[ "$KEYBIND_MENU" == 1 ]] && apply_keybind_menu
 
+# Quiet autostart urgency until the window has actually been visited. The launch
+# tag and compositor focus history survive shell restarts without a timer or a
+# blanket exception for an application or workspace.
+python3 - "$tmp" <<'PYSTARTUP'
+from pathlib import Path
+import sys
+
+target = Path(sys.argv[1]) / "Services/CompositorService.qml"
+text = target.read_text()
+anchor = "    function workspaceUrgent(record, loadedUrgent) {\n        switch (compositor) {\n"
+replacement = '''    function startupWorkspaceUrgent(record) {
+        if (record?.urgent !== true)
+            return false;
+        const windows = Array.from(Hyprland.toplevels?.values || []).filter(window =>
+            window.workspace?.id === record.id && window.urgent === true);
+        // Preserve alerts when the compositor has not supplied window details yet.
+        if (windows.length === 0)
+            return true;
+        return windows.some(window => {
+            const data = window.lastIpcObject;
+            const tags = data?.tags || [];
+            const startup = tags.includes("startup-quiet") || tags.includes("startup-quiet*");
+            return !startup || data?.focusHistoryID !== -1;
+        });
+    }
+
+    function workspaceUrgent(record, loadedUrgent) {
+        switch (compositor) {
+        case "hyprland":
+            return startupWorkspaceUrgent(record);
+'''
+if text.count(anchor) != 1:
+    raise SystemExit("dms-shell-patch: startup urgency anchor changed; refusing partial build")
+target.write_text(text.replace(anchor, replacement))
+PYSTARTUP
+
 echo "$BIN_SHA" > "$tmp/.dms-binary-sha256"
 # Swap by rename, never delete in place: a running Quickshell watches the loaded
 # files and hot-reloads on change; deleting them under it aborts the shell (seen
