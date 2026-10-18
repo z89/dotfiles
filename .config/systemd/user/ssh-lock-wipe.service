@@ -1,0 +1,11 @@
+[Unit]
+Description=Empty the SSH agent on lock and suspend
+After=ssh-agent.service
+
+[Service]
+Type=simple
+ExecStart=%h/.local/bin/ssh-lock-wipe
+Restart=on-failure
+
+[Install]
+WantedBy=default.target

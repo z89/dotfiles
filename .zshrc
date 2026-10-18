@@ -9,9 +9,10 @@ export ROCM_PATH=/opt/rocm
 
 # SSH agent (systemd-managed)
 export SSH_AUTH_SOCK="/run/user/1000/ssh-agent.socket"
-# the signing key stays in the agent for one hour per passphrase entry (ssh-add -t), no
-# confirm click per use. agents run in the warden box and cannot reach this agent socket.
-ssh-add -l 2>/dev/null | grep -qF "$(ssh-keygen -lf ~/.ssh/id_ed25519.pub | cut -d' ' -f2)" || ssh-add -t 3600 ~/.ssh/id_ed25519 &>/dev/null
+# the key loads on first use, not when a shell starts. ssh (Match exec in ~/.ssh/config) and
+# git signing (ssh-sign) call ssh-unlock, which asks in a window and keeps the key for four
+# hours, or until the session locks (ssh-lock-wipe). agents run in the warden box and
+# cannot reach this agent socket.
 
 # pnpm
 export PNPM_HOME="/home/archie/.local/share/pnpm"

@@ -72,6 +72,7 @@
 .config/systemd/user/*
 !.config/systemd/user/cliphist.service
 !.config/systemd/user/ssh-agent.service
+!.config/systemd/user/ssh-lock-wipe.service
 !.config/systemd/user/theme-apply.service
 !.config/systemd/user/theme-apply.path
 !.config/systemd/user/theme-sync.service
@@ -101,6 +102,9 @@
 !.local/bin/boot-cover
 !.local/bin/ssh-confirm-askpass
 !.local/bin/ssh-passphrase-askpass
+!.local/bin/ssh-lock-wipe
+!.local/bin/ssh-sign
+!.local/bin/ssh-unlock
 !.local/bin/browser-open
 !.local/bin/theme-switch
 !.local/bin/avatar-make

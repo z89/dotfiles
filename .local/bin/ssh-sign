@@ -1,0 +1,5 @@
+#!/usr/bin/env bash
+# ssh-sign: git's gpg.ssh.program. git signs with the key held in the agent (ssh-keygen -U),
+# so a signing call unlocks it first. verifying (git log --show-signature) never asks.
+[ "$1 $2" = "-Y sign" ] && "$HOME/.local/bin/ssh-unlock"
+exec ssh-keygen "$@"

@@ -18,6 +18,7 @@
 	format = ssh
 [gpg "ssh"]
 	allowedSignersFile = /home/archie/.ssh/allowed_signers
+	program = /home/archie/.local/bin/ssh-sign
 [credential "https://github.com"]
 	helper = 
 	helper = !/usr/bin/gh auth git-credential

@@ -5,7 +5,8 @@ Documentation=man:ssh-agent(1)
 [Service]
 Type=simple
 Environment=SSH_ASKPASS=%h/.local/bin/ssh-confirm-askpass SSH_ASKPASS_REQUIRE=force
-ExecStart=/usr/bin/ssh-agent -D -a /run/user/1000/ssh-agent.socket
+# -t caps every key at four hours, whatever added it
+ExecStart=/usr/bin/ssh-agent -D -t 4h -a /run/user/1000/ssh-agent.socket
 Restart=on-failure
 
 [Install]

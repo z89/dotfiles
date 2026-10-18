@@ -1,0 +1,12 @@
+#!/usr/bin/env bash
+# ssh-lock-wipe: empties the ssh agent when the session locks or the machine is about to
+# suspend, so a loaded key never outlives the person at the keyboard. it follows logind on
+# the system bus. PrepareForSleep covers suspend, and the session Lock signal and LockedHint
+# cover a lock from DMS or `loginctl lock-session`. ssh-unlock asks again on the next use.
+export SSH_AUTH_SOCK="${SSH_AUTH_SOCK:-${XDG_RUNTIME_DIR:-/run/user/$(id -u)}/ssh-agent.socket}"
+gdbus monitor --system --dest org.freedesktop.login1 | while read -r line; do
+    case "$line" in
+        *"PrepareForSleep (true,)"* | *"Session.Lock ()"* | *"'LockedHint': <true>"*)
+            ssh-add -D >/dev/null 2>&1 ;;
+    esac
+done

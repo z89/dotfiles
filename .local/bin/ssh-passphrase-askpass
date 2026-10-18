@@ -1,9 +1,8 @@
 #!/usr/bin/env bash
-# ssh-passphrase-askpass: the window ssh opens when it needs a key passphrase and has no
-# terminal to ask on (a git push from an editor or an agent session). The key then stays in
-# the agent for the AddKeysToAgent window from ~/.ssh/config, so the question comes once per
-# hour, not once per push. Terminals keep their usual prompt because SSH_ASKPASS_REQUIRE is
-# not set. A yes/no confirmation from ssh-agent itself goes through ssh-confirm-askpass.
+# ssh-passphrase-askpass: the window that asks for a key passphrase. ssh-unlock forces it
+# for ssh-add, and ssh falls back to it when it has no terminal. terminals keep their usual
+# prompt for anything else because SSH_ASKPASS_REQUIRE is not set globally. a yes/no
+# confirmation from ssh-agent itself goes through ssh-confirm-askpass.
 if [ -z "${WAYLAND_DISPLAY:-}" ]; then
     for s in "${XDG_RUNTIME_DIR:-/run/user/$(id -u)}"/wayland-[0-9]*; do
         case "$s" in *.lock) continue ;; esac

@@ -10,6 +10,7 @@ p11-kit-server.socket
 pipewire-pulse.socket
 pipewire.socket
 ssh-agent.service
+ssh-lock-wipe.service
 theme-apply.path
 theme-sync-dconf.path
 theme-sync.timer
