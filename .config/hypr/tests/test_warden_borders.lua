@@ -16,8 +16,11 @@ hl.config({
 })
 ]]
 
+local NEUTRAL = "gradient 0xFFE7E8D3 0deg gradient 0xFF636655 0deg"
+
 local function world()
-    local w = { windows = {}, calls = {}, handlers = {}, logs = {}, file = COLOURS }
+    local w = { windows = {}, calls = {}, handlers = {}, logs = {}, file = COLOURS,
+                neutral = { "gradient 0xFFE7E8D3 0deg", "gradient 0xFF636655 0deg" } }
     w.be = {
         read = function() return w.file end,
         windows = function()
@@ -28,6 +31,14 @@ local function world()
         end,
         set = function(addr, active, inactive)
             w.calls[#w.calls + 1] = addr .. " " .. tostring(active) .. " " .. tostring(inactive)
+        end,
+        neutral = function() return w.neutral[1], w.neutral[2] end,
+        tag = function(addr, tag)
+            local win = w.windows[addr]
+            if win and tag:sub(1, 1) == "+" then
+                win.tags = win.tags or {}
+                win.tags[#win.tags + 1] = tag:sub(2)
+            end
         end,
         on = function(ev, cb)
             w.handlers[ev] = cb
@@ -55,6 +66,14 @@ check("accent", M.accent(COLOURS), "b2d400")
 check("no accent", M.accent("nothing here"), nil)
 check("no file", M.accent(nil), nil)
 
+-- the live general gradient becomes a set_prop value led by the placeholder word
+check("one colour", M.colour({ colors = { "0xFFE7E8D3" }, angle = 0 }), "gradient 0xFFE7E8D3 0deg")
+check("gradient", M.colour({ colors = { "0xFF000000", "0xFFFFFFFF" }, angle = 45.0 }), "gradient 0xFF000000 0xFFFFFFFF 45deg")
+check("no colours", M.colour({ colors = {} }), nil)
+check("no gradient", M.colour(nil), nil)
+check("tag string", M.tagged({ tags = "warden-border" }), true)
+check("no tags", M.tagged({}), false)
+
 do -- setup paints windows that are already open, and only boxed ones
     local w = world()
     w.add("0xa", "\u{1F512} z89 \u{00B7} Claude Code")
@@ -76,9 +95,39 @@ do -- a title change marks and unmarks a window
     check("marked", w.calls[1], "0xc rgb(b2d400) rgba(b2d40099)")
     win.title = "~/Documents"
     w.handlers["window.title"](win)
-    check("cleared after the session", w.calls[2], "0xc nil nil")
+    check("neutral after the session", w.calls[2], "0xc " .. NEUTRAL)
     w.handlers["window.title"](win)
-    check("cleared once", #w.calls, 2)
+    check("restored once", #w.calls, 2)
+    check("tagged once", #win.tags, 1)
+end
+
+do -- a window whose session ended follows the theme, also after a reload forgot it
+    local w = world()
+    local win = w.add("0x11", "\u{1F512} z89")
+    M.setup(w.be)
+    win.title = "zsh"
+    w.handlers["window.title"](win)
+    M.setup(w.be) -- a reload: the new instance only has the tag to go by
+    w.neutral = { "gradient 0xFF111111 0deg", "gradient 0xFF222222 0deg" }
+    _G.warden_borders.refresh()
+    check("follows the theme", w.calls[#w.calls], "0x11 gradient 0xFF111111 0deg gradient 0xFF222222 0deg")
+    w.add("0x12", "zsh")
+    local before = #w.calls
+    _G.warden_borders.refresh()
+    check("untagged left alone", #w.calls, before + 1)
+end
+
+do -- without the live colours the accent stays rather than clearing the border
+    local w = world()
+    local win = w.add("0x13", "\u{1F512} z89")
+    M.setup(w.be)
+    w.neutral = {}
+    win.title = "zsh"
+    w.handlers["window.title"](win)
+    check("no neutral, no set", #w.calls, 1)
+    w.neutral = { "a", "b" }
+    w.handlers["window.title"](win)
+    check("restored later", w.calls[2], "0x13 a b")
 end
 
 do -- a theme change repaints every boxed window with the new accent
@@ -123,10 +172,10 @@ do -- stop removes the handlers and gives the borders back, a second setup stops
     w.add("0x10", "\u{1F512} z89")
     M.setup(w.be)
     M.setup(w.be)
-    check("second setup clears the first", w.calls[2], "0x10 nil nil")
+    check("second setup clears the first", w.calls[2], "0x10 " .. NEUTRAL)
     check("and paints again", w.calls[3], "0x10 rgb(b2d400) rgba(b2d40099)")
     _G.warden_borders.stop()
-    check("stop clears", w.calls[4], "0x10 nil nil")
+    check("stop clears", w.calls[4], "0x10 " .. NEUTRAL)
     check("handlers gone", w.handlers["window.title"], nil)
     check("global gone", _G.warden_borders, nil)
 end
