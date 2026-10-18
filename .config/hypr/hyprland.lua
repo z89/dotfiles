@@ -444,6 +444,7 @@ hl.bind(mainMod .. " + SHIFT + C",      hl.dsp.exec_cmd("gnome-calculator"),    
 hl.bind(mainMod .. " + SHIFT + Q",      hl.dsp.window.close(),                              { desc = "Close Window" })
 hl.bind(mainMod .. " + SHIFT + E",      hl.dsp.exec_cmd(fileManager),                       { desc = "File Manager" })
 hl.bind(mainMod .. " + SHIFT + space",  hl.dsp.window.float({ action = "toggle" }),         { desc = "Toggle Floating" })
+hl.bind(mainMod .. " + F",              hl.dsp.window.fullscreen(),                         { desc = "Toggle Fullscreen" })
 hl.bind(mainMod .. " + space",          hl.dsp.exec_cmd("dms ipc call notifications clearAll"), { desc = "Dismiss Notifications" })
 hl.bind(mainMod .. " + D",              hl.dsp.exec_cmd("dms ipc call spotlight toggle"),   { desc = "App Launcher" })
 hl.bind(mainMod .. " + SHIFT + R",      hl.dsp.exec_cmd('hyprctl reload && notify-send -a Hyprland -u low -t 2000 "Hyprland" "Config reloaded"'), { desc = "Reload Config" })
