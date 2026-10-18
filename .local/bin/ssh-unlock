@@ -2,7 +2,7 @@
 # ssh-unlock: puts a key in the agent for four hours, asking for the passphrase in a window.
 # ssh-sign runs it for the signing key (id_ed25519) before git signs a commit. ~/.ssh/config
 # runs it with the GitHub key through `Match host github.com exec "ssh-unlock <key>"`, scoped
-# to that host so background ssh (llm-tunnel) never opens a window. the question only comes
+# to that host so background ssh to other hosts never opens a window. the question only comes
 # when the key is about to be used. a key already in the agent returns straight away. the
 # lock keeps two callers from opening two windows, and the one that waited finds the key
 # loaded once the first window closes.
