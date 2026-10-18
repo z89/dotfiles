@@ -18,7 +18,7 @@ the config is `~/.config/kitty/kitty.conf`.
 | font | `JetBrainsMono Nerd Font` |
 | font size | `10.4` |
 | window padding | `14 18` |
-| remote control | `allow_remote_control yes` |
+| remote control | `allow_remote_control socket-only` (the TTY is refused, so a program in a window cannot drive kitty) |
 | remote socket | `unix:/tmp/kitty-{kitty_pid}` |
 | close confirmation | `confirm_os_window_close 0` |
 | colour include | `matugen-theme.conf`, then `dank-tabs.conf` |
