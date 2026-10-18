@@ -4,6 +4,7 @@
   "showSeconds": true,
   "fontFamily": "Inter",
   "monoFontFamily": "JetBrainsMono Nerd Font",
+  "lockScreenShowProfileImage": false,
   "dockConfigs": [
     {
       "id": "dock",
@@ -206,6 +207,9 @@
   "terminalsAlwaysDark": true,
   "matugenTemplateKitty": false,
   "notificationPopupShadowEnabled": false,
+  "lockScreenShowSystemIcons": false,
+  "lockScreenShowTime": false,
+  "lockScreenShowDate": false,
   "notificationShowTimeoutBar": true,
   "notificationRules": [
     {
