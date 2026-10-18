@@ -84,7 +84,7 @@ PNPM_HOME=~/.local/share/pnpm
 - **Name:** z89
 - **Email:** z89@matix.com.au
 - **GitHub account:** z89
-- **SSH key:** `~/.ssh/id_ed25519` loaded via ssh-agent at `/run/user/1000/ssh-agent.socket`
+- **SSH keys:** `~/.ssh/id_ed25519` signs commits, `~/.ssh/z89_desktop_ed25519` authenticates to GitHub. Both load on first use into ssh-agent at `/run/user/1000/ssh-agent.socket` through `ssh-unlock` (a passphrase window), stay 4h, and are cleared on lock or suspend by `ssh-lock-wipe.service`
 - Before any git operation, follow `~/.claude/skills/commit/SKILL.md`
 
 ## Debugging Approach (for this system)
