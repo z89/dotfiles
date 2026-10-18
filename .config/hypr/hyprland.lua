@@ -83,6 +83,48 @@ local startup_quiet_apps = {
     spotify = "spotify",
 }
 local startup_quiet_pending = {}
+-- DMS reloads the config while the launch gate is still closed. Keep this
+-- compositor's pending apps outside the Lua state so that reload cannot lose them.
+local startup_quiet_state_file
+do
+    local runtime = os.getenv("XDG_RUNTIME_DIR")
+    local instance = os.getenv("HYPRLAND_INSTANCE_SIGNATURE")
+    if runtime and instance then
+        startup_quiet_state_file = runtime .. "/dms-startup-quiet-" .. instance
+        local f = io.open(startup_quiet_state_file, "r")
+        if f then
+            for app in f:lines() do
+                if app == "mullvad" or app == "spotify" then startup_quiet_pending[app] = true end
+            end
+            f:close()
+        end
+    end
+end
+local function persist_startup_quiet()
+    if not startup_quiet_state_file then
+        print("startup-quiet: missing compositor runtime identity")
+        return
+    end
+    local f, err = io.open(startup_quiet_state_file, "w")
+    if not f then
+        print("startup-quiet: cannot save pending apps: " .. tostring(err))
+        return
+    end
+    local apps = {}
+    for _, app in ipairs({ "mullvad", "spotify" }) do
+        if startup_quiet_pending[app] then apps[#apps + 1] = app end
+    end
+    local written, write_err = f:write(table.concat(apps, "\n"))
+    local closed, close_err = f:close()
+    if not written or not closed then
+        print("startup-quiet: cannot save pending apps: " .. tostring(write_err or close_err))
+    end
+end
+local function finish_startup_quiet(app)
+    if not startup_quiet_pending[app] then return end
+    startup_quiet_pending[app] = nil
+    persist_startup_quiet()
+end
 local function startup_app(window)
     return window and startup_quiet_apps[(window.class or ""):lower()]
 end
@@ -91,7 +133,7 @@ local function quiet_startup_window(window)
     local app = startup_app(window)
     if not app or not startup_quiet_pending[app] then return end
     if window.active then
-        startup_quiet_pending[app] = nil
+        finish_startup_quiet(app)
         return
     end
     hl.dispatch(hl.dsp.window.tag({ tag = "+startup-quiet", window = "address:" .. window.address }))
@@ -102,7 +144,7 @@ hl.on("window.class", quiet_startup_window)
 hl.on("window.active", function(window)
     local app = startup_app(window)
     if not app then return end
-    startup_quiet_pending[app] = nil
+    finish_startup_quiet(app)
     -- First focus ends the startup exception for this app, including any other
     -- windows it mapped during startup. Static tags survive a shell restart.
     for _, tagged in ipairs(hl.get_windows({ tag = "startup-quiet" })) do
@@ -114,6 +156,7 @@ end)
 
 hl.on("hyprland.start", function()
     startup_quiet_pending = { mullvad = true, spotify = true }
+    persist_startup_quiet()
     hl.exec_cmd("systemctl --user start hyprland-session.target")
     -- Boot staging: shows the plymouth-matching cover (boot-cover), waits for DMS,
     -- then writes $XDG_RUNTIME_DIR/desktop-ready and, 20s later, desktop-heavy.

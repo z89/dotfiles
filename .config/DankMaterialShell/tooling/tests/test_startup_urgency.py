@@ -87,7 +87,7 @@ assert.equal(startupWorkspaceUrgent(null), false, 'missing workspace');
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertIn('case "hyprland":\n            return startupWorkspaceUrgent(record);', text)
 
-    def test_actual_hyprland_handlers_tag_on_open_and_end_exception_on_focus(self):
+    def test_hyprland_handlers_preserve_pending_apps_across_startup_reloads(self):
         config = HYPR_CONFIG.read_text().split("---- AUTOSTART ----", 1)[1]
         config = config.split("---- ENVIRONMENT VARIABLES ----", 1)[0]
         script = '''
@@ -127,6 +127,10 @@ local early = opened("0x0", "spotify", false)
 assert(not early.tags["startup-quiet"], "loading config must not arm startup")
 handlers["hyprland.start"]()
 assert(#launches == 6, "existing startup commands must remain registered")
+'''
+        # DMS regenerates layout and reloads the config before the gate releases
+        # these apps. Re-evaluate the real config with new locals and callbacks.
+        script += config + config + '''
 -- Windows arrive after the gate and any Electron process handoff, without a
 -- launch rule or timer. The open event must provide the static tag itself.
 local mullvad = opened("0x1", "mullvad-vpn", false)
@@ -145,6 +149,8 @@ assert(mullvad.tags["startup-quiet"] and spotify.tags["startup-quiet"])
 handlers["window.active"](mullvad)
 assert(not mullvad.tags["startup-quiet"], "first focus must restore Mullvad alerts")
 assert(spotify.tags["startup-quiet"], "Spotify is independent")
+'''
+        script += config + '''
 local manual_mullvad = opened("0x5", "Mullvad VPN", false)
 assert(not manual_mullvad.tags["startup-quiet"], "later launches must alert normally")
 handlers["window.active"](spotify)
@@ -168,7 +174,24 @@ assert(not opened("0xa", "spotify", false).tags["startup-quiet"])
 handlers["window.active"](remaining)
 assert(not remaining.tags["startup-quiet"], "focus after config reload clears the old marker")
 '''
-        result = subprocess.run(["lua5.5", "-"], input=script, text=True, capture_output=True)
+        script += '''
+handlers["hyprland.start"]()
+local getenv = os.getenv
+os.getenv = function(name)
+    if name == "HYPRLAND_INSTANCE_SIGNATURE" then return "new-compositor" end
+    return getenv(name)
+end
+'''
+        script += config + '''
+assert(not opened("0xb", "spotify", false).tags["startup-quiet"], "a new compositor cannot inherit pending state")
+handlers["hyprland.start"]()
+assert(opened("0xc", "spotify", false).tags["startup-quiet"], "a new startup arms its own exception")
+'''
+        result = subprocess.run(
+            ["lua5.5", "-"], input=script, text=True, capture_output=True,
+            env={**os.environ, "XDG_RUNTIME_DIR": str(self.root),
+                 "HYPRLAND_INSTANCE_SIGNATURE": "startup-test"},
+        )
         self.assertEqual(result.returncode, 0, result.stderr)
 
     def test_changed_anchor_fails_without_changing_source(self):
