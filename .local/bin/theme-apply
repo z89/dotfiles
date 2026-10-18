@@ -625,6 +625,8 @@ def step_fade():
                                  for w, h in border_changes.items()})
         if err:
             log("fade", "border push rejected: %s" % err)
+    # boxed agent windows (warden-borders.lua) take the new accent on the same tick
+    _hypr_request("eval if warden_borders then warden_borders.refresh() end")
     socks = _kitty_sockets() if new else {}
     old = {pid: _kitty_live_colors(sk) for pid, sk in socks.items()}
     keys = {pid: sorted(k for k in new if k in o and o[k] != new[k]) for pid, o in old.items()}

@@ -608,6 +608,29 @@ do
     end
 end
 
+-- Windows running a boxed agent session (warden marks their titles with a lock) take the
+-- wallpaper accent as their border. ~/.config/hypr/warden-borders.lua does the matching and
+-- theme-apply refreshes it on a theme change. Loaded and guarded like carry.lua: a broken
+-- module leaves every border stock, and a change to it needs a config reload.
+do
+    local f = io.open(os.getenv("HOME") .. "/.config/hypr/warden-borders.lua", "r")
+    if f then
+        local chunk, err = load(f:read("*a"), "@warden-borders.lua")
+        f:close()
+        if not chunk then
+            print("hyprland.lua: warden-borders.lua failed to compile: " .. tostring(err))
+        else
+            local ok, m = pcall(chunk)
+            if ok and type(m) == "table" and type(m.setup) == "function" then
+                local sok, serr = pcall(m.setup)
+                if not sok then print("hyprland.lua: warden-borders.setup failed: " .. tostring(serr)) end
+            else
+                print("hyprland.lua: warden-borders.lua failed to load: " .. tostring(m))
+            end
+        end
+    end
+end
+
 -- Move/resize windows with mainMod + LMB/RMB and dragging
 -- Hand off before the native mouse bind records its drag origin. Keep the native
 -- dispatchers intact so Hyprland still handles release and ends the drag normally.
