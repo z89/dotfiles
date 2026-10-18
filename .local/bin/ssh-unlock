@@ -1,11 +1,13 @@
 #!/usr/bin/env bash
-# ssh-unlock: puts the key in the agent for four hours, asking for the passphrase in a window.
-# ~/.ssh/config runs it through `Match exec` before a connection and ssh-sign runs it before
-# git signs a commit, so the question only comes when the key is about to be used. a key
-# already in the agent returns straight away. the lock keeps two callers from opening two
-# windows, and the one that waited finds the key loaded once the first window closes.
+# ssh-unlock: puts a key in the agent for four hours, asking for the passphrase in a window.
+# ssh-sign runs it for the signing key (id_ed25519) before git signs a commit. ~/.ssh/config
+# runs it with the GitHub key through `Match host github.com exec "ssh-unlock <key>"`, scoped
+# to that host so background ssh (llm-tunnel) never opens a window. the question only comes
+# when the key is about to be used. a key already in the agent returns straight away. the
+# lock keeps two callers from opening two windows, and the one that waited finds the key
+# loaded once the first window closes.
 # ssh-lock-wipe empties the agent sooner when the session locks or suspends.
-key="$HOME/.ssh/id_ed25519"
+key="${1:-$HOME/.ssh/id_ed25519}"
 life=4h
 run="${XDG_RUNTIME_DIR:-/run/user/$(id -u)}"
 export SSH_AUTH_SOCK="${SSH_AUTH_SOCK:-$run/ssh-agent.socket}"

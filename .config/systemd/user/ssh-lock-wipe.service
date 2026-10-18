@@ -5,7 +5,9 @@ After=ssh-agent.service
 [Service]
 Type=simple
 ExecStart=%h/.local/bin/ssh-lock-wipe
-Restart=on-failure
+# the pipeline exits 0 when gdbus stops, so restart on any exit
+Restart=always
+RestartSec=5
 
 [Install]
 WantedBy=default.target

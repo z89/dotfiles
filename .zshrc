@@ -9,9 +9,9 @@ export ROCM_PATH=/opt/rocm
 
 # SSH agent (systemd-managed)
 export SSH_AUTH_SOCK="/run/user/1000/ssh-agent.socket"
-# the key loads on first use, not when a shell starts. ssh (Match exec in ~/.ssh/config) and
-# git signing (ssh-sign) call ssh-unlock, which asks in a window and keeps the key for four
-# hours, or until the session locks (ssh-lock-wipe). agents run in the warden box and
+# keys load on first use, not when a shell starts. git signing (ssh-sign) and GitHub pushes
+# (Match exec in ~/.ssh/config) call ssh-unlock, which asks in a window and keeps the key for
+# four hours, or until the session locks (ssh-lock-wipe). agents run in the warden box and
 # cannot reach this agent socket.
 
 # pnpm
