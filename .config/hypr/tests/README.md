@@ -21,7 +21,7 @@ bash .config/hypr/tests/run.sh
 | 🎞 `test_carry_render.lua` | the rendered workspace slide and when the pin is released |
 | 🎯 `test_clock_landing.lua` | adaptive timing and landing corrections |
 | 🔔 `test_notify_focus.lua` | pairing a DankMaterialShell notification click with kitty's urgent window |
-| 🔒 `test_warden_borders.lua` | the accent border on boxed agent windows, theme refresh and unload |
+| 🔒 `test_warden_borders.lua` | the accent border on boxed agent windows, the neutral border once a session ends, theme refresh and unload |
 
 `test_carry_render.lua` models the workspace slide separately from the carry physics, matching the `gentle` spring in `hyprland.lua` and how hyprland 0.56.2 renders pinned windows. window coordinates alone cannot show the snap that comes from releasing the pin before the slide settles.
 
