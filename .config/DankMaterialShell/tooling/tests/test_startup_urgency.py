@@ -9,6 +9,7 @@ import unittest
 
 TOOLING = Path(__file__).resolve().parents[1]
 PATCHER = TOOLING / "bin/dms-shell-patch"
+HYPR_CONFIG = TOOLING.parents[1] / "hypr/hyprland.lua"
 PATCH = PATCHER.read_text().split("<<'PYSTARTUP'\n", 1)[1].split("\nPYSTARTUP\n", 1)[0]
 SOURCE = os.environ.get("DMS_THEME_TEST_SOURCE")
 
@@ -51,17 +52,18 @@ const Hyprland = {toplevels: {values: []}};
 const workspace = {id: 9, urgent: true};
 const startup = {
     workspace: {id: 9}, urgent: true,
-    lastIpcObject: {tags: ['startup-quiet*'], focusHistoryID: -1}
+    lastIpcObject: {tags: ['startup-quiet'], focusHistoryID: 4}
 };
 Hyprland.toplevels.values = [startup];
 assert.equal(startupWorkspaceUrgent(workspace), false, 'quiet before first focus');
-startup.lastIpcObject.tags = ['startup-quiet'];
-assert.equal(startupWorkspaceUrgent(workspace), false, 'static launch tag');
 startup.lastIpcObject.focusHistoryID = 0;
+assert.equal(startupWorkspaceUrgent(workspace), false, 'history index cannot prove first focus');
+delete startup.lastIpcObject.focusHistoryID;
+assert.equal(startupWorkspaceUrgent(workspace), false, 'static tag needs no history index');
+startup.lastIpcObject.tags = [];
 assert.equal(startupWorkspaceUrgent(workspace), true, 'alerts resume after focus');
-startup.lastIpcObject.focusHistoryID = 7;
 assert.equal(startupWorkspaceUrgent(workspace), true, 'alerts remain after leaving');
-startup.lastIpcObject.focusHistoryID = -1;
+startup.lastIpcObject.tags = ['startup-quiet'];
 const manual = {
     workspace: {id: 9}, urgent: true,
     lastIpcObject: {tags: [], focusHistoryID: -1}
@@ -74,8 +76,6 @@ manual.urgent = true;
 manual.workspace.id = 10;
 assert.equal(startupWorkspaceUrgent(workspace), false, 'other workspace is independent');
 assert.equal(startupWorkspaceUrgent({id: 10, urgent: true}), true, 'manual launch alerts');
-delete startup.lastIpcObject.focusHistoryID;
-assert.equal(startupWorkspaceUrgent(workspace), true, 'unknown focus history preserves alert');
 delete startup.lastIpcObject;
 assert.equal(startupWorkspaceUrgent(workspace), true, 'unknown metadata preserves alert');
 Hyprland.toplevels.values = [];
@@ -86,6 +86,90 @@ assert.equal(startupWorkspaceUrgent(null), false, 'missing workspace');
         result = subprocess.run(["node", "-"], input=script, text=True, capture_output=True)
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertIn('case "hyprland":\n            return startupWorkspaceUrgent(record);', text)
+
+    def test_actual_hyprland_handlers_tag_on_open_and_end_exception_on_focus(self):
+        config = HYPR_CONFIG.read_text().split("---- AUTOSTART ----", 1)[1]
+        config = config.split("---- ENVIRONMENT VARIABLES ----", 1)[0]
+        script = '''
+local handlers, windows, launches = {}, {}, {}
+local local_conf = { autostart = { "local-command" } }
+local hl = {
+    on = function(event, fn) handlers[event] = fn end,
+    exec_cmd = function(command, rules)
+        assert(rules == nil, "startup must not depend on exec rule inheritance")
+        launches[#launches + 1] = command
+    end,
+    dsp = { window = { tag = function(spec) return spec end } },
+    dispatch = function(spec)
+        local address = assert(spec.window:match("^address:(.+)$"))
+        local window = assert(windows[address])
+        local name = spec.tag:sub(2)
+        window.tags[name] = spec.tag:sub(1, 1) == "+" or nil
+    end,
+    get_windows = function(filter)
+        assert(filter.tag == "startup-quiet")
+        local found = {}
+        for _, window in pairs(windows) do
+            if window.tags[filter.tag] then found[#found + 1] = window end
+        end
+        return found
+    end,
+}
+'''
+        script += config + '''
+local function opened(address, class, active)
+    local window = { address = address, class = class, active = active, tags = {} }
+    windows[address] = window
+    handlers["window.open"](window)
+    return window
+end
+local early = opened("0x0", "spotify", false)
+assert(not early.tags["startup-quiet"], "loading config must not arm startup")
+handlers["hyprland.start"]()
+assert(#launches == 6, "existing startup commands must remain registered")
+-- Windows arrive after the gate and any Electron process handoff, without a
+-- launch rule or timer. The open event must provide the static tag itself.
+local mullvad = opened("0x1", "mullvad-vpn", false)
+local spotify = opened("0x2", "Spotify", false)
+local spotify_extra = opened("0x3", "", false)
+assert(not spotify_extra.tags["startup-quiet"])
+spotify_extra.class = "spotify"
+handlers["window.class"](spotify_extra)
+local other = opened("0x4", "kitty", false)
+assert(mullvad.tags["startup-quiet"])
+assert(spotify.tags["startup-quiet"])
+assert(spotify_extra.tags["startup-quiet"])
+assert(not other.tags["startup-quiet"])
+handlers["window.active"](other)
+assert(mullvad.tags["startup-quiet"] and spotify.tags["startup-quiet"])
+handlers["window.active"](mullvad)
+assert(not mullvad.tags["startup-quiet"], "first focus must restore Mullvad alerts")
+assert(spotify.tags["startup-quiet"], "Spotify is independent")
+local manual_mullvad = opened("0x5", "Mullvad VPN", false)
+assert(not manual_mullvad.tags["startup-quiet"], "later launches must alert normally")
+handlers["window.active"](spotify)
+assert(not spotify.tags["startup-quiet"] and not spotify_extra.tags["startup-quiet"])
+handlers["window.active"](spotify)
+assert(not spotify.tags["startup-quiet"], "leaving and returning must not rearm suppression")
+local manual_spotify = opened("0x6", "spotify", false)
+assert(not manual_spotify.tags["startup-quiet"])
+handlers["window.active"](nil)
+-- A window that already received focus before its open callback needs no exception.
+handlers["hyprland.start"]()
+local active = opened("0x7", "spotify", true)
+assert(not active.tags["startup-quiet"])
+assert(not opened("0x8", "spotify", false).tags["startup-quiet"])
+-- A config reload must not rearm startup, but must still remove existing tags.
+local remaining = opened("0x9", "mullvad-vpn", false)
+assert(remaining.tags["startup-quiet"])
+'''
+        script += config + '''
+assert(not opened("0xa", "spotify", false).tags["startup-quiet"])
+handlers["window.active"](remaining)
+assert(not remaining.tags["startup-quiet"], "focus after config reload clears the old marker")
+'''
+        result = subprocess.run(["lua5.5", "-"], input=script, text=True, capture_output=True)
+        self.assertEqual(result.returncode, 0, result.stderr)
 
     def test_changed_anchor_fails_without_changing_source(self):
         original = self.target.read_text().replace(

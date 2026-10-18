@@ -1624,9 +1624,9 @@ apply_keybind_menu() {
 # property the template uses are unchanged, so the same guarded copy applies to both trees.
 [[ "$KEYBIND_MENU" == 1 ]] && apply_keybind_menu
 
-# Quiet autostart urgency until the window has actually been visited. The launch
-# tag and compositor focus history survive shell restarts without a timer or a
-# blanket exception for an application or workspace.
+# Quiet autostart urgency until the window has actually been visited. The
+# static tag survives shell restarts and is removed by Hyprland on first focus.
+# focusHistoryID cannot detect first focus: it includes never-focused windows.
 python3 - "$tmp" <<'PYSTARTUP'
 from pathlib import Path
 import sys
@@ -1645,8 +1645,7 @@ replacement = '''    function startupWorkspaceUrgent(record) {
         return windows.some(window => {
             const data = window.lastIpcObject;
             const tags = data?.tags || [];
-            const startup = tags.includes("startup-quiet") || tags.includes("startup-quiet*");
-            return !startup || data?.focusHistoryID !== -1;
+            return !tags.includes("startup-quiet");
         });
     }
 

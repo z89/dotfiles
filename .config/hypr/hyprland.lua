@@ -74,7 +74,46 @@ local fileManager = "nautilus --new-window"
 ---- AUTOSTART ----
 -------------------
 
+-- These classes belong to the two apps launched below. Arm suppression only on
+-- compositor startup, then tag their mapped windows directly. Exec rules can be
+-- lost between the startup gate and Electron's eventual window process.
+local startup_quiet_apps = {
+    ["mullvad-vpn"] = "mullvad",
+    ["mullvad vpn"] = "mullvad",
+    spotify = "spotify",
+}
+local startup_quiet_pending = {}
+local function startup_app(window)
+    return window and startup_quiet_apps[(window.class or ""):lower()]
+end
+
+local function quiet_startup_window(window)
+    local app = startup_app(window)
+    if not app or not startup_quiet_pending[app] then return end
+    if window.active then
+        startup_quiet_pending[app] = nil
+        return
+    end
+    hl.dispatch(hl.dsp.window.tag({ tag = "+startup-quiet", window = "address:" .. window.address }))
+end
+hl.on("window.open", quiet_startup_window)
+hl.on("window.class", quiet_startup_window)
+
+hl.on("window.active", function(window)
+    local app = startup_app(window)
+    if not app then return end
+    startup_quiet_pending[app] = nil
+    -- First focus ends the startup exception for this app, including any other
+    -- windows it mapped during startup. Static tags survive a shell restart.
+    for _, tagged in ipairs(hl.get_windows({ tag = "startup-quiet" })) do
+        if startup_app(tagged) == app then
+            hl.dispatch(hl.dsp.window.tag({ tag = "-startup-quiet", window = "address:" .. tagged.address }))
+        end
+    end
+end)
+
 hl.on("hyprland.start", function()
+    startup_quiet_pending = { mullvad = true, spotify = true }
     hl.exec_cmd("systemctl --user start hyprland-session.target")
     -- Boot staging: shows the plymouth-matching cover (boot-cover), waits for DMS,
     -- then writes $XDG_RUNTIME_DIR/desktop-ready and, 20s later, desktop-heavy.
@@ -97,15 +136,14 @@ hl.on("hyprland.start", function()
     -- desktop-ready (DMS up and settled), then waits the per-app delay, so they
     -- never contend for GPU and disk with the bar's own startup. The gate is
     -- fail-open (75s after the user manager started). Night light is ember (DMS night mode).
-    -- DMS ignores urgency from these tagged windows until their first focus.
-    -- Keep the tag on the launch so manually launched windows still alert normally.
-    hl.exec_cmd("~/.local/bin/desktop-gate ready 0; mullvad-vpn", { tag = "+startup-quiet" })
-    hl.exec_cmd("~/.local/bin/desktop-gate ready 2; spotify --remote-debugging-port=9332", { tag = "+startup-quiet" })
+    -- The window event handlers above quiet these apps until first focus.
+    hl.exec_cmd("~/.local/bin/desktop-gate ready 0; mullvad-vpn")
+    hl.exec_cmd("~/.local/bin/desktop-gate ready 2; spotify --remote-debugging-port=9332")
     -- notion-app, claude-desktop and chatgpt are launched on demand, not at boot.
 
     -- Anything ~/.config/hypr/local.lua wants started with the session, behind the same gate.
     for _, cmd in ipairs(local_conf.autostart or {}) do
-        hl.exec_cmd("~/.local/bin/desktop-gate ready 1; " .. cmd, { tag = "+startup-quiet" })
+        hl.exec_cmd("~/.local/bin/desktop-gate ready 1; " .. cmd)
     end
 end)
 
