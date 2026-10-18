@@ -7,7 +7,8 @@
 # lock-screen crossfade, compact notification popup card, synced palette/wallpaper fades,
 # volume percent at the head of the control centre pill, bar date as "Thu 10th Sept",
 # a polished keybind cheatsheet, a bottom-centred Notepad slideout suitable for ultrawide displays,
-# and notification clicks that bring the sending kitty window forward (with ~/.config/hypr/notify-focus.lua).
+# notification clicks that bring the sending kitty window forward (with ~/.config/hypr/notify-focus.lua),
+# and no on-screen keyboard button and wider padding in the lock screen password field.
 # Re-run the explicit bundle build after dms upgrades; startup selects prepared files.
 set -euo pipefail
 tooling_bin=$(dirname -- "$(readlink -f -- "${BASH_SOURCE[0]}")")
@@ -98,8 +99,8 @@ fi
 # control-centre layout and the brightness id fix apply here, then the theme sync
 # block (ported: its anchors are unchanged in 77e6031). The launcher size, volume
 # percent, ordinal date, bottom Notepad, notification click and keybind blocks are
-# ported too. The lock fade and the notification card were rewritten upstream and are
-# not ported; modern_off turns them off with a message so the stock files stay.
+# ported too, and the lock fade has its own modern port. The notification card was
+# rewritten upstream and is not ported; modern_off turns it off so the stock files stay.
 MODERN=0
 modern_off() { # VAR "block name": disable an unported block on a modern tree, loudly
     [[ $MODERN == 1 ]] || return 0
@@ -266,8 +267,8 @@ fi
 # Hyprland cannot animate session-lock surfaces, so this lives in the shell. The block
 # is skipped with a warning (launcher patches still apply) if upstream changed the files.
 LOCK_FADE=${LOCK_FADE:-1}             # 0 disables the block
-LOCK_FADE_IN=${LOCK_FADE_IN:-900}     # ms, desktop -> lock screen
-LOCK_FADE_OUT=${LOCK_FADE_OUT:-800}   # ms, lock screen -> desktop
+LOCK_FADE_IN=${LOCK_FADE_IN:-350}     # ms, desktop -> lock screen
+LOCK_FADE_OUT=${LOCK_FADE_OUT:-350}   # ms, lock screen -> desktop
 STOCK_FADE_WINDOW_SHA=34e02e2660ca6634610b35f6f28304a51c2cc7db170efc2761dfce688826701e
 
 lock_fade_files=(Modules/Lock/Lock.qml DMSShell.qml Services/IdleService.qml Modules/Lock/FadeToLockWindow.qml Modules/Lock/LockScreenContent.qml)
@@ -521,8 +522,330 @@ PanelWindow {
 }
 QML
 }
-modern_off LOCK_FADE "lock fade"
-[[ "$LOCK_FADE" == 1 ]] && apply_lock_fade
+# Modern DMS builds FadeToLockWindow on a shared FadeOverlayWindow (dim to black only)
+# and loads it only when fadeToLockEnabled is on. This port replaces that window with
+# one that also carries a copy of the lock screen: a manual lock crossfades into it,
+# and every unlock (manual, idle, suspend or loginctl) fades it back out, because the
+# copy is parked opaque beneath the session lock once the lock is secure. The idle
+# dim-to-black still follows fadeToLockEnabled. All edits are checked before any file
+# is written, so a changed upstream leaves every file stock.
+apply_lock_fade_modern() {
+    if ! LOCK_FADE_IN="$LOCK_FADE_IN" LOCK_FADE_OUT="$LOCK_FADE_OUT" python3 - "$tmp" <<'PY'
+import os, sys
+tmp = sys.argv[1]
+ms_in = int(os.environ["LOCK_FADE_IN"])
+ms_out = int(os.environ["LOCK_FADE_OUT"])
+files = {}
+def edit(rel, old, new):
+    if rel not in files:
+        files[rel] = open(os.path.join(tmp, rel)).read()
+    assert files[rel].count(old) == 1, f"{rel}: {old.strip().splitlines()[0]}"
+    files[rel] = files[rel].replace(old, new)
+
+edit("Services/IdleService.qml", "    signal dismissFadeToLock\n",
+     "    signal dismissFadeToLock\n    signal quickFadeToLockRequested\n")
+
+edit("Modules/Lock/Lock.qml",
+     "        function lock() {\n            root.lock();\n        }\n",
+     "        function lock() {\n"
+     "            // Crossfade into the lock screen instead of cutting to it (dms-shell-patch).\n"
+     "            if (!root.shouldLock && !root.pendingLock && !(SettingsData.customPowerActionLock?.length > 0)) {\n"
+     "                IdleService.quickFadeToLockRequested();\n"
+     "                quickLockFallback.restart();\n"
+     "            } else {\n"
+     "                root.lock();\n"
+     "            }\n"
+     "        }\n")
+edit("Modules/Lock/Lock.qml", "    IpcHandler {\n        target: \"lock\"\n",
+     "    // dms-shell-patch: engage the real lock even if no crossfade window completes.\n"
+     "    Timer {\n"
+     "        id: quickLockFallback\n"
+     f"        interval: {ms_in + 1500}\n"
+     "        onTriggered: {\n"
+     "            if (!root.shouldLock && !root.pendingLock)\n"
+     "                root.lock();\n"
+     "        }\n"
+     "    }\n\n"
+     "    IpcHandler {\n        target: \"lock\"\n")
+
+edit("DMSShell.qml",
+     "            readonly property FadeToLockWindow loadedWindow: item as FadeToLockWindow\n"
+     "            active: SettingsData.fadeToLockEnabled\n",
+     "            readonly property FadeToLockWindow loadedWindow: item as FadeToLockWindow\n"
+     "            active: true // dms-shell-patch: also carries the lock crossfade\n")
+edit("DMSShell.qml", "                function onCancelFadeToLock() {\n",
+     "                function onQuickFadeToLockRequested() {\n"
+     "                    if (fadeWindowLoader.loadedWindow) {\n"
+     f"                        fadeWindowLoader.loadedWindow.startFade({ms_in});\n"
+     "                    }\n"
+     "                }\n\n"
+     "                function onCancelFadeToLock() {\n")
+
+# demoLook: the copy runs LockScreenContent in demoMode, which shows placeholder dots,
+# a demo banner and no focus ring. demoLook makes it match the real, empty prompt.
+# The real prompt keeps its ring on even before the lock surface gets keyboard focus,
+# so the border does not drop to the thin outline for a few frames at the hand-over.
+c = "Modules/Lock/LockScreenContent.qml"
+edit(c, "    property bool demoMode: false\n",
+     "    property bool demoMode: false\n    property bool demoLook: false\n")
+edit(c, "readonly property bool focusRingShown: passwordField.activeFocus && Theme.focusRingWidth > 0\n",
+     "readonly property bool focusRingShown: (passwordField.activeFocus || root.demoLook || !root.demoMode) && Theme.focusRingWidth > 0\n")
+edit(c, "                            if (demoMode) {\n                                return \"\";\n                            }\n                            if (root.unlocking) {\n",
+     "                            if (demoMode) {\n                                return root.demoLook ? I18n.tr(\"Password\", \"lock screen password field placeholder\") + \"…\" : \"\";\n                            }\n                            if (root.unlocking) {\n")
+edit(c, "                                if (demoMode) {\n                                    return \"••••••••\";\n",
+     "                                if (demoMode) {\n                                    return root.demoLook ? \"\" : \"••••••••\";\n")
+edit(c, "opacity: (demoMode || root.passwordBuffer.length > 0) ? 1 : 0\n",
+     "opacity: ((demoMode && !root.demoLook) || root.passwordBuffer.length > 0) ? 1 : 0\n")
+edit(c, "            visible: demoMode\n", "            visible: demoMode && !root.demoLook\n")
+
+window = open(os.path.join(tmp, "Modules/Lock/FadeToLockWindow.qml")).read()
+assert "FadeOverlayWindow {" in window and "holdsAfterCompletion: true" in window, "FadeToLockWindow.qml"
+for rel, s in files.items():
+    open(os.path.join(tmp, rel), "w").write(s)
+open(os.path.join(tmp, "Modules/Lock/FadeToLockWindow.qml"), "w").write(r'''pragma ComponentBehavior: Bound
+
+import QtQuick
+import Quickshell
+import Quickshell.Wayland
+import qs.Common
+import qs.Services
+
+// dms-shell-patch: the stock idle dim-to-black, plus a copy of the lock screen that
+// crossfades in on a manual lock and fades out to the desktop on every unlock.
+PanelWindow {
+    id: root
+
+    property bool active: false
+    property bool _completed: false
+    // quick: the lock look is in use. It crossfades in over the desktop, then the
+    // real session lock takes over invisibly. It stays parked opaque beneath the
+    // lock so it is already on screen when the lock releases. Not cancellable.
+    property bool quick: false
+    property int quickMs: 0
+    property bool revealing: false
+
+    readonly property bool lookOnScreen: {
+        if (Quickshell.screens.length <= 1)
+            return true;
+        const screens = SettingsData.getFilteredScreens("lockScreen");
+        return screens.length === 0 || screens.includes(root.screen);
+    }
+
+    signal fadeCompleted
+    signal fadeCancelled
+
+    visible: active
+    color: "transparent"
+
+    WlrLayershell.namespace: "dms:fade-to-lock"
+    WlrLayershell.layer: WlrLayershell.Overlay
+    WlrLayershell.exclusiveZone: -1
+    WlrLayershell.keyboardFocus: active && !_completed ? WlrKeyboardFocus.Exclusive : WlrKeyboardFocus.None
+
+    anchors {
+        left: true
+        right: true
+        top: true
+        bottom: true
+    }
+
+    // Idle path: the stock dim-to-black over the grace period.
+    Rectangle {
+        id: fadeOverlay
+
+        anchors.fill: parent
+        color: "black"
+        opacity: 0
+        visible: !root.quick
+
+        onOpacityChanged: {
+            if (opacity >= 0.99 && root.active && !root.quick && !root._completed) {
+                root._completed = true;
+                root.fadeCompleted();
+            }
+        }
+    }
+
+    Item {
+        id: lockLook
+
+        anchors.fill: parent
+        opacity: 0
+        visible: root.quick && opacity > 0
+
+        onOpacityChanged: {
+            if (opacity >= 0.995 && root.active && root.quick && !root._completed && !root.revealing) {
+                root._completed = true;
+                root.fadeCompleted();
+            }
+        }
+
+        Rectangle {
+            anchors.fill: parent
+            color: SettingsData.lockScreenInactiveColor
+            visible: !root.lookOnScreen
+        }
+
+        Loader {
+            anchors.fill: parent
+            active: root.quick && root.active && root.lookOnScreen
+            sourceComponent: LockScreenContent {
+                demoMode: true
+                demoLook: true
+                screenName: root.screen?.name ?? ""
+            }
+        }
+    }
+
+    NumberAnimation {
+        id: idleFade
+
+        target: fadeOverlay
+        property: "opacity"
+        from: 0.0
+        to: 1.0
+        duration: SettingsData.fadeToLockGracePeriod * 1000
+        easing.type: Easing.OutCubic
+    }
+
+    NumberAnimation {
+        id: lookIn
+
+        target: lockLook
+        property: "opacity"
+        to: 1.0
+        duration: root.quickMs
+        easing.type: Easing.InOutSine
+    }
+
+    NumberAnimation {
+        id: lookOut
+
+        target: lockLook
+        property: "opacity"
+        to: 0.0
+        duration: @LOCK_FADE_OUT@
+        easing.type: Easing.InOutSine
+        onFinished: root.dismiss(true)
+    }
+
+    function startFade(quickMs) {
+        const isQuick = quickMs !== undefined && quickMs > 0;
+        if (!isQuick && !SettingsData.fadeToLockEnabled)
+            return;
+        idleFade.stop();
+        lookIn.stop();
+        lookOut.stop();
+        // A lock during the unlock fade picks up from the current opacity.
+        if (!revealing || !isQuick)
+            lockLook.opacity = 0.0;
+        revealing = false;
+        quick = isQuick;
+        root.quickMs = isQuick ? quickMs : 0;
+        _completed = false;
+        active = true;
+        fadeOverlay.opacity = 0.0;
+        if (isQuick)
+            lookIn.restart();
+        else
+            idleFade.restart();
+    }
+
+    function cancelFade() {
+        if (_completed || quick)
+            return;
+        dismiss(true);
+        fadeCancelled();
+    }
+
+    // Park the lock look opaque beneath a secure session lock, whichever path locked.
+    function park() {
+        idleFade.stop();
+        lookIn.stop();
+        lookOut.stop();
+        quick = true;
+        revealing = false;
+        _completed = true;
+        fadeOverlay.opacity = 0.0;
+        lockLook.opacity = 1.0;
+        active = true;
+    }
+
+    function reveal() {
+        revealing = true;
+        lookOut.restart();
+    }
+
+    function dismiss(force) {
+        if (!force && IdleService.isShellLocked) {
+            park();
+            return;
+        }
+        idleFade.stop();
+        lookIn.stop();
+        lookOut.stop();
+        fadeOverlay.opacity = 0.0;
+        lockLook.opacity = 0.0;
+        active = false;
+        _completed = false;
+        quick = false;
+        revealing = false;
+    }
+
+    Connections {
+        target: IdleService
+
+        function onIsShellLockedChanged() {
+            if (IdleService.isShellLocked || !root._completed)
+                return;
+            if (root.quick)
+                root.reveal();
+            else
+                root.dismiss(true);
+        }
+    }
+
+    MouseArea {
+        anchors.fill: parent
+        enabled: root.active && !root._completed && !root.quick
+        onClicked: root.cancelFade()
+        onPressed: root.cancelFade()
+    }
+
+    FocusScope {
+        id: keyScope
+
+        anchors.fill: parent
+        focus: root.active
+
+        Keys.onPressed: event => {
+            root.cancelFade();
+            event.accepted = true;
+        }
+    }
+
+    Component.onCompleted: {
+        if (active)
+            keyScope.forceActiveFocus();
+    }
+
+    onActiveChanged: {
+        if (active)
+            keyScope.forceActiveFocus();
+    }
+}
+'''.replace("@LOCK_FADE_OUT@", str(ms_out)))
+PY
+    then
+        echo "dms-shell-patch: lock fade skipped: modern lock files changed upstream" >&2
+        LOCK_FADE=0
+    fi
+}
+if [[ $MODERN == 1 ]]; then
+    [[ "$LOCK_FADE" == 1 ]] && apply_lock_fade_modern
+else
+    [[ "$LOCK_FADE" == 1 ]] && apply_lock_fade
+fi
 
 # ---- Notification popup: compact banner card (optional) ---------------------------
 # Rewrites the popup card body (Modules/Notifications/Popup/NotificationPopup.qml) into a
@@ -1203,6 +1526,67 @@ else
     [[ "$CLOCK_ORDINAL" == 1 ]] && apply_clock_ordinal
 fi
 
+# ---- Lock screen: no on-screen keyboard button (optional) ------------------------
+# The password field carries a keyboard button that opens the on-screen keyboard, and
+# DMS has no setting for it. This hides it; the neighbouring buttons already anchor
+# around it when it is not visible. Skipped with a warning if upstream changed it.
+: "${LOCK_NO_OSK:=1}"
+apply_lock_no_osk() {
+    if ! python3 - "$tmp" <<'PY6'
+import sys
+p = sys.argv[1] + "/Modules/Lock/LockScreenContent.qml"
+s = open(p).read()
+start = s.find("id: virtualKeyboardButton\n")
+assert start >= 0 and s.count("id: virtualKeyboardButton\n") == 1, "keyboard button id"
+old = "visible: !demoMode && !pam.passwd.active && !root.unlocking && !pam.u2fPending\n"
+at = s.find(old, start)
+assert at >= 0 and at - start < 1500, "keyboard button visible binding"
+s = s[:at] + "visible: false // dms-shell-patch: no on-screen keyboard button\n" + s[at + len(old):]
+open(p, "w").write(s)
+PY6
+    then
+        echo "dms-shell-patch: lock keyboard button kept: LockScreenContent.qml changed upstream" >&2
+        LOCK_NO_OSK=0
+        return
+    fi
+}
+[[ "$LOCK_NO_OSK" == 1 ]] && apply_lock_no_osk
+
+# ---- Lock screen: wider password field padding (optional) -------------------------
+# The padlock sits 12px from the left of the pill and the enter button 2px from the
+# right, which looks cramped against the fully rounded ends. This moves both (and the
+# unlock spinner and the hidden input's margins) LOCK_FIELD_PAD px further in.
+: "${LOCK_FIELD_PAD:=12}"
+apply_lock_field_pad() {
+    if ! LOCK_FIELD_PAD="$LOCK_FIELD_PAD" python3 - "$tmp" <<'PY7'
+import os, sys
+p = sys.argv[1] + "/Modules/Lock/LockScreenContent.qml"
+pad = int(os.environ["LOCK_FIELD_PAD"])
+s = open(p).read()
+def edit(old, new):
+    global s
+    assert s.count(old) == 1, old.strip().splitlines()[0]
+    s = s.replace(old, new)
+i = "                        "
+edit(f"{i}id: lockIconContainer\n{i}anchors.left: parent.left\n{i}anchors.leftMargin: Theme.spacingM\n",
+     f"{i}id: lockIconContainer\n{i}anchors.left: parent.left\n{i}anchors.leftMargin: Theme.spacingM + {pad} // dms-shell-patch: field padding\n")
+edit(f"{i}anchors.leftMargin: lockIconContainer.width + Theme.spacingM * 2\n",
+     f"{i}anchors.leftMargin: lockIconContainer.width + Theme.spacingM * 2 + {pad}\n")
+edit(f"{i}    let margin = Theme.spacingM;\n", f"{i}    let margin = Theme.spacingM + {pad};\n")
+edit(f"{i}anchors.right: enterButton.visible ? enterButton.left : parent.right\n{i}anchors.rightMargin: Theme.spacingM\n",
+     f"{i}anchors.right: enterButton.visible ? enterButton.left : parent.right\n{i}anchors.rightMargin: enterButton.visible ? Theme.spacingM : Theme.spacingM + {pad}\n")
+edit(f"{i}anchors.right: parent.right\n{i}anchors.rightMargin: Theme.spacingXXS\n{i}anchors.verticalCenter: parent.verticalCenter\n{i}iconName: \"keyboard_return\"\n",
+     f"{i}anchors.right: parent.right\n{i}anchors.rightMargin: Theme.spacingXXS + {pad} // dms-shell-patch: field padding\n{i}anchors.verticalCenter: parent.verticalCenter\n{i}iconName: \"keyboard_return\"\n")
+open(p, "w").write(s)
+PY7
+    then
+        echo "dms-shell-patch: lock field padding skipped: LockScreenContent.qml changed upstream" >&2
+        LOCK_FIELD_PAD=0
+        return
+    fi
+}
+[[ "$LOCK_FIELD_PAD" != 0 ]] && apply_lock_field_pad
+
 # ---- Bottom-centred Notepad slideout (optional) ----------------------------------
 # Stock DMS only supports left/right slideouts. Add a generic "bottom" orientation
 # to DankSlideout and expose it in the Notepad settings. The bottom panel is capped
@@ -1697,7 +2081,9 @@ clkmsg="ordinal bar date"; [[ "$CLOCK_ORDINAL" == 1 ]] || clkmsg="stock bar date
 notepadmsg="bottom Notepad ${NOTEPAD_BOTTOM_WIDTH}px wide"; [[ "$NOTEPAD_BOTTOM" == 1 ]] || notepadmsg="stock Notepad slideout"
 keybindmsg="polished keybind menu"; [[ "$KEYBIND_MENU" == 1 ]] || keybindmsg="stock keybind menu"
 nfmsg="notification click raises sender"; [[ "$NOTIFY_FOCUS" == 1 ]] || nfmsg="stock notification click"
+oskmsg="no lock keyboard button"; [[ "$LOCK_NO_OSK" == 1 ]] || oskmsg="stock lock keyboard button"
+padmsg="lock field padding +${LOCK_FIELD_PAD}px"; [[ "$LOCK_FIELD_PAD" != 0 ]] || padmsg="stock lock field padding"
 launchmsg="launcher ${FULL_WIDTH}x${FULL_HEIGHT}, spotlight bar ${SPOT_WIDTH}px wide"
 [[ $MODERN == 1 ]] && launchmsg="modern DMS: compact control centre, $launchmsg"
 [[ $MODERN == 1 && "$LAUNCHER_SIZE" != 1 ]] && launchmsg="modern DMS: compact control centre, stock launcher"
-echo "dms-shell-patch: built $OUT from $(cat "$OUT/VERSION") ($launchmsg, $lockmsg, $notifmsg, $syncmsg, $pctmsg, $clkmsg, $keybindmsg, $notepadmsg, $nfmsg)"
+echo "dms-shell-patch: built $OUT from $(cat "$OUT/VERSION") ($launchmsg, $lockmsg, $notifmsg, $syncmsg, $pctmsg, $clkmsg, $keybindmsg, $notepadmsg, $nfmsg, $oskmsg, $padmsg)"
