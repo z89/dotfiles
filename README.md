@@ -39,7 +39,7 @@ dconf load /org/gnome/desktop/interface/ < ~/.config/gsettings/interface.ini
 
 | path | what it holds |
 | --- | --- |
-| 🪟 `.config/hypr/` | `hyprland.lua`, `carry.lua`, notification focus and their tests |
+| 🪟 `.config/hypr/` | `hyprland.lua`, `carry.lua`, notification focus, warden borders and their tests |
 | 🧩 `.config/DankMaterialShell/` | DMS settings, shell patches and the `persona`, `cpumon`, `memmon` and `gpumon` plugins |
 | 🎨 `.config/matugen/` | colour templates filled from the wallpaper |
 | 🐱 `.config/kitty/` | terminal config, with the prompt in `.config/starship.template.toml` |
