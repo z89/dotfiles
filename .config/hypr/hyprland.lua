@@ -243,6 +243,32 @@ end)
 local bg_ok, bg_err = pcall(hl.config, { misc = { background_color = boot_background } })
 if not bg_ok then print("hyprland.lua: misc.background_color: " .. tostring(bg_err)) end
 
+-- Boot frame. plymouth-esp-sync installs the rendered unlock background with the name block
+-- composited in (~/.cache/plymouth-dank-theme.frame.png) as /usr/share/hypr/wall0.png, the
+-- texture Hyprland draws as its own background when the logo is enabled and
+-- force_default_wallpaper = 0. Hyprland's first frame then matches the frame plymouth retained
+-- on quit, so unlock to cover to desktop has no flat-colour gap. Enabled only on the first
+-- config load of a session (desktop-stage has not created desktop-ready yet, and turns the
+-- texture off again once the cover has faded) and only when wall0.png has the frame's PNG
+-- size: the stock 7680x4320 logo wallpaper is never shown or decoded.
+local boot_frame = false
+pcall(function()
+    local rt = os.getenv("XDG_RUNTIME_DIR")
+    if not rt then return end
+    local flag = io.open(rt .. "/desktop-ready", "r")
+    if flag then flag:close() return end
+    local function png_size(path)
+        local f = io.open(path, "rb")
+        if not f then return nil end
+        local head = f:read(24)
+        f:close()
+        if not head or #head < 24 or head:sub(1, 8) ~= "\137PNG\r\n\26\n" then return nil end
+        return head:sub(17, 24)
+    end
+    local want = png_size(os.getenv("HOME") .. "/.cache/plymouth-dank-theme.frame.png")
+    boot_frame = want ~= nil and png_size("/usr/share/hypr/wall0.png") == want
+end)
+
 hl.config({
     general = {
         -- Look A: flat tonal Material 3. 2px tonal borders; depth comes from tonal surfaces; no window shadows (user preference).
@@ -299,8 +325,8 @@ hl.config({
 
     misc = {
         vrr = 2,                         -- adaptive sync for fullscreen only (games/video)
-        force_default_wallpaper = 0,     -- DMS paints the whole output; skip decoding the stock wallpaper texture
-        disable_hyprland_logo   = true,  -- no logo texture in VRAM, no occluded draw behind the shell
+        force_default_wallpaper = 0,     -- wall0.png, which is the boot frame when boot_frame is true
+        disable_hyprland_logo   = not boot_frame,  -- boot frame only (above); otherwise no texture in VRAM, no occluded draw behind the shell
         disable_splash_rendering = true,
     },
 

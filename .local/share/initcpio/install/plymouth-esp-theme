@@ -1,0 +1,135 @@
+#!/bin/bash
+# plymouth-esp-theme — mkinitcpio install hook (source of truth: ~/.local/share/initcpio/install/plymouth-esp-theme,
+# installed to /etc/initcpio/install/ by luks-boot-setup).
+#
+# The Plymouth theme is baked into the initramfs, so the unlock screen would only follow the
+# wallpaper after a mkinitcpio rebuild. Instead the images are refreshed at boot from the EFI
+# system partition, which is unencrypted and readable before the LUKS prompt. plymouth-esp-sync
+# (a root path unit set up by luks-boot-setup) keeps /boot/plymouth/<theme>/ in step with the
+# wallpaper the desktop last selected, and this hook lays those PNGs over the baked-in ones
+# (a tmpfs mounted over the theme folder, since the initrd's /usr is read-only) right before
+# plymouthd starts. The ESP is mounted read-only for well under a second and
+# unmounted again, so nothing is left mounted for the real system to trip over.
+#
+# The ESP is identified by the filesystem UUID of whatever is mounted on /boot at build time
+# (there are two ESPs on this machine, the Windows one must never be picked). If the ESP, the
+# folder or the files are missing, the baked-in theme is used unchanged.
+#
+# Kernel command line tunable:
+#   rd.plymouth-esp=0    skip the refresh for one boot
+#
+# The image also drops plymouth's label plugin, so the unlock screen shows no text at all (no
+# passphrase prompt line, no security key or Windows messages).
+#
+# Requires: the plymouth hook listed before this one (theme in the image) and /boot mounted from
+# the ESP at build time.
+
+build() {
+    local uuid theme
+    uuid=$(findmnt -no UUID /boot 2>/dev/null)
+    if [[ -z $uuid ]]; then
+        warning "plymouth-esp-theme: /boot is not a mounted filesystem with a UUID; hook disabled in this image"
+        return 0
+    fi
+    theme=$(plymouth-set-default-theme 2>/dev/null)
+    if [[ -z $theme ]]; then
+        warning "plymouth-esp-theme: no default plymouth theme; hook disabled in this image"
+        return 0
+    fi
+
+    add_module vfat
+    add_module nls_iso8859-1
+
+    # No text on the unlock screen: without a label plugin two-step draws only the pill and the
+    # bullets, so the cryptsetup prompt line and every display-message go away. The plymouth hook
+    # runs first and adds the plugin, so it is taken back out here.
+    rm -f "$BUILDROOT/usr/lib/plymouth/label-freetype.so" "$BUILDROOT/usr/lib/plymouth/label-pango.so"
+
+    cat > "$BUILDROOT/usr/local/bin/plymouth-esp-theme" <<SCRIPT
+#!/bin/sh
+# plymouth-esp-theme — copy the current theme images from the ESP over the baked-in ones (initrd only).
+uuid=$uuid
+theme=$theme
+SCRIPT
+    cat >> "$BUILDROOT/usr/local/bin/plymouth-esp-theme" <<'SCRIPT'
+dst=/usr/share/plymouth/themes/$theme
+dev=/dev/disk/by-uuid/$uuid
+mnt=/run/plymouth-esp-theme
+if ! udevadm wait --timeout=4 "$dev" >/dev/null 2>&1; then
+    echo "plymouth-esp-theme: $dev did not appear, keeping the baked-in theme"
+    exit 0
+fi
+mkdir -p "$mnt"
+if ! mount -t vfat -o ro,nosuid,nodev,noexec,iocharset=ascii "$dev" "$mnt" 2>/dev/null; then
+    echo "plymouth-esp-theme: could not mount $dev, keeping the baked-in theme"
+    exit 0
+fi
+src=$mnt/plymouth/$theme
+# systemd keeps /usr read-only in the initrd, so the baked-in theme cannot be written in place.
+# Build the refreshed theme in /run (baked-in files, then the ESP images over them) and mount
+# a tmpfs holding it over the theme folder. The tmpfs goes away with the initrd at
+# switch-root; plymouthd has the images loaded by then.
+work=/run/plymouth-esp-theme.d
+rm -rf "$work"
+n=0 bad=0
+if [ -d "$src" ] && [ -d "$dst" ] && mkdir -p "$work" && cp -a "$dst"/. "$work"/; then
+    for f in "$src"/*.png; do
+        [ -f "$f" ] || continue
+        if cat "$f" > "$work/.new" && mv -f "$work/.new" "$work/${f##*/}"; then
+            n=$((n + 1))
+        else
+            bad=$((bad + 1))
+        fi
+    done
+    rm -f "$work/.new"
+fi
+umount "$mnt" 2>/dev/null || umount -l "$mnt" 2>/dev/null
+rmdir "$mnt" 2>/dev/null
+if [ "$n" -eq 0 ] || [ "$bad" -ne 0 ]; then
+    rm -rf "$work"
+    echo "plymouth-esp-theme: $n theme images read from the ESP, $bad failed, keeping the baked-in theme"
+    exit 0
+fi
+if ! mount -t tmpfs -o mode=755,size=64m plymouth-esp-theme "$dst"; then
+    rm -rf "$work"
+    echo "plymouth-esp-theme: could not mount a tmpfs over $dst, keeping the baked-in theme"
+    exit 0
+fi
+if ! cp -a "$work"/. "$dst"/; then
+    umount "$dst" 2>/dev/null || umount -l "$dst" 2>/dev/null
+    rm -rf "$work"
+    echo "plymouth-esp-theme: could not fill $dst, keeping the baked-in theme"
+    exit 0
+fi
+rm -rf "$work"
+mount -o remount,ro "$dst" 2>/dev/null
+echo "plymouth-esp-theme: $n theme images refreshed from the ESP"
+SCRIPT
+    chmod 755 "$BUILDROOT/usr/local/bin/plymouth-esp-theme"
+
+    cat > "$BUILDROOT/usr/lib/systemd/system/plymouth-esp-theme.service" <<'UNIT'
+[Unit]
+Description=Refresh the Plymouth theme images from the EFI system partition
+DefaultDependencies=no
+ConditionKernelCommandLine=!rd.plymouth-esp=0
+ConditionKernelCommandLine=!plymouth.enable=0
+After=systemd-udev-trigger.service systemd-udevd.service
+Before=plymouth-start.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/plymouth-esp-theme
+TimeoutStartSec=10
+UNIT
+    mkdir -p "$BUILDROOT/usr/lib/systemd/system/sysinit.target.wants"
+    ln -sf ../plymouth-esp-theme.service "$BUILDROOT/usr/lib/systemd/system/sysinit.target.wants/plymouth-esp-theme.service"
+}
+
+help() {
+    cat <<HELPEOF
+Before plymouthd starts, mount the EFI system partition read-only and lay the PNGs from
+/boot/plymouth/<theme>/ over the theme baked into the image (a tmpfs over the theme folder), so the unlock screen shows the
+wallpaper last selected on the desktop without rebuilding the initramfs. Disable for one boot
+with rd.plymouth-esp=0.
+HELPEOF
+}

@@ -8,7 +8,9 @@
 #      then settle about 1s (wallpaper, plugins, night light); hard cap 20s
 #      from start, the settle included
 #   4. create $XDG_RUNTIME_DIR/desktop-ready
-#   5. sleep 20s, create $XDG_RUNTIME_DIR/desktop-heavy
+#   5. sleep 20s, create $XDG_RUNTIME_DIR/desktop-heavy; when step 3 was healthy, also
+#      turn off Hyprland's background texture (the boot frame hyprland.lua enables for
+#      the first config load only), long after DMS, including a video wallpaper, painted
 # Every step is logged with elapsed milliseconds via `logger -t desktop-stage`.
 # A second instance exits at once. Whatever happens after step 1, the ready
 # flag is created by the cap or on exit, so the cover never outlives it.
@@ -149,5 +151,16 @@ if touch -- "$heavy" 2>/dev/null; then
     log "desktop-heavy created"
 else
     log "could not create $heavy"
+fi
+# Hyprland drew the boot frame (/usr/share/hypr/wall0.png, the plymouth background with the
+# name block) as its own background, so its first frame matched plymouth's last one. DMS
+# paints the whole output by now: stop drawing that texture behind it. Skipped on the cap
+# path, where the frame beats a flat colour.
+if [ "$healthy" = 1 ]; then
+    if [ "$(timeout 2 hyprctl eval 'hl.config({ misc = { disable_hyprland_logo = true } })' 2>/dev/null | head -1)" = ok ]; then
+        log "hyprland boot frame texture off"
+    else
+        log "could not turn the hyprland boot frame texture off"
+    fi
 fi
 exit 0

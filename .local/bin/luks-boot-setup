@@ -33,6 +33,23 @@
 #      If the token metadata says PIN or user verification is required, the slot is
 #      re-enrolled touch-only (needs the key plugged in; asks the passphrase and the key's
 #      PIN once) and the old FIDO2 slot is wiped.
+#   8. plymouth-esp-theme mkinitcpio hook + plymouth-esp-sync root path unit: the theme is
+#      baked into the initramfs, so on its own it would only follow the wallpaper after a
+#      rebuild. plymouth-dank-theme.path (user unit) re-renders the theme into
+#      ~/.cache/plymouth-dank-theme on every wallpaper or palette change, plymouth-esp-sync
+#      copies the PNGs to /boot/plymouth/dank-unlock (the ESP is unencrypted), and the hook
+#      copies them over the baked-in images right before plymouthd starts. The unlock screen
+#      therefore shows the wallpaper last selected on the desktop.
+#   9. Boot frame: plymouth's last frame is Hyprland's first frame. Every render also writes
+#      ~/.cache/plymouth-dank-theme.frame.png (the background with the name block composited
+#      at plymouth's watermark position), and plymouth-esp-sync installs it as
+#      /usr/share/hypr/wall0.png, the image Hyprland draws at startup before DMS is up, so the
+#      hand-off from the unlock screen to the desktop shows no black or flat-colour frame. A
+#      sync runs the ESP copy, then the installed theme, then the frame, and installs the frame
+#      only when the first two succeeded, so plymouth, boot-cover and Hyprland never show
+#      different renders. The zz-hypr-boot-frame pacman hook re-runs
+#      `plymouth-esp-sync --frame-only` (the frame step alone) whenever a hyprland install or
+#      upgrade puts the stock wall0.png back.
 #
 # Idempotent: every step checks before it writes. Header changes are preceded by a LUKS
 # header backup in /root/luks-header-backup/. Nothing here touches the running session.
@@ -143,6 +160,7 @@ fi
 # 2c. custom mkinitcpio hooks from dotfiles ------------------------------------------------
 #   fido2-smart     after sd-encrypt : FIDO2 only when the token is plugged in, else passphrase at once
 #   windows-escape  after plymouth   : hold Super on the unlock screen to reboot into Windows
+#   plymouth-esp-theme after plymouth: refresh the theme images from the ESP before plymouthd starts
 install_hook() {
   local name=$1 after=$2 src="$home/.local/share/initcpio/install/$1" dst="/etc/initcpio/install/$1"
   if [[ ! -f $src ]]; then note "$src missing; hook $name not installed"; return; fi
@@ -168,7 +186,7 @@ install_hook() {
 install_hook initrd-rescue sd-encrypt
 install_hook fido2-smart sd-encrypt
 install_hook windows-escape plymouth
-HINT="Hold the Windows key to boot Windows"
+install_hook plymouth-esp-theme plymouth
 
 # 3. Keyslot priority (and optional retune) ---------------------------------------------
 backup_header() {
@@ -283,7 +301,7 @@ gen="$home/.local/bin/plymouth-dank-theme"
 build="$home/.cache/plymouth-dank-theme"
 if [[ -x $gen ]]; then
   note "generating $THEME from the current DMS palette + wallpaper"
-  run sudo -H -u "$user" "$gen" --out "$build" --hint "$HINT"
+  run sudo -H -u "$user" "$gen" --out "$build"
   if (( ! dry )); then
     rm -rf "/usr/share/plymouth/themes/$THEME"
     cp -r "$build" "/usr/share/plymouth/themes/$THEME"
@@ -298,6 +316,257 @@ if [[ -x $gen ]]; then
 else
   note "$gen missing; leaving the plymouth theme alone"
 fi
+
+# 4b. Keep the ESP copy of the theme in step with the wallpaper ----------------------------
+# plymouth-dank-theme.path (user unit, enabled from the dotfiles) re-renders the theme into
+# $home/.cache/plymouth-dank-theme and touches $home/.cache/plymouth-dank-theme.stamp. This
+# root path unit copies the PNGs to /boot/plymouth/$THEME (read by the plymouth-esp-theme
+# hook at boot) and to the installed theme (used by the shutdown splash). Only regular PNG
+# files with allowlisted names are copied, never the .plymouth config, so the user-writable
+# render directory cannot change what plymouthd parses as configuration.
+sync_bin=/usr/local/bin/plymouth-esp-sync
+sync_unit=/etc/systemd/system/plymouth-esp-sync
+write_if_changed() {  # write_if_changed <path> <mode>  (content on stdin)
+  local dst=$1 mode=$2 tmp
+  tmp=$(mktemp)
+  cat > "$tmp"
+  if cmp -s "$tmp" "$dst"; then
+    rm -f "$tmp"; return 1
+  fi
+  note "write $dst"
+  if (( dry )); then rm -f "$tmp"; return 0; fi
+  install -m "$mode" -o root -g root "$tmp" "$dst"
+  rm -f "$tmp"
+  return 0
+}
+sync_changed=0
+# Every read from $home in the generated script runs as $user (uid and gid baked in here), so
+# a symlink or a FIFO the user plants in the render directory can never make root read or
+# block on a file the user could not read anyway.
+uid=$(id -u "$user" 2>/dev/null || true) gid=$(id -g "$user" 2>/dev/null || true)
+[[ $uid =~ ^[0-9]+$ && $gid =~ ^[0-9]+$ ]] || { echo "  STOP: cannot resolve the uid/gid of $user"; exit 1; }
+# the first half expands $home, $THEME, $uid and $gid, the second half is literal (quoted heredoc)
+{ cat <<SCRIPT; cat <<'SCRIPT'; } | write_if_changed "$sync_bin" 755 && sync_changed=1 || true
+#!/bin/bash
+# plymouth-esp-sync — copy the rendered $THEME PNGs to the ESP and the installed theme, then
+# install the boot frame as Hyprland's wall0.png. Generated by luks-boot-setup. Triggered by
+# plymouth-esp-sync.path when $home/.cache/plymouth-dank-theme.stamp is rewritten
+# (plymouth-dank-theme writes it last, after a complete render). --frame-only (run by the
+# zz-hypr-boot-frame pacman hook) installs just the frame.
+set -u
+src=$home/.cache/plymouth-dank-theme
+frame=$home/.cache/plymouth-dank-theme.frame.png
+stamp=$home/.cache/plymouth-dank-theme.stamp
+theme=$THEME
+# every read from the user's home runs as the user, never as root
+as_user=(timeout 10 setpriv --reuid=$uid --regid=$gid --clear-groups --)
+SCRIPT
+boot=/boot
+esp=$boot/plymouth/$theme
+inst=/usr/share/plymouth/themes/$theme
+hypr=/usr/share/hypr
+mib=$((1024 * 1024))
+file_max=$((8 * mib)) total_max=$((16 * mib)) frame_max=$((64 * mib)) esp_reserve=$((256 * mib))
+names='^(background|bullet|entry|lock|watermark|throbber-[0-9]{4})\.png$'
+log() { echo "plymouth-esp-sync: $*"; }
+frame_only=0
+case ${1:-} in
+  --frame-only) frame_only=1 ;;
+  '') ;;
+  *) log "unknown option: $1"; exit 2 ;;
+esac
+
+# read_user <file> <dest> <limit>: copy at most <limit> bytes of a file in the user's home,
+# read as the user. Symlinks and anything that is not a regular file are refused.
+read_user() {
+  [[ -f $1 && ! -L $1 ]] || return 1
+  "${as_user[@]}" head -c "$3" -- "$1" > "$2"
+}
+is_png() { [[ $(head -c 8 -- "$1" | od -An -tx1 | tr -d ' \n') == 89504e470d0a1a0a ]]; }
+# the stamp identity: up to 512 bytes of its content (read as the user) plus its mtime
+stamp_id() {
+  [[ -f $stamp && ! -L $stamp ]] || { echo none; return 0; }
+  printf '%s %s\n' "$(stat -c %y -- "$stamp" 2>/dev/null)" \
+    "$("${as_user[@]}" head -c 512 -- "$stamp" 2>/dev/null | od -An -tx1 | tr -d ' \n')"
+}
+
+# Boot frame: the last plymouth frame becomes the first Hyprland frame. It is only taken when
+# it is a regular file that starts with the PNG signature and is under 64M. The copy is
+# checked rather than the source, and the swap is a rename inside /usr/share/hypr, so
+# Hyprland never reads a half-written image. Every failure is logged and skipped.
+install_frame() {
+  local dst=$hypr/wall0.png tmp size
+  if [[ ! -d $hypr ]]; then
+    log "$hypr missing, boot frame not installed"; return 0
+  fi
+  if [[ -L $frame || ! -f $frame ]]; then
+    log "no boot frame at $frame, leaving $dst alone"; return 0
+  fi
+  tmp=$(mktemp "$hypr/.wall0.png.XXXXXX") || {
+    log "cannot create a temp file in $hypr, boot frame not installed"; return 0
+  }
+  if ! read_user "$frame" "$tmp" "$frame_max"; then
+    rm -f "$tmp"; log "cannot read $frame, boot frame not installed"; return 0
+  fi
+  size=$(stat -c %s -- "$tmp")
+  if ! is_png "$tmp"; then
+    rm -f "$tmp"; log "$frame is not a PNG, leaving $dst alone"; return 0
+  fi
+  if (( size >= frame_max )); then
+    rm -f "$tmp"; log "$frame is 64M or larger, leaving $dst alone"; return 0
+  fi
+  if cmp -s "$tmp" "$dst"; then
+    rm -f "$tmp"; log "boot frame already installed as $dst"; return 0
+  fi
+  if chown root:root "$tmp" && chmod 644 "$tmp" && mv -f "$tmp" "$dst"; then
+    log "boot frame -> $dst"
+  else
+    rm -f "$tmp"; log "could not install the boot frame as $dst"
+  fi
+  return 0
+}
+if (( frame_only )); then
+  install_frame; exit 0
+fi
+
+stage= tmp=
+cleanup() { [[ -n $stage ]] && rm -rf "$stage"; [[ -n $tmp ]] && rm -rf "$tmp"; stage= tmp=; }
+trap cleanup EXIT
+# abort <message>: drop the staged and half-written copies, never swap, fail the run
+abort() { cleanup; log "$*"; return 1; }
+
+# One full pass, in the order ESP, installed theme, boot frame. The images are first read
+# (as the user) into a private staging directory and checked there: allowlisted names only,
+# 8M per file, 16M in total, PNG signature on every copy. Only then is the ESP touched, and
+# only when it keeps 256M free afterwards (the initramfs images and their .bak copies live
+# there too). Any error aborts before the swap, so a boot sees the old set or the new set,
+# never a mix. The frame is installed only when the ESP and theme steps succeeded, so
+# plymouth, boot-cover and Hyprland always show the same render.
+sync_once() {
+  local f name n=0 skipped=0 size total=0 avail
+  if [[ -L $src || ! -f $src/background.png || -L $src/background.png ]]; then
+    log "no render in $src, nothing to copy"; return 0
+  fi
+  if ! mountpoint -q "$boot"; then
+    log "$boot is not mounted, not touching the ESP"; return 1
+  fi
+  stage=$(mktemp -d) || { log "cannot create a staging directory"; return 1; }
+  shopt -s nullglob
+  for f in "$src"/*; do
+    name=${f##*/}
+    if [[ ! $name =~ $names || -L $f || ! -f $f ]]; then
+      skipped=$((skipped + 1)); continue
+    fi
+    read_user "$f" "$stage/$name" "$((file_max + 1))" || { abort "cannot read $f, ESP left alone"; return 1; }
+    size=$(stat -c %s -- "$stage/$name")
+    (( size <= file_max )) || { abort "$name is over 8M, ESP left alone"; return 1; }
+    is_png "$stage/$name" || { abort "$name is not a PNG, ESP left alone"; return 1; }
+    total=$((total + size))
+    (( total <= total_max )) || { abort "render is over 16M in total, ESP left alone"; return 1; }
+    n=$((n + 1))
+  done
+  shopt -u nullglob
+  (( skipped )) && log "skipped $skipped entries in $src (symlinks, other files or names not allowed)"
+  if (( n == 0 )); then
+    cleanup; log "no images in $src"; return 0
+  fi
+  avail=$(df --output=avail -B1 -- "$boot" | tail -n 1 | tr -d ' ')
+  if [[ ! $avail =~ ^[0-9]+$ ]] || (( avail - total < esp_reserve )); then
+    abort "the ESP would keep less than 256M free (${avail:-?} bytes free, $total needed), ESP left alone"; return 1
+  fi
+  tmp=$esp.new
+  rm -rf "$tmp"
+  mkdir -p "$tmp" || { abort "cannot create $tmp"; return 1; }
+  cp -- "$stage"/*.png "$tmp"/ || { abort "copy to $tmp failed, ESP left alone"; return 1; }
+  sync -f "$tmp" || { abort "sync of $tmp failed, ESP left alone"; return 1; }
+  # swap directories so a boot never sees a half-written set (the hook falls back to the
+  # baked-in images if the directory is missing for the instant between rm and mv)
+  rm -rf "$esp"
+  mv "$tmp" "$esp" || { abort "could not move $tmp to $esp"; return 1; }
+  tmp=
+  sync -f "$esp"
+  if [[ -d $inst ]]; then
+    install -m 644 -o root -g root "$stage"/*.png "$inst"/ || { abort "copy to $inst failed, boot frame not installed"; return 1; }
+  fi
+  log "$n images -> $esp and $inst"
+  cleanup
+  install_frame
+  return 0
+}
+
+# The path unit does not watch while this service is active, so a render that lands during a
+# pass would be missed. Re-read the stamp after each pass and run again if it changed, at
+# most 5 passes.
+pass=1 rc=0
+while :; do
+  before=$(stamp_id)
+  sync_once; rc=$?
+  [[ $(stamp_id) == "$before" ]] && break
+  if (( pass >= 5 )); then
+    log "stamp still changing after 5 passes, leaving it to the next trigger"; break
+  fi
+  pass=$((pass + 1))
+  log "stamp changed during the sync, pass $pass"
+done
+exit "$rc"
+SCRIPT
+write_if_changed "$sync_unit.path" 644 <<UNIT && sync_changed=1 || true
+[Unit]
+Description=Sync the Plymouth unlock theme to the EFI system partition after a re-render
+
+[Path]
+PathChanged=$home/.cache/plymouth-dank-theme.stamp
+Unit=plymouth-esp-sync.service
+
+[Install]
+WantedBy=multi-user.target
+UNIT
+write_if_changed "$sync_unit.service" 644 <<'UNIT' && sync_changed=1 || true
+[Unit]
+Description=Copy the rendered Plymouth unlock theme to the ESP and the installed theme
+After=boot.mount
+StartLimitIntervalSec=0
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/plymouth-esp-sync
+TimeoutStartSec=60
+Nice=10
+IOSchedulingClass=idle
+ProtectHome=read-only
+PrivateTmp=yes
+NoNewPrivileges=yes
+UNIT
+# 4c. Boot frame pacman hook ---------------------------------------------------------------
+# A hyprland install or upgrade puts the stock /usr/share/hypr/wall0.png back. The hook runs
+# the frame step of plymouth-esp-sync right after, so the next boot still hands off from the
+# unlock screen to the same picture. zz- sorts it after every other hook.
+run mkdir -p /etc/pacman.d/hooks
+write_if_changed /etc/pacman.d/hooks/zz-hypr-boot-frame.hook 644 <<'HOOK' || true
+[Trigger]
+Type = Path
+Operation = Install
+Operation = Upgrade
+Target = usr/share/hypr/wall0.png
+
+[Action]
+Description = Installing the plymouth boot frame as Hyprland's wall0.png
+When = PostTransaction
+Exec = /usr/local/bin/plymouth-esp-sync --frame-only
+HOOK
+
+if (( sync_changed )); then
+  run systemctl daemon-reload
+fi
+if ! systemctl is-enabled --quiet plymouth-esp-sync.path 2>/dev/null; then
+  note "enable plymouth-esp-sync.path"
+  run systemctl enable --now plymouth-esp-sync.path
+else
+  note "plymouth-esp-sync.path already enabled"
+fi
+note "initial sync of the theme images to /boot/plymouth/$THEME"
+run mkdir -p /boot/plymouth
+run systemctl start plymouth-esp-sync.service
 
 # 5. Regenerate -------------------------------------------------------------------------
 if (( grub_changed )); then
@@ -356,6 +625,7 @@ if (( changed )); then
       [[ -f $img ]] || continue
       for want in usr/local/bin/cryptsetup-fido2-smart usr/local/bin/boot-windows \
                   usr/local/bin/windows-escape-evdev usr/local/bin/initrd-rescue-watch \
+                  usr/local/bin/plymouth-esp-theme \
                   usr/bin/unlock \
                   etc/systemd/system/emergency.service.d/initrd-rescue.conf; do
         lsinitcpio "$img" 2>/dev/null | grep -qx "$want" || { echo "  MISSING in $img: $want"; miss=1; }
@@ -367,7 +637,7 @@ if (( changed )); then
       echo "  Restore with the cp commands above and do not reboot until this is resolved."
       exit 1
     fi
-    note "verified: both images carry the fido2-smart wrapper, the Windows escape and the rescue watchdog"
+    note "verified: both images carry the fido2-smart wrapper, the Windows escape, the ESP theme refresh and the rescue watchdog"
     : > "$stamp"; chmod 600 "$stamp"
     for img in /boot/initramfs-linux.img /boot/initramfs-linux-lts.img; do
       [[ -f $img ]] && printf '%s %s\n' "$(sha256sum "$img" | cut -d" " -f1)" "$img" >> "$stamp"
@@ -380,6 +650,11 @@ echo "Done. Next boot: no key plugged in -> passphrase prompt as soon as USB has
 echo "      key plugged in before power-on -> touch the key (no PIN, no passphrase); untouched for 15 s -> passphrase prompt;
       key plugged in while the prompt is up -> touch it or keep typing, whichever you reach for first wins."
 echo "Log line to look for: fido2-smart: ... (journalctl -b | grep fido2-smart)"
+echo "The unlock screen follows the desktop wallpaper: journalctl -b | grep plymouth-esp-theme shows the refresh."
+echo "Boot frame: plymouth's last frame is Hyprland's first (/usr/share/hypr/wall0.png, journalctl -b | grep plymouth-esp-sync)."
+echo "      pacman -Qkk hyprland reports wall0.png as modified, which is expected. sudo pacman -S hyprland restores the"
+echo "      stock wall0.png, but the zz-hypr-boot-frame hook and the next re-render put the frame back, so remove"
+echo "      /etc/pacman.d/hooks/zz-hypr-boot-frame.hook and disable plymouth-esp-sync.path first to keep the stock image."
 echo "If the new initramfs ever fails to boot: at the GRUB menu press e, add .bak to the"
 echo "      initrd line (initramfs-linux.img.bak) and press Control + X."
 echo "Check the timeline after a boot with:"

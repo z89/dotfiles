@@ -1,0 +1,15 @@
+[Unit]
+Description=Watch the wallpaper and palette for the Plymouth unlock theme
+
+[Path]
+# dank-colors.css is rewritten by matugen on every wallpaper or palette change;
+# session.json carries the wallpaper path and can land after the css, and dms-colors.json is the
+# palette the script reads, so all three are watched.
+# The service compares a fingerprint of its inputs and skips renders that would change nothing.
+PathChanged=%h/.config/gtk-3.0/dank-colors.css
+PathChanged=%h/.local/state/DankMaterialShell/session.json
+PathChanged=%h/.cache/DankMaterialShell/dms-colors.json
+Unit=plymouth-dank-theme.service
+
+[Install]
+WantedBy=graphical-session.target

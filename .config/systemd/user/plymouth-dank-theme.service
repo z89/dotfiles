@@ -1,0 +1,17 @@
+[Unit]
+Description=Render the Plymouth unlock theme from the current wallpaper and palette
+# Triggered by plymouth-dank-theme.path; no Install section on purpose.
+# A burst of wallpaper switches must not trip the default start limit (see theme-apply.service).
+StartLimitIntervalSec=0
+
+[Service]
+Type=oneshot
+# Renders into %h/.cache/plymouth-dank-theme and writes %h/.cache/plymouth-dank-theme.stamp,
+# which the root plymouth-esp-sync.path unit (installed by luks-boot-setup) copies to the ESP.
+ExecStart=%h/.local/bin/plymouth-dank-theme --if-changed
+Nice=19
+IOSchedulingClass=idle
+# One run renders until the result matches the inputs, so a burst of switches means several
+# passes (up to 15s debounce plus about 4s of rendering each, slower at Nice=19 with idle IO,
+# and a 60s ffmpeg poster for a video wallpaper). The limit only catches a hung run.
+TimeoutStartSec=15min

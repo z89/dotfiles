@@ -2,34 +2,71 @@
 """plymouth-dank-theme — render the "dank-unlock" Plymouth theme from the live DMS look.
 
 Reads the DankMaterialShell matugen palette (~/.cache/DankMaterialShell/dms-colors.json),
-the current wallpaper (~/.local/state/DankMaterialShell/session.json) and ~/.face, and
+and the current wallpaper (~/.local/state/DankMaterialShell/session.json), and
 writes a complete two-step theme directory:
 
     background.png   blurred, dimmed wallpaper at the monitor's native mode size, so Plymouth
                      draws it 1:1 (ScaleBackgroundImage=false) instead of upscaling it at boot
-    watermark.png    avatar ring + user name + host name (always visible, centred at 40 %)
+    watermark.png    empty canvas (no text, no profile picture)
     throbber-NNNN.png  60-frame Material arc spinner shown while booting / unlocking
-    lock.png + entry.png  one seamless pill: lock glyph in the left cap, bullets on the right
+    lock.png + entry.png  one seamless pill: a plain left cap (padding, no glyph), bullets on the right
     bullet.png       dot for typed passphrase characters
     dank-unlock.plymouth
+
+and, next to DIR, DIR.frame.png: background.png with watermark.png and the throbber's last
+frame composited at exactly the spots Plymouth's two-step plugin draws them (the throbber stops
+on its last frame and that frame stays on screen when Plymouth quits), opaque RGB at the background's size, PNG compression
+level 1 so it decodes fast. luks-boot-setup's root sync installs it as Hyprland's wall0.png, so
+the first compositor frame shows the same picture as the unlock screen. It lives outside DIR,
+so it never reaches the ESP or the initramfs.
 
 Plymouth's two-step plugin composes PNGs only (no vector primitives), so every rounded
 corner, ring and shadow is pre-rendered here with cairo. Fonts come from Font= in the
 .plymouth file; mkinitcpio's plymouth hook copies the matching TTF into the initramfs.
 
-Usage:  plymouth-dank-theme [--out DIR] [--mode dark|light]
+Usage:  plymouth-dank-theme [--out DIR] [--mode dark|light] [--if-changed]
+A video wallpaper (eco) renders from its poster frame in ~/.cache/eco/posters, made with
+ffmpeg if missing. --wallpaper PATH overrides the session wallpaper (testing).
 Run as the desktop user (it reads your caches). luks-boot-setup calls it and installs the
-result into /usr/share/plymouth/themes/dank-unlock.
+result into /usr/share/plymouth/themes/dank-unlock. After every render DIR.stamp (a sibling
+file, so it survives the directory being rebuilt) is written with a fingerprint of the inputs;
+--if-changed skips the render while that fingerprint still matches. plymouth-dank-theme.path
+runs it with --if-changed on every wallpaper or palette change, and the root plymouth-esp-sync
+path unit watches the stamp to copy the PNGs to the EFI system partition, where the
+plymouth-esp-theme initcpio hook picks them up at boot.
+
+A render is built in the sibling DIR.new and swapped in (DIR moves to DIR.old, DIR.new to DIR,
+then DIR.old is removed), so a root sync still copying the previous render never sees a half
+written directory. Leftover DIR.new and DIR.old from a killed run are removed first. Then the
+frame is built from the final DIR (temp file + os.replace), and the stamp is written last, so a
+watcher that fires on the stamp always finds both complete. --if-changed renders when the
+fingerprint differs or the frame is missing.
+
+A palette that does not parse (matugen mid-write) or cannot be read is read again,
+PALETTE_RETRIES (5) times 0.4s apart, before the run fails. A failed poster for a video
+wallpaper is remembered for that file and mtime, so ffmpeg runs once per run, not per check.
+
+Debounce. A wallpaper switch rewrites several inputs over a second or so, and rapid switching
+rewrites them again and again. Once the fingerprint says a render is due, the script waits until
+the newest mtime of the watched inputs (DEBOUNCE_INPUTS, default session.json, dank-colors.css
+and dms-colors.json) is DEBOUNCE_QUIET (2s) old, waiting DEBOUNCE_CAP (15s) at most per pass.
+An unchanged fingerprint still exits at once, without waiting.
+
+Recheck. After writing the stamp the fingerprint is computed again. If it differs, a switch
+landed during the render (the path unit cannot start the running oneshot a second time), so the
+theme is debounced and rendered again, with one line printed for every extra pass. There is no
+pass limit (giving up would drop the newest change, since nothing triggers again), so the run
+ends only once a render matches the inputs as they are after it. The last wallpaper always wins.
 """
 import argparse
 import json
 import math
 import os
-import pwd
 import shutil
 import subprocess
 import sys
 import tempfile
+import time
 from pathlib import Path
 
 import cairo
@@ -39,17 +76,31 @@ THEME = "dank-unlock"
 FONT = "Inter"
 
 # Geometry (pixels at device scale 1; the desk monitor is 5120x1440 @1x)
-ENTRY_H = 60
-LOCK_W = 72          # left pill cap + lock glyph
-ENTRY_W = 388        # right part of the pill (bullets start 11 px in)
+ENTRY_H = 40
+LOCK_W = 16          # left pill cap, padding only (two-step needs lock.png, so it stays)
+ENTRY_W = 252        # right part of the pill (first bullet centred 12 px in, 20 fit)
 RADIUS = ENTRY_H / 2
-BULLET = 22          # bullet cell size; spacing == cell size in two-step
-AVATAR = 112
+BULLET = 12          # bullet cell size; spacing == cell size in two-step
+WM_W, WM_H = 480, 186  # watermark canvas, kept at its old size so the frame contract holds
 THROB = 44
 # Plymouth's throbber plays the whole sequence once every 2.0 s on a 30 Hz timer (constants
 # in libply-splash-graphics), so N frames show at N/2 fps: 60 is the most that 30 Hz can use.
 THROB_FRAMES = 60
 BG_WORK_W = 2560     # blur/dim at this width (the look is tuned here), then scale to native
+# Plymouth two-step watermark alignment, equal to Watermark*Alignment in write_plymouth
+WM_XALIGN = 0.5
+WM_YALIGN = 0.40
+# Plymouth two-step throbber alignment (HorizontalAlignment/VerticalAlignment in write_plymouth),
+# also used by boot-cover's Cover.qml, which plays the same frames at the same spot
+THROB_XALIGN = 0.5
+THROB_YALIGN = 0.52
+
+# Debounce and recheck (see the docstring). Module level so tests can override them.
+DEBOUNCE_INPUTS = None   # None means watched_inputs() under the current HOME
+DEBOUNCE_QUIET = 2.0     # seconds the newest watched mtime must be old before a render
+DEBOUNCE_CAP = 15.0      # most seconds one pass spends waiting
+PALETTE_RETRIES = 5      # extra reads of a palette that is mid-write
+PALETTE_RETRY_DELAY = 0.4
 
 
 def rgb(hexstr):
@@ -87,7 +138,14 @@ def surface(w, h):
 
 def load_palette(mode):
     p = HOME / ".cache/DankMaterialShell/dms-colors.json"
-    d = json.loads(p.read_text())
+    for attempt in range(PALETTE_RETRIES + 1):
+        try:
+            d = json.loads(p.read_text())
+            break
+        except (json.JSONDecodeError, OSError):
+            if attempt == PALETTE_RETRIES:
+                raise
+            time.sleep(PALETTE_RETRY_DELAY)
     mode = mode or d.get("mode", "dark")
     return d["colors"][mode], mode
 
@@ -127,13 +185,166 @@ def background_size():
     return BG_WORK_W, int(round(BG_WORK_W * 9 / 16)), False
 
 
+VIDEO_EXT = {".mp4", ".mkv", ".webm", ".mov", ".m4v"}   # keep equal to LiveWall.videoExtensions (eco)
+POSTER_DIR = Path(os.environ.get("XDG_CACHE_HOME", HOME / ".cache")) / "eco/posters"
+
+
+_still_memo = {}
+
+
+def still_for(p):
+    """A video wallpaper (eco) is represented by its poster, frame 0 at full resolution, the
+    same still DMS uses for the lock screen and the palette. The poster normally exists
+    (eco-encode and dms-matugen-thumb write it); if not, it is made here with ffmpeg. The
+    answer, a failure included, is remembered per (path, mtime) for the rest of the run."""
+    if p.suffix.lower() not in VIDEO_EXT:
+        return p
+    key = (str(p), p.stat().st_mtime_ns)
+    if key not in _still_memo:
+        _still_memo[key] = _make_still(p)
+    return _still_memo[key]
+
+
+def _make_still(p):
+    poster = POSTER_DIR / (p.name + ".jpg")
+    if poster.is_file() and poster.stat().st_mtime >= p.stat().st_mtime:
+        return poster
+    POSTER_DIR.mkdir(parents=True, exist_ok=True)
+    tmp = poster.with_name(f"{poster.name}.{os.getpid()}.tmp.jpg")
+    try:
+        subprocess.check_call(["ffmpeg", "-v", "error", "-y", "-i", str(p), "-frames:v", "1",
+                               "-q:v", "2", str(tmp)], timeout=60)
+        os.replace(tmp, poster)
+        return poster
+    except Exception as e:
+        print(f"poster for {p.name} failed ({e}); flat background colour only")
+        tmp.unlink(missing_ok=True)
+        return None
+
+
+_wallpaper_override = None
+
+
 def wallpaper_path():
     try:
-        s = json.loads((HOME / ".local/state/DankMaterialShell/session.json").read_text())
-        p = Path(s.get("wallpaperPath", ""))
-        return p if p.is_file() else None
+        if _wallpaper_override:
+            p = Path(_wallpaper_override)
+        else:
+            s = json.loads((HOME / ".local/state/DankMaterialShell/session.json").read_text())
+            p = Path(s.get("wallpaperPath", ""))
+        return still_for(p) if p.is_file() else None
     except Exception:
         return None
+
+
+def fingerprint(mode, size, hint):
+    """One line describing every input the render depends on. The wallpaper enters
+    by path, size and mtime (hashing a 5120x1440 image every time would cost more than the
+    check saves); the palette and this script enter by content."""
+    import hashlib
+    parts = [f"mode={mode}", f"size={size}", f"hint={hint}"]
+    for label, path in (("wallpaper", wallpaper_path()),):
+        try:
+            st = path.stat()
+            parts.append(f"{label}={path}:{st.st_size}:{st.st_mtime_ns}")
+        except Exception:
+            parts.append(f"{label}=none")
+    for label, path in (("palette", HOME / ".cache/DankMaterialShell/dms-colors.json"),
+                        ("script", Path(__file__))):
+        try:
+            parts.append(f"{label}={hashlib.sha256(path.read_bytes()).hexdigest()}")
+        except Exception:
+            parts.append(f"{label}=none")
+    return " ".join(parts)
+
+
+def watched_inputs():
+    """The files a wallpaper or palette change rewrites (the path unit watches the first two)."""
+    return [HOME / ".local/state/DankMaterialShell/session.json",
+            HOME / ".config/gtk-3.0/dank-colors.css",
+            HOME / ".cache/DankMaterialShell/dms-colors.json"]
+
+
+def debounce(paths=None, quiet=None, cap=None):
+    """Wait until the newest mtime of paths is quiet seconds old, cap seconds at most. Missing
+    files are ignored. Returns the seconds waited (0 when the inputs are already quiet)."""
+    if paths is None:
+        paths = DEBOUNCE_INPUTS if DEBOUNCE_INPUTS is not None else watched_inputs()
+    paths = [Path(p) for p in paths]
+    quiet = DEBOUNCE_QUIET if quiet is None else quiet
+    cap = DEBOUNCE_CAP if cap is None else cap
+    start = time.monotonic()
+    while True:
+        mtimes = []
+        for p in paths:
+            try:
+                mtimes.append(p.stat().st_mtime)
+            except OSError:
+                pass
+        if not mtimes:
+            break
+        age = time.time() - max(mtimes)
+        left = cap - (time.monotonic() - start)
+        if age >= quiet or left <= 0:
+            break
+        time.sleep(min(quiet - age, left))
+    return time.monotonic() - start
+
+
+def png_size(path):
+    """(width, height) from a PNG's IHDR chunk."""
+    with open(path, "rb") as f:
+        head = f.read(24)
+    if head[:8] != b"\x89PNG\r\n\x1a\n" or head[12:16] != b"IHDR":
+        raise ValueError(f"{path} is not a PNG")
+    return int.from_bytes(head[16:20], "big"), int.from_bytes(head[20:24], "big")
+
+
+def watermark_position(bg_size, wm_size):
+    """Top-left of the watermark as Plymouth's two-step plugin computes it: alignment * screen
+    minus alignment * image, in doubles, stored in a long (truncation toward zero)."""
+    (W, H), (w, h) = bg_size, wm_size
+    return int(W * WM_XALIGN - w * WM_XALIGN), int(H * WM_YALIGN - h * WM_YALIGN)
+
+
+def throbber_position(bg_size, th_size):
+    """Top-left of the throbber as two-step computes it: alignment * screen minus half the
+    image, in doubles, stored in a long (truncation toward zero)."""
+    (W, H), (w, h) = bg_size, th_size
+    return int(W * THROB_XALIGN - w / 2), int(H * THROB_YALIGN - h / 2)
+
+
+def frame_path(out):
+    return out.with_name(out.name + ".frame.png")
+
+
+def render_frame(out, pal, size):
+    """Write frame_path(out): background.png (or the flat surface colour when there is none)
+    with watermark.png and the last throbber frame composited at Plymouth's positions. Opaque RGB, compression level 1,
+    written to a temp file and moved into place."""
+    frame = frame_path(out)
+    bg, wm = out / "background.png", out / "watermark.png"
+    if bg.is_file():
+        W, H = png_size(bg)
+        base = [str(bg)]
+    else:
+        W, H = size[0], size[1]
+        base = ["-size", f"{W}x{H}", f"xc:{pal['surface']}"]
+    layers = []
+    if wm.is_file():
+        x, y = watermark_position((W, H), png_size(wm))
+        layers = [str(wm), "-geometry", f"{x:+d}{y:+d}", "-composite"]
+    th = out / f"throbber-{THROB_FRAMES - 1:04d}.png"
+    if th.is_file():
+        x, y = throbber_position((W, H), png_size(th))
+        layers += [str(th), "-geometry", f"{x:+d}{y:+d}", "-composite"]
+    tmp = frame.with_name(f"{frame.name}.{os.getpid()}.tmp")
+    try:
+        subprocess.check_call(["magick", *base, *layers, "-alpha", "off", "-strip",
+                               "-define", "png:compression-level=1", f"PNG24:{tmp}"])
+        os.replace(tmp, frame)
+    finally:
+        tmp.unlink(missing_ok=True)
 
 
 def render_background(out, pal, size):
@@ -184,7 +395,6 @@ def render_hint(out, pal, text):
 def render_pill(out, pal):
     fill = rgb(pal["surface_container_high"])
     border = rgb(pal["outline_variant"])
-    accent = rgb(pal["primary"])
     # entry.png: right portion, rounded on the right only
     s, cr = surface(ENTRY_W, ENTRY_H)
     rounded_rect(cr, 0.5, 0.5, ENTRY_W - 1, ENTRY_H - 1, RADIUS, corners=(False, True, True, False))
@@ -200,7 +410,7 @@ def render_pill(out, pal):
     cr.fill()
     s.write_to_png(str(out / "entry.png"))
 
-    # lock.png: left cap with the glyph
+    # lock.png: left cap, no glyph
     s, cr = surface(LOCK_W, ENTRY_H)
     rounded_rect(cr, 0.5, 0.5, LOCK_W + RADIUS, ENTRY_H - 1, RADIUS, corners=(True, False, False, True))
     cr.set_source_rgba(*fill, 0.96)
@@ -212,29 +422,12 @@ def render_pill(out, pal):
     cr.set_source_rgba(*fill, 0.96)
     cr.rectangle(LOCK_W - 1, 1, 1, ENTRY_H - 2)
     cr.fill()
-    cr.set_operator(cairo.OPERATOR_OVER)
-    # Material "lock" glyph: body + shackle, 20x22, centred at x=40
-    cx, cy = 40, ENTRY_H / 2
-    cr.set_source_rgb(*accent)
-    rounded_rect(cr, cx - 9, cy - 2, 18, 13, 3)
-    cr.fill()
-    cr.set_line_width(2.6)
-    cr.set_line_cap(cairo.LINE_CAP_ROUND)
-    cr.arc(cx, cy - 4, 5.5, math.pi, 2 * math.pi)
-    cr.move_to(cx - 5.5, cy - 4)
-    cr.line_to(cx - 5.5, cy - 1)
-    cr.move_to(cx + 5.5, cy - 4)
-    cr.line_to(cx + 5.5, cy - 1)
-    cr.stroke()
-    cr.set_source_rgb(*fill)
-    cr.arc(cx, cy + 4.5, 1.8, 0, 2 * math.pi)
-    cr.fill()
     s.write_to_png(str(out / "lock.png"))
 
     # bullet.png
     s, cr = surface(BULLET, BULLET)
     cr.set_source_rgb(*rgb(pal["on_surface"]))
-    cr.arc(BULLET / 2, BULLET / 2, 4.5, 0, 2 * math.pi)
+    cr.arc(BULLET / 2, BULLET / 2, 3, 0, 2 * math.pi)
     cr.fill()
     s.write_to_png(str(out / "bullet.png"))
 
@@ -267,65 +460,9 @@ def text_extents(cr, text):
 
 
 def render_watermark(out, pal, tmp):
-    user = pwd.getpwuid(os.getuid())
-    name = (user.pw_gecos.split(",")[0] or user.pw_name).strip()
-    host = Path("/etc/hostname").read_text().strip() if Path("/etc/hostname").exists() else os.uname().nodename
-    accent = rgb(pal["primary"])
-    fg = rgb(pal["on_surface"])
-    fg2 = rgb(pal["on_surface_variant"])
-
-    face = HOME / ".face"
-    avatar_png = None
-    if face.is_file():
-        avatar_png = tmp / "avatar.png"
-        subprocess.check_call([
-            "magick", str(face), "-auto-orient", "-gravity", "center",
-            "-resize", f"{AVATAR}x{AVATAR}^", "-extent", f"{AVATAR}x{AVATAR}", str(avatar_png),
-        ])
-
-    W, H = 480, AVATAR + 8 + 14 + 30 + 22
-    s, cr = surface(W, H)
-    cx = W / 2
-    # ring
-    cr.set_source_rgb(*accent)
-    cr.arc(cx, 4 + AVATAR / 2, AVATAR / 2 + 4, 0, 2 * math.pi)
-    cr.fill()
-    cr.set_source_rgb(*rgb(pal["surface"]))
-    cr.arc(cx, 4 + AVATAR / 2, AVATAR / 2 + 1.5, 0, 2 * math.pi)
-    cr.fill()
-    if avatar_png:
-        img = cairo.ImageSurface.create_from_png(str(avatar_png))
-        cr.save()
-        cr.arc(cx, 4 + AVATAR / 2, AVATAR / 2, 0, 2 * math.pi)
-        cr.clip()
-        cr.set_source_surface(img, cx - AVATAR / 2, 4)
-        cr.paint()
-        cr.restore()
-    else:
-        cr.set_source_rgb(*rgb(pal["primary_container"]))
-        cr.arc(cx, 4 + AVATAR / 2, AVATAR / 2, 0, 2 * math.pi)
-        cr.fill()
-        cr.select_font_face(FONT, cairo.FONT_SLANT_NORMAL, cairo.FONT_WEIGHT_BOLD)
-        cr.set_font_size(44)
-        w, h, xb = text_extents(cr, name[:1].upper())
-        cr.set_source_rgb(*rgb(pal["on_primary_container"]))
-        cr.move_to(cx - w / 2 - xb, 4 + AVATAR / 2 + h / 2)
-        cr.show_text(name[:1].upper())
-    # name
-    y = 4 + AVATAR + 14
-    cr.select_font_face(FONT, cairo.FONT_SLANT_NORMAL, cairo.FONT_WEIGHT_BOLD)
-    cr.set_font_size(24)
-    w, h, xb = text_extents(cr, name)
-    cr.set_source_rgb(*fg)
-    cr.move_to(cx - w / 2 - xb, y + 22)
-    cr.show_text(name)
-    # host
-    cr.select_font_face(FONT, cairo.FONT_SLANT_NORMAL, cairo.FONT_WEIGHT_NORMAL)
-    cr.set_font_size(14)
-    w, h, xb = text_extents(cr, host)
-    cr.set_source_rgba(*fg2, 0.9)
-    cr.move_to(cx - w / 2 - xb, y + 22 + 24)
-    cr.show_text(host)
+    # No text and no profile picture: an empty canvas, so the unlock screen shows only the
+    # wallpaper and the pill. The file stays because Plymouth, boot-cover and the frame use it.
+    s, cr = surface(WM_W, WM_H)
     s.write_to_png(str(out / "watermark.png"))
 
 
@@ -338,19 +475,19 @@ Description=DankMaterialShell-styled boot splash and LUKS unlock (generated by p
 ModuleName=two-step
 
 [two-step]
-Font={FONT} 13
-TitleFont={FONT} 30
-MonospaceFont=JetBrainsMono Nerd Font 12
+Font={FONT} 9
+TitleFont={FONT} 18
+MonospaceFont=JetBrainsMono Nerd Font 9
 ImageDir=/usr/share/plymouth/themes/{THEME}
 ScaleBackgroundImage={scale}
 BackgroundStartColor=0x{bg}
 BackgroundEndColor=0x{bg}
-# avatar block (watermark) sits above the spinner / passphrase pill
+# watermark is an empty canvas (no name, host or picture)
 WatermarkHorizontalAlignment=.5
 WatermarkVerticalAlignment=.40
 # spinner while booting or unlocking; the pill replaces it at the same spot
-HorizontalAlignment=.5
-VerticalAlignment=.52
+HorizontalAlignment={THROB_XALIGN}
+VerticalAlignment={THROB_YALIGN}
 DialogHorizontalAlignment=.5
 DialogVerticalAlignment=.52
 TitleHorizontalAlignment=.5
@@ -394,31 +531,96 @@ SubTitle=Do not turn off your computer
 """)
 
 
+def swap_paths(out):
+    return out.with_name(out.name + ".new"), out.with_name(out.name + ".old")
+
+
+def remove_leftovers(out):
+    for d in swap_paths(out):
+        if d.is_dir() and not d.is_symlink():
+            shutil.rmtree(d)
+        elif d.exists() or d.is_symlink():
+            d.unlink()
+
+
+def render_theme(out, pal, mode, size, hint, stamp, fp):
+    """One full render: theme files into DIR.new, swap it in, then the frame, then the stamp
+    (C3 order)."""
+    new, old = swap_paths(out)
+    remove_leftovers(out)
+    new.mkdir(parents=True)
+    with tempfile.TemporaryDirectory() as tmp:
+        tmp = Path(tmp)
+        render_background(new, pal, size)
+        render_hint(new, pal, hint)
+        render_pill(new, pal)
+        render_throbber(new, pal)
+        render_watermark(new, pal, tmp)
+        write_plymouth(new, pal, size)
+    if out.exists():
+        os.rename(out, old)
+    os.rename(new, out)
+    if old.exists():
+        shutil.rmtree(old)
+    render_frame(out, pal, size)
+    # Written last, so a watcher that fires on the stamp always finds a complete render.
+    stamp.write_text(fp + "\n")
+    how = "native, unscaled" if size[2] else "monitor unknown, Plymouth scales it"
+    print(f"{THEME} ({mode}, primary {pal['primary']}) rendered to {out}, background {size[0]}x{size[1]} ({how})")
+
+
+def current_fingerprint(mode_arg, size, hint):
+    """Fingerprint of the inputs as they are now, or None while the palette is unreadable
+    (matugen mid-write), which counts as changed."""
+    try:
+        return fingerprint(load_palette(mode_arg)[1], size, hint)
+    except Exception:
+        return None
+
+
+def render_until_current(out, stamp, mode_arg, size, hint):
+    """Debounce, render, recheck: repeat until the stamp matches the inputs as they are after
+    the render. Every pass gets its own debounce (DEBOUNCE_CAP each). Returns the passes."""
+    passes = 0
+    while True:
+        debounce()
+        pal, mode = load_palette(mode_arg)
+        fp = fingerprint(mode, size, hint)
+        render_theme(out, pal, mode, size, hint, stamp, fp)
+        passes += 1
+        if current_fingerprint(mode_arg, size, hint) == fp:
+            return passes
+        print(f"{THEME}: inputs changed during pass {passes}, rendering again (pass {passes + 1})")
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--out", default=str(HOME / ".cache/plymouth-dank-theme"))
     ap.add_argument("--mode", choices=["dark", "light"])
-    ap.add_argument("--hint", default="", help="text drawn at the bottom of the background (e.g. the Windows escape key)")
+    ap.add_argument("--hint", default="", help="text drawn at the bottom of the background")
+    ap.add_argument("--if-changed", action="store_true",
+                    help="skip the render when the inputs match the fingerprint in DIR.stamp")
+    ap.add_argument("--wallpaper", help="render this image or video instead of the DMS session wallpaper")
     a = ap.parse_args()
+    global _wallpaper_override
+    _wallpaper_override = a.wallpaper
     for tool in ("magick",):
         if not shutil.which(tool):
             sys.exit(f"{tool} not found (pacman -S imagemagick)")
     pal, mode = load_palette(a.mode)
     out = Path(a.out)
-    if out.exists():
-        shutil.rmtree(out)
-    out.mkdir(parents=True)
     size = background_size()
-    with tempfile.TemporaryDirectory() as tmp:
-        tmp = Path(tmp)
-        render_background(out, pal, size)
-        render_hint(out, pal, a.hint)
-        render_pill(out, pal)
-        render_throbber(out, pal)
-        render_watermark(out, pal, tmp)
-        write_plymouth(out, pal, size)
-    how = "native, unscaled" if size[2] else "monitor unknown, Plymouth scales it"
-    print(f"{THEME} ({mode}, primary {pal['primary']}) rendered to {out}, background {size[0]}x{size[1]} ({how})")
+    stamp = out.with_name(out.name + ".stamp")
+    fp = fingerprint(mode, size, a.hint)
+    if (a.if_changed and out.is_dir() and (out / "background.png").is_file()
+            and frame_path(out).is_file()):
+        try:
+            if stamp.read_text().strip() == fp:
+                print(f"{THEME}: inputs unchanged, nothing to render")
+                return
+        except Exception:
+            pass
+    render_until_current(out, stamp, a.mode, size, a.hint)
 
 
 if __name__ == "__main__":

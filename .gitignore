@@ -78,6 +78,8 @@
 !.config/systemd/user/theme-sync.service
 !.config/systemd/user/theme-sync.timer
 !.config/systemd/user/theme-sync-dconf.path
+!.config/systemd/user/plymouth-dank-theme.path
+!.config/systemd/user/plymouth-dank-theme.service
 !.config/systemd/user/hyprland-session.target
 !.config/systemd/user/qs-reload-notify.service
 !.config/systemd/user/dms.service.d/
