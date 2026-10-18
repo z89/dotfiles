@@ -94,14 +94,9 @@ export PATH="$PATH:$HOME/.local/bin"
 # Keep hand-built user commands after the system paths.
 export PATH="$PATH:$HOME/bin"
 
-# claude, codex and opencode start inside the warden box through `agent`. `agent`
-# refuses outside a registered checkout and prints the registration command. The hint
-# below is printed only when agent exits 64, its "refused" status.
-#
-# To run one unconfined as YOURSELF (warden ships /usr/bin/bypass):  bypass claude
-claude() { agent claude -- "$@"; local rc=$?; [ $rc -eq 64 ] && print -u2 "unconfined: run bypass claude"; return $rc; }
-codex() { agent codex -- "$@"; local rc=$?; [ $rc -eq 64 ] && print -u2 "unconfined: run bypass codex"; return $rc; }
-opencode() { agent opencode -- "$@"; local rc=$?; [ $rc -eq 64 ] && print -u2 "unconfined: run bypass opencode"; return $rc; }
+# claude, codex and opencode start inside the warden box through `warden run`. The
+# wrappers ship with the package, so they go away when warden is removed.
+[[ -r /usr/share/warden/warden.zsh ]] && source /usr/share/warden/warden.zsh
 
 
 # >>> Codex installer >>>

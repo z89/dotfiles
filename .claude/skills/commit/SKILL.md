@@ -7,7 +7,7 @@ allowed-tools: Bash, Read, Glob, Grep
 
 # commit
 
-Check `WARDEN_PROFILE` before staging. A session started with `agent` has `WARDEN_PROFILE` and `WARDEN_PUBLISH_SOCK` set, runs as its own Unix user, and holds no write credential. A session without them is an operator session.
+Check `WARDEN_PROFILE` before staging. A session started with `warden run` has `WARDEN_PROFILE` and `WARDEN_PUBLISH_SOCK` set, runs as its own Unix user, and holds no write credential. A session without them is an operator session.
 
 ## local commits inside the box
 
