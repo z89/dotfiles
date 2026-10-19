@@ -192,6 +192,8 @@ __pycache__/
 !.local/bin/airpods-mic
 !.local/bin/dotfiles-sync
 !/system/
+# enabled service lists stay local, the repo is public
+/system/services-*.txt
 
 # Shared desktop guard code; approval records stay in the runtime directory.
 !.local/lib/
