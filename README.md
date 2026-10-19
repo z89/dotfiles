@@ -31,7 +31,7 @@ systemctl --user enable dms.service cliphist.service ssh-agent.service ssh-lock-
 dconf load /org/gnome/desktop/interface/ < ~/.config/gsettings/interface.ini
 ```
 
-`dotfiles-sync --apply` copies the mirrored system files in `system/` back onto `/`. plain `dotfiles-sync` refreshes the mirror, the package lists and the service lists, so `git status` shows drift. secrets and machine identity are never mirrored.
+`dotfiles-sync --apply` copies the mirrored system files in `system/` back onto `/`. plain `dotfiles-sync` refreshes the mirror and the package lists, so `git status` shows drift. it also writes the enabled service lists to `system/`, which stay local and untracked. secrets and machine identity are never mirrored.
 
 [auris](https://github.com/z89/auris) and [ember](https://github.com/z89/ember) live in their own repos. `dms-plugins` clones them and links them into `~/.config/DankMaterialShell/plugins/`. auris also needs its daemon, which its readme sets up. video wallpapers come from [eco](https://github.com/z89/eco) (private for now), which is optional. clone it, run its `bin/eco-install` and restart `dms.service`. [`.config/DankMaterialShell/README.md`](.config/DankMaterialShell/README.md) has the full DMS install sequence.
 
@@ -44,7 +44,7 @@ dconf load /org/gnome/desktop/interface/ < ~/.config/gsettings/interface.ini
 | 🎨 `.config/matugen/` | colour templates filled from the wallpaper |
 | 🐱 `.config/kitty/` | terminal config, with the prompt in `.config/starship.template.toml` |
 | 🔧 `.local/bin/` | theme, launcher, screenshot, boot and agent scripts |
-| 💽 `system/` | mirrored `/etc` and `/usr` files and the enabled service lists |
+| 💽 `system/` | mirrored `/etc` and `/usr` files |
 | 📦 `pkglist/` | explicitly installed native and aur packages |
 | 🤖 `.claude/` | claude code instructions, settings, guard hooks and skills |
 
