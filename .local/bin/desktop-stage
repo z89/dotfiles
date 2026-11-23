@@ -1,5 +1,5 @@
 #!/bin/bash
-# desktop-stage (boot-tune contract 1.3)
+# desktop-stage (boot-tune contract 1.4)
 #
 # Run once by Hyprland at hyprland.start, in the background, no arguments.
 #   1. remove old desktop-ready / desktop-heavy flags
@@ -11,6 +11,10 @@
 #   5. sleep 20s, create $XDG_RUNTIME_DIR/desktop-heavy; when step 3 was healthy, also
 #      turn off Hyprland's background texture (the boot frame hyprland.lua enables for
 #      the first config load only), long after DMS, including a video wallpaper, painted
+#   6. touch the plymouth hand-off flag (default /run/boot-handoff/cover-mapped), once, at
+#      the first of: boot-cover layer listed by `hyprctl layers -j` (acted on one poll later),
+#      dms:bar mapped, the cap, exit. A root path unit then quits plymouth. Skipped with a
+#      log line when the flag's directory does not exist.
 # Every step is logged with elapsed milliseconds via `logger -t desktop-stage`.
 # A second instance exits at once. Whatever happens after step 1, the ready
 # flag is created by the cap or on exit, so the cover never outlives it.
@@ -21,6 +25,7 @@
 #   DESKTOP_STAGE_HEAVY_DELAY  ready -> heavy delay (default 20)
 #   DESKTOP_STAGE_POLL         poll interval (default 0.2)
 #   DESKTOP_STAGE_COVER        cover launcher (default ~/.local/bin/boot-cover)
+#   DESKTOP_STAGE_HANDOFF_FLAG plymouth hand-off flag (default /run/boot-handoff/cover-mapped)
 
 set -u
 
@@ -68,6 +73,7 @@ heavy_ms=$(ms_env "${DESKTOP_STAGE_HEAVY_DELAY:-20}" 20000)
 poll_ms=$(ms_env "${DESKTOP_STAGE_POLL:-0.2}" 200)
 [ "$poll_ms" -gt 0 ] || poll_ms=200
 cover=${DESKTOP_STAGE_COVER:-$HOME/.local/bin/boot-cover}
+flag=${DESKTOP_STAGE_HANDOFF_FLAG:-/run/boot-handoff/cover-mapped}
 
 t0=$(uptime_ms)
 elapsed() { printf '%s' $(( $(uptime_ms) - t0 )); }
@@ -100,12 +106,27 @@ make_ready() {
         log "could not create $ready ($1)"
     fi
 }
-trap 'make_ready "on exit"' EXIT
+
+handoff_done=0
+handoff() {
+    [ "$handoff_done" = 1 ] && return
+    handoff_done=1
+    if [ ! -d "$(dirname "$flag")" ]; then
+        log "no hand-off dir $(dirname "$flag"), plymouth hand-off skipped"
+    elif touch -- "$flag" 2>/dev/null; then
+        log "plymouth hand-off flag created ($1)"
+    else
+        log "could not create $flag ($1)"
+    fi
+}
+trap 'make_ready "on exit"; handoff "on exit"' EXIT
 trap 'exit 0' TERM INT HUP
 
+cover_state=0   # 0 no cover, 1 started and unseen, 2 seen (hand-off next poll), 3 done
 if [ -x "$cover" ]; then
     "$cover" </dev/null >/dev/null 2>&1 9>&- &
     log "boot-cover started pid $!"
+    cover_state=1
 else
     log "boot-cover not executable at $cover, skipped"
 fi
@@ -121,13 +142,30 @@ budget() {
 dms_seen=0
 healthy=0
 while :; do
+    # one `hyprctl layers -j` per poll at most: the cover check reads it, the dms:bar check reuses it
+    layers="" layers_read=0
+    if [ "$cover_state" = 2 ]; then
+        cover_state=3
+        handoff "boot-cover mapped"
+    elif [ "$cover_state" = 1 ]; then
+        t=$(budget 2000) || break
+        layers=$(timeout "$t" hyprctl layers -j 2>/dev/null) layers_read=1
+        if printf '%s' "$layers" | grep -q '"namespace": *"boot-cover"'; then
+            cover_state=2
+            log "boot-cover layer mapped"
+        fi
+    fi
     t=$(budget 2000) || break
     if timeout "$t" systemctl --user is-active --quiet dms.service 2>/dev/null; then
         [ "$dms_seen" = 1 ] || { dms_seen=1; log "dms.service active"; }
-        t=$(budget 2000) || break
-        if timeout "$t" hyprctl layers -j 2>/dev/null | grep -q '"namespace": *"dms:bar"'; then
+        if [ "$layers_read" = 0 ]; then
+            t=$(budget 2000) || break
+            layers=$(timeout "$t" hyprctl layers -j 2>/dev/null)
+        fi
+        if printf '%s' "$layers" | grep -q '"namespace": *"dms:bar"'; then
             healthy=1
             log "dms:bar layer mapped"
+            handoff "dms:bar mapped"
             break
         fi
     fi
@@ -144,6 +182,7 @@ if [ "$healthy" = 1 ]; then
 else
     log "cap reached (dms active seen: $dms_seen, dms:bar seen: 0)"
     make_ready "cap"
+    handoff "cap"
 fi
 
 nap "$heavy_ms"

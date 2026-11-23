@@ -11,8 +11,8 @@ export ROCM_PATH=/opt/rocm
 export SSH_AUTH_SOCK="/run/user/1000/ssh-agent.socket"
 # keys load on first use, not when a shell starts. git signing (ssh-sign) and GitHub pushes
 # (Match exec in ~/.ssh/config) call ssh-unlock, which asks in a window and keeps the key for
-# four hours, or until the session locks (ssh-lock-wipe). agents run in the warden box and
-# cannot reach this agent socket.
+# four hours, or until the session locks (ssh-lock-wipe). agents run as you and can use a
+# key while it is loaded.
 
 # pnpm
 export PNPM_HOME="/home/archie/.local/share/pnpm"
@@ -94,11 +94,6 @@ export PATH="$PATH:$HOME/.local/bin"
 # ── local binaries ─────────────────────────────────────────────────────────────
 # Keep hand-built user commands after the system paths.
 export PATH="$PATH:$HOME/bin"
-
-# claude, codex and opencode start inside the warden box through `warden run`. The
-# wrappers ship with the package, so they go away when warden is removed.
-[[ -r /usr/share/warden/warden.zsh ]] && source /usr/share/warden/warden.zsh
-
 
 # >>> Codex installer >>>
 export PATH="/home/archie/.local/bin:$PATH"

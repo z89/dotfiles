@@ -300,6 +300,10 @@ fi
 gen="$home/.local/bin/plymouth-dank-theme"
 build="$home/.cache/plymouth-dank-theme"
 if [[ -x $gen ]]; then
+  # pause the ESP sync watcher while rendering. The render touches the stamp, and a sync
+  # started now would run the previous sync script (and its image allowlist) before 4b
+  # below writes the new one. 4b starts the watcher again.
+  run systemctl stop plymouth-esp-sync.path 2>/dev/null || true
   note "generating $THEME from the current DMS palette + wallpaper"
   run sudo -H -u "$user" "$gen" --out "$build"
   if (( ! dry )); then
@@ -367,7 +371,7 @@ inst=/usr/share/plymouth/themes/$theme
 hypr=/usr/share/hypr
 mib=$((1024 * 1024))
 file_max=$((8 * mib)) total_max=$((16 * mib)) frame_max=$((64 * mib)) esp_reserve=$((256 * mib))
-names='^(background|bullet|entry|lock|watermark|throbber-[0-9]{4})\.png$'
+names='^(background|box|bullet|entry|lock|watermark|throbber-[0-9]{4})\.png$'
 log() { echo "plymouth-esp-sync: $*"; }
 frame_only=0
 case ${1:-} in
@@ -563,6 +567,7 @@ if ! systemctl is-enabled --quiet plymouth-esp-sync.path 2>/dev/null; then
   run systemctl enable --now plymouth-esp-sync.path
 else
   note "plymouth-esp-sync.path already enabled"
+  run systemctl start plymouth-esp-sync.path
 fi
 note "initial sync of the theme images to /boot/plymouth/$THEME"
 run mkdir -p /boot/plymouth

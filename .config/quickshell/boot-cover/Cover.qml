@@ -19,6 +19,8 @@ Item {
     property string themeDir: ""
     // plymouth BackgroundStartColor, also shown wherever an image is missing
     property color fallbackColor: "#1d1013"
+    // Keep the blurred background opaque until exit, hiding desktop motion below it.
+    property real foregroundOpacity: 1
     readonly property real watermarkXAlign: 0.5
     readonly property real watermarkYAlign: 0.40
     // HorizontalAlignment / VerticalAlignment and THROB_FRAMES in plymouth-dank-theme
@@ -50,6 +52,8 @@ Item {
     Image {
         id: watermark
 
+        opacity: cover.foregroundOpacity
+
         source: cover.themeDir !== "" ? "file://" + cover.themeDir + "/watermark.png" : ""
         asynchronous: false
         cache: false
@@ -74,6 +78,8 @@ Item {
 
         delegate: Image {
             id: throbberImage
+
+            opacity: cover.foregroundOpacity
 
             required property int index
 

@@ -1,5 +1,6 @@
 // boot-cover: the plymouth frame redrawn on every monitor as an overlay layer, held until
-// $XDG_RUNTIME_DIR/desktop-ready appears, then faded out over 400ms and quit.
+// $XDG_RUNTIME_DIR/desktop-ready appears, then its foreground fades over 400ms and quits.
+// The blurred background stays opaque throughout, hiding moving desktop content.
 // Started by ~/.local/bin/boot-cover (qs -n -c boot-cover), which passes:
 //   BOOT_COVER_DIR          plymouth ImageDir (background.png, watermark.png), may be empty
 //   BOOT_COVER_BG           plymouth BackgroundStartColor as #rrggbb
@@ -103,7 +104,7 @@ ShellRoot {
 
             Cover {
                 anchors.fill: parent
-                opacity: ctl.coverOpacity
+                foregroundOpacity: ctl.coverOpacity
                 themeDir: root.themeDir
                 fallbackColor: root.backgroundColour
             }

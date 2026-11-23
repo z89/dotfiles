@@ -301,7 +301,7 @@ hl.config({
         },
 
         blur = {
-            enabled    = false,
+            enabled = false,
             size       = 8,
             passes     = 2,
             noise      = 0.015,
@@ -401,6 +401,8 @@ hl.animation({ leaf = "workspaces",    enabled = true, speed = 3.5, spring = "sw
 hl.animation({ leaf = "workspacesIn",  enabled = true, speed = 3.5, spring = "gentle",           style = "slide" })
 hl.animation({ leaf = "workspacesOut", enabled = true, speed = 3.5, spring = "gentle",           style = "slide" })
 hl.animation({ leaf = "zoomFactor",    enabled = true, speed = 7,    bezier = "quick" })
+-- Disable the compositor's 2x-to-1x monitor startup animation.
+hl.animation({ leaf = "monitorAdded",  enabled = false })
 
 
 -- Dynamic gaps for ultrawide: decrease side gaps as tiled window count increases.

@@ -9,8 +9,11 @@ writes a complete two-step theme directory:
                      draws it 1:1 (ScaleBackgroundImage=false) instead of upscaling it at boot
     watermark.png    empty canvas (no text, no profile picture)
     throbber-NNNN.png  60-frame Material arc spinner shown while booting / unlocking
-    lock.png + entry.png  one seamless pill: a plain left cap (padding, no glyph), bullets on the right
-    bullet.png       dot for typed passphrase characters
+    box.png          the DMS lock screen password field (size, full radius, focus ring border,
+                     card fill), with transparent padding that steers two-step's fixed layout
+    lock.png         the field's lock icon (Material Symbols "lock") at its DMS spot
+    entry.png        transparent; its width sets how many bullets show (the DMS field's count)
+    bullet.png       one "•" cell, as wide as the DMS dot advance, so bullets space the same
     dank-unlock.plymouth
 
 and, next to DIR, DIR.frame.png: background.png with watermark.png and the throbber's last
@@ -21,8 +24,16 @@ the first compositor frame shows the same picture as the unlock screen. It lives
 so it never reaches the ESP or the initramfs.
 
 Plymouth's two-step plugin composes PNGs only (no vector primitives), so every rounded
-corner, ring and shadow is pre-rendered here with cairo. Fonts come from Font= in the
-.plymouth file; mkinitcpio's plymouth hook copies the matching TTF into the initramfs.
+corner, ring and shadow is pre-rendered here with cairo. The initramfs ships no label plugin
+(plymouth-esp-theme removes it), so two-step draws no text at all and every glyph (the lock
+icon, the bullet) is rendered into a PNG here. The Font= keys in the .plymouth file are unused.
+
+The password field follows the DMS lock screen (lock_geometry names the QML lines): box.png is
+placed by DialogHorizontalAlignment/DialogVerticalAlignment, computed per screen size, and
+solve_padding() pads box.png and lock.png so the icon, the first bullet and the bullet count
+land where DMS draws them. The DMS settings it reads (font, font scale, focus ring, radius,
+date and avatar visibility) enter the fingerprint. box.png and the .plymouth file only reach
+the boot screen through luks-boot-setup, so a geometry change needs it to run again.
 
 Usage:  plymouth-dank-theme [--out DIR] [--mode dark|light] [--if-changed]
 A video wallpaper (eco) renders from its poster frame in ~/.cache/eco/posters, made with
@@ -76,11 +87,19 @@ THEME = "dank-unlock"
 FONT = "Inter"
 
 # Geometry (pixels at device scale 1; the desk monitor is 5120x1440 @1x)
-ENTRY_H = 40
-LOCK_W = 16          # left pill cap, padding only (two-step needs lock.png, so it stays)
-ENTRY_W = 252        # right part of the pill (first bullet centred 12 px in, 20 fit)
-RADIUS = ENTRY_H / 2
-BULLET = 12          # bullet cell size; spacing == cell size in two-step
+# Password field, copied from the DMS lock screen (dms-shell-patched). Every value is in pixels at
+# scale 1; lock_geometry() turns them into the PNG sizes and the dialog alignment, and its
+# docstring names the QML file and line each one comes from.
+DMS_SETTINGS = HOME / ".config/DankMaterialShell/settings.json"
+DMS_SPACING_XXS, DMS_SPACING_XS, DMS_SPACING_M, DMS_SPACING_L, DMS_SPACING_XL = 2, 4, 12, 16, 24
+DMS_BUTTON_H_M = 56          # Theme.buttonHeightM == LockMetrics.fieldHeight
+DMS_BUTTON_H_XS = 32         # reveal, keyboard and enter buttons at the right of the field
+DMS_FIELD_DEFAULT_W = 200    # Theme.fieldDefaultWidth
+DMS_ICON_SMALL = 16          # Theme.iconSizeSmall
+DMS_OUTLINE_W = 1            # Theme.outlineWidth
+ICON_FONT = "Material Symbols Rounded"   # DankCommon Fonts.icons
+LOCK_GLYPH = ""        # Material Symbols "lock" (glyph name lock); DankIcon draws it by ligature
+BULLET_CHAR = "•"       # the lock screen's passwordDisplay shows "•".repeat(length)
 WM_W, WM_H = 480, 186  # watermark canvas, kept at its old size so the frame contract holds
 THROB = 44
 # Plymouth's throbber plays the whole sequence once every 2.0 s on a 30 Hz timer (constants
@@ -242,7 +261,8 @@ def fingerprint(mode, size, hint):
     by path, size and mtime (hashing a 5120x1440 image every time would cost more than the
     check saves); the palette and this script enter by content."""
     import hashlib
-    parts = [f"mode={mode}", f"size={size}", f"hint={hint}"]
+    lock = ",".join(f"{k}:{v}" for k, v in sorted(lock_settings().items()))
+    parts = [f"mode={mode}", f"size={size}", f"hint={hint}", f"lock={lock}"]
     for label, path in (("wallpaper", wallpaper_path()),):
         try:
             st = path.stat()
@@ -392,46 +412,248 @@ def render_hint(out, pal, text):
     img.write_to_png(str(bg))
 
 
-def render_pill(out, pal):
-    fill = rgb(pal["surface_container_high"])
-    border = rgb(pal["outline_variant"])
-    # entry.png: right portion, rounded on the right only
-    s, cr = surface(ENTRY_W, ENTRY_H)
-    rounded_rect(cr, 0.5, 0.5, ENTRY_W - 1, ENTRY_H - 1, RADIUS, corners=(False, True, True, False))
-    cr.set_source_rgba(*fill, 0.96)
-    cr.fill_preserve()
-    cr.set_source_rgba(*border, 0.9)
-    cr.set_line_width(1)
-    cr.stroke()
-    # hide the left edge stroke so the seam with lock.png is invisible
-    cr.set_operator(cairo.OPERATOR_SOURCE)
-    cr.set_source_rgba(*fill, 0.96)
-    cr.rectangle(0, 1, 1, ENTRY_H - 2)
-    cr.fill()
-    s.write_to_png(str(out / "entry.png"))
+def js_round(v):
+    """Math.round as QML does it (halves round up, not to even)."""
+    return math.floor(v + 0.5)
 
-    # lock.png: left cap, no glyph
-    s, cr = surface(LOCK_W, ENTRY_H)
-    rounded_rect(cr, 0.5, 0.5, LOCK_W + RADIUS, ENTRY_H - 1, RADIUS, corners=(True, False, False, True))
-    cr.set_source_rgba(*fill, 0.96)
-    cr.fill_preserve()
-    cr.set_source_rgba(*border, 0.9)
-    cr.set_line_width(1)
-    cr.stroke()
-    cr.set_operator(cairo.OPERATOR_SOURCE)
-    cr.set_source_rgba(*fill, 0.96)
-    cr.rectangle(LOCK_W - 1, 1, 1, ENTRY_H - 2)
+
+def dms_settings():
+    try:
+        s = json.loads(DMS_SETTINGS.read_text())
+        return s if isinstance(s, dict) else {}
+    except Exception:
+        return {}
+
+
+def lock_settings(s=None):
+    """The DMS settings the lock field depends on, defaults from SettingsSpec.js and
+    SharedSettingsSpec.js, as one dict (also entered into the fingerprint)."""
+    s = dms_settings() if s is None else s
+    strength = s.get("radiusStrength")
+    if not isinstance(strength, (int, float)):
+        # SettingsStore.js strengthFromWindowRadius: cornerRadius (default 16) * 12 / 16
+        r = s.get("cornerRadius", 16)
+        r = (r if isinstance(r, (int, float)) else 16) * 12 / 16
+        strength = r * 50 / 12 if r <= 12 else 50 + (r - 12)
+    return {
+        "font": s.get("fontFamily") or FONT,
+        "scale": float(s.get("fontScale") or 1.0),
+        "weight": int(s.get("fontWeight") or 400),
+        "ring": bool(s.get("focusRingEnabled", True)),
+        "ring_w": float(s.get("focusRingWidth") or 1.5),
+        "ring_color": s.get("focusRingColor", "primary"),
+        "strength": max(0, min(100, js_round(strength))),
+        "date": bool(s.get("lockScreenShowDate", True)),
+        "avatar": bool(s.get("lockScreenShowProfileImage", True)),
+    }
+
+
+def font_metrics(family, px, weight=400, variations=None, text=None):
+    """(ascent, descent, advance of text, ink x_bearing, ink width) with no hinting, the way
+    Qt lays out unhinted text."""
+    s, cr = surface(1, 1)
+    fo = cairo.FontOptions()
+    fo.set_hint_style(cairo.HINT_STYLE_NONE)
+    fo.set_hint_metrics(cairo.HINT_METRICS_OFF)
+    if variations:
+        fo.set_variations(variations)
+    cr.set_font_options(fo)
+    cr.select_font_face(family, cairo.FONT_SLANT_NORMAL,
+                        cairo.FONT_WEIGHT_BOLD if weight >= 600 else cairo.FONT_WEIGHT_NORMAL)
+    cr.set_font_size(px)
+    asc, desc = cr.font_extents()[:2]
+    if text is None:
+        return asc, desc, 0, 0, 0
+    xb, _, w, _, adv, _ = cr.text_extents(text)
+    return asc, desc, adv, xb, w
+
+
+def icon_variations(mode):
+    """DankIcon axes: FILL 0, GRAD -25 in dark mode and 0 in light, opsz 24, wght 400."""
+    return f"FILL=0,GRAD={0 if mode == 'light' else -25},opsz=24,wght=400"
+
+
+def solve_padding(box_w, text_x, half, entry_w, icon_x, icon_w):
+    """Transparent padding that makes two-step's fixed layout land on the DMS geometry.
+    two-step centres lock.png + entry.png inside box.png, puts lock.png at
+    box.x + trunc((box_w' - lock_w - entry_w) / 2) and the first bullet at entry.x + half. The
+    pill is drawn PAD_L px into box.png (PAD_R spare px after it); the solution puts the first
+    bullet text_x px into the pill and the icon icon_x px into it. Returns
+    (pad_l, pad_r, lock_w, lock_offset) with the smallest box.png."""
+    t = text_x - half                     # entry.x relative to the pill's left edge
+    best = None
+    for pad_r in range(0, 4 * entry_w + 64):
+        for d in range(0, 4 * entry_w + 4 * box_w + 64):
+            # lock_w = pad_l + t - d, so box_w' - lock_w - entry_w does not depend on pad_l
+            rest = box_w + pad_r - t - entry_w + d
+            if rest < 0 or int(rest / 2.0) != d:
+                continue
+            pad_l = max(0, d - icon_x, d - t + 1)
+            lock_w = pad_l + t - d
+            if pad_l + icon_x - d + icon_w > lock_w:
+                continue
+            if best is None or pad_l + pad_r < best[0] + best[1]:
+                best = (pad_l, pad_r, lock_w, d)
+        if best is not None:
+            return best
+    raise ValueError("no padding solves the two-step layout")
+
+
+def alignment_for(target, screen, image):
+    """A two-step alignment fraction that puts an image's top-left at target: two-step stores
+    (screen - image) * fraction in a long (truncation), so aim half a pixel past it."""
+    span = screen - image
+    if span <= 0:
+        return 0.5
+    for digits in (6, 7, 8, 9, 10, 12):
+        frac = float(f"{(target + 0.5) / span:.{digits}f}")
+        if int(span * frac) == target:
+            return frac
+    return (target + 0.5) / span
+
+
+def lock_geometry(size, mode="dark", s=None):
+    """The DMS lock screen password field at this screen size, and the PNG sizes and dialog
+    alignment that reproduce it in two-step. Sources (dms-shell-patched):
+
+      Modules/Lock/LockScreenContent.qml
+        309-312  clockContainer.bottom = screen centre - LockMetrics.fieldHeight
+        440-451  dateText under it (spacingXS, fontSizeXLarge), shown when lockScreenShowDate
+        586-591  passwordLayout: centred, top = date or clock bottom + spacingL,
+                 width min(passwordRowWidth, screen - 2 * spacingXL)
+        599-611  avatar (fieldHeight wide, spacingM gap), shown when lockScreenShowProfileImage
+        614-627  passwordBox: fillWidth, height fieldHeight, Theme.fullRadius, Theme.cardSurface,
+                 border max(outlineWidth, focusRingWidth) in focusRingColor while focused
+        632-660  lock icon: spacingM from the left, iconSizeSmall, Theme.primary while focused
+        1009-1039 text viewport: from lockIconContainer.right + spacingM to the reveal button,
+                 spacingXS top and bottom margins, text centred vertically
+        1052-1074 dots: "•" per character, Theme.surfaceText, fontFamily, fontSizeLarge
+        1112-1250 reveal, keyboard and enter buttons (buttonHeightXS each, enter 2px from the edge)
+      DankCommon/Session/LockMetrics.qml 9-12  fieldWidth, fieldHeight, passwordRowWidth
+      Common/Theme.qml  1310-1325 spacing and font sizes, 1357-1373 outline and focus ring,
+                        514 cardSurface = surfaceContainer, 1245 fullRadius
+    """
+    W, H = size[0], size[1]
+    st = lock_settings(s)
+    field_h = DMS_BUTTON_H_M
+    field_w = DMS_FIELD_DEFAULT_W + DMS_BUTTON_H_M * 2
+    row_w = min(field_w + DMS_BUTTON_H_M + DMS_SPACING_M, W - DMS_SPACING_XL * 2)
+    row_x = (W - row_w) / 2
+    if st["avatar"]:
+        box_x, box_w = row_x + DMS_BUTTON_H_M + DMS_SPACING_M, row_w - DMS_BUTTON_H_M - DMS_SPACING_M
+    else:
+        box_x, box_w = row_x, row_w
+    top = H / 2 - field_h
+    if st["date"]:
+        asc, desc = font_metrics(st["font"], js_round(st["scale"] * 20))[:2]
+        top += DMS_SPACING_XS + asc + desc
+    box_y = top + DMS_SPACING_L
+    shape = st["strength"] / 50 if st["strength"] <= 50 else 1 + (st["strength"] - 50) / 30
+    radius = min(box_w, field_h) / 2 * min(1, shape)
+    border = max(DMS_OUTLINE_W, st["ring_w"] if st["ring"] else 0)
+    ring_key = {"secondary": "secondary", "outline": "outline",
+                "surfaceText": "on_background"}.get(st["ring_color"], "primary")
+
+    # dots
+    dot_px = js_round(st["scale"] * 16)
+    asc, desc, adv, _, _ = font_metrics(st["font"], dot_px, st["weight"], text=BULLET_CHAR)
+    text_x = DMS_ICON_SMALL + DMS_SPACING_M * 2
+    view_h = field_h - DMS_SPACING_XS * 2
+    line_h = asc + desc
+    baseline = DMS_SPACING_XS + max(0.0, (view_h - line_h) / 2) + asc
+    usable = box_w - text_x - DMS_SPACING_XXS - DMS_BUTTON_H_XS * 3 - DMS_SPACING_XXS
+    bullet_w = max(1, js_round(adv))
+    visible = max(1, int(usable // adv))
+    entry_w = (visible + 1) * bullet_w          # two-step shows entry_w / bullet_w - 1 bullets
+
+    # lock icon, centred in an iconSizeSmall box (Text AlignHCenter / AlignVCenter)
+    iasc, idesc, iadv, _, _ = font_metrics(ICON_FONT, DMS_ICON_SMALL, 400, icon_variations(mode),
+                                           LOCK_GLYPH)
+    icon_x, icon_y = DMS_SPACING_M, (field_h - DMS_ICON_SMALL) / 2
+    icon_dx = (DMS_ICON_SMALL - iadv) / 2
+    icon_baseline = icon_y + (DMS_ICON_SMALL - (iasc + idesc)) / 2 + iasc
+
+    pad_l, pad_r, lock_w, lock_d = solve_padding(round(box_w), text_x, bullet_w // 2, entry_w,
+                                                 icon_x, DMS_ICON_SMALL)
+    img_w = pad_l + round(box_w) + pad_r
+    target_x, target_y = round(box_x) - pad_l, round(box_y)
+    return {
+        "settings": st, "field": (box_x, box_y, box_w, field_h), "radius": radius,
+        "border": border, "ring_key": ring_key, "fill_key": "surface_container",
+        "icon_key": "primary", "dot_key": "on_background",
+        "dot_px": dot_px, "dot_adv": adv, "baseline": baseline, "text_x": text_x,
+        "usable": usable, "visible": visible,
+        "box_size": (img_w, field_h), "pad_l": pad_l, "pad_r": pad_r,
+        "lock_size": (lock_w, field_h), "lock_d": lock_d,
+        "icon_png_x": pad_l + icon_x - lock_d + icon_dx, "icon_baseline": icon_baseline,
+        "entry_size": (entry_w, field_h), "bullet_size": (bullet_w, field_h),
+        "halign": alignment_for(target_x, W, img_w), "valign": alignment_for(target_y, H, field_h),
+        "target": (target_x, target_y),
+    }
+
+
+def twostep_dialog(screen, halign, valign, box, lock, entry, bullet, count):
+    """Top-left of box.png, lock.png, entry.png and of each bullet as two-step computes them
+    (view_show_prompt and ply_entry_draw_area: doubles stored in longs)."""
+    W, H = screen
+    bx, by = int((W - box[0]) * halign), int((H - box[1]) * valign)
+    lx = int(bx + (box[0] - (lock[0] + entry[0])) / 2.0)
+    ly = int(by + (box[1] - lock[1]) / 2.0)
+    ex, ey = lx + lock[0], int(by + (box[1] - entry[1]) / 2.0)
+    shown = min(count, entry[0] // bullet[0] - 1)
+    bullets = [(int(ex + i * bullet[0] + bullet[0] / 2.0), int(ey + entry[1] / 2.0 - bullet[1] / 2.0))
+               for i in range(shown)]
+    return {"box": (bx, by), "lock": (lx, ly), "entry": (ex, ey), "bullets": bullets}
+
+
+def text_context(s, cr, family, px, weight=400, variations=None):
+    fo = cairo.FontOptions()
+    fo.set_antialias(cairo.ANTIALIAS_GRAY)
+    fo.set_hint_style(cairo.HINT_STYLE_NONE)
+    fo.set_hint_metrics(cairo.HINT_METRICS_OFF)
+    if variations:
+        fo.set_variations(variations)
+    cr.set_font_options(fo)
+    cr.select_font_face(family, cairo.FONT_SLANT_NORMAL,
+                        cairo.FONT_WEIGHT_BOLD if weight >= 600 else cairo.FONT_WEIGHT_NORMAL)
+    cr.set_font_size(px)
+
+
+def render_field(out, pal, mode, size):
+    """box.png (the pill), lock.png (the lock icon), entry.png (transparent, sets the bullet
+    count) and bullet.png (one "•" cell), laid out by lock_geometry()."""
+    g = lock_geometry(size, mode)
+    st = g["settings"]
+    h = g["field"][3]
+
+    s, cr = surface(*g["box_size"])
+    x, w, r, b = g["pad_l"], round(g["field"][2]), g["radius"], g["border"]
+    # Qt draws a Rectangle border inside its bounds: outer edge on the rect, inner radius r - b
+    rounded_rect(cr, x, 0, w, h, r)
+    cr.set_source_rgb(*rgb(pal[g["ring_key"]]))
     cr.fill()
+    rounded_rect(cr, x + b, b, w - 2 * b, h - 2 * b, max(0.0, r - b))
+    cr.set_source_rgb(*rgb(pal[g["fill_key"]]))
+    cr.fill()
+    s.write_to_png(str(out / "box.png"))
+
+    s, cr = surface(*g["lock_size"])
+    text_context(s, cr, ICON_FONT, DMS_ICON_SMALL, 400, icon_variations(mode))
+    cr.set_source_rgb(*rgb(pal[g["icon_key"]]))
+    cr.move_to(g["icon_png_x"], g["icon_baseline"])
+    cr.show_text(LOCK_GLYPH)
     s.write_to_png(str(out / "lock.png"))
 
-    # bullet.png
-    s, cr = surface(BULLET, BULLET)
-    cr.set_source_rgb(*rgb(pal["on_surface"]))
-    cr.arc(BULLET / 2, BULLET / 2, 3, 0, 2 * math.pi)
-    cr.fill()
+    s, cr = surface(*g["entry_size"])
+    s.write_to_png(str(out / "entry.png"))
+
+    s, cr = surface(*g["bullet_size"])
+    text_context(s, cr, st["font"], g["dot_px"], st["weight"])
+    cr.set_source_rgb(*rgb(pal[g["dot_key"]]))
+    cr.move_to(0, g["baseline"])
+    cr.show_text(BULLET_CHAR)
     s.write_to_png(str(out / "bullet.png"))
-
-
+    return g
 def render_throbber(out, pal):
     accent = rgb(pal["primary"])
     track = rgb(pal["surface_container_highest"]) if "surface_container_highest" in pal else rgb(pal["surface_bright"])
@@ -466,8 +688,9 @@ def render_watermark(out, pal, tmp):
     s.write_to_png(str(out / "watermark.png"))
 
 
-def write_plymouth(out, pal, size):
+def write_plymouth(out, pal, size, mode="dark"):
     bg = pal["surface"].lstrip("#")
+    geo = lock_geometry(size, mode)
     scale = "false" if size[2] else "true"
     (out / f"{THEME}.plymouth").write_text(f"""[Plymouth Theme]
 Name=Dank Unlock
@@ -485,11 +708,12 @@ BackgroundEndColor=0x{bg}
 # watermark is an empty canvas (no name, host or picture)
 WatermarkHorizontalAlignment=.5
 WatermarkVerticalAlignment=.40
-# spinner while booting or unlocking; the pill replaces it at the same spot
+# spinner while booting or unlocking
 HorizontalAlignment={THROB_XALIGN}
 VerticalAlignment={THROB_YALIGN}
-DialogHorizontalAlignment=.5
-DialogVerticalAlignment=.52
+# box.png lands where the DMS lock screen draws its password field (lock_geometry)
+DialogHorizontalAlignment={geo['halign']}
+DialogVerticalAlignment={geo['valign']}
 TitleHorizontalAlignment=.5
 TitleVerticalAlignment=.70
 ProgressBarBackgroundColor=0x{pal['surface_container_high'].lstrip('#')}
@@ -553,10 +777,10 @@ def render_theme(out, pal, mode, size, hint, stamp, fp):
         tmp = Path(tmp)
         render_background(new, pal, size)
         render_hint(new, pal, hint)
-        render_pill(new, pal)
+        render_field(new, pal, mode, size)
         render_throbber(new, pal)
         render_watermark(new, pal, tmp)
-        write_plymouth(new, pal, size)
+        write_plymouth(new, pal, size, mode)
     if out.exists():
         os.rename(out, old)
     os.rename(new, out)
